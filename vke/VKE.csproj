@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{32B7E80D-BEA7-4811-B82D-CC2533069F0A}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <RootNamespace>testvk</RootNamespace>
+    <AssemblyName>testvk</AssemblyName>
+    <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
+    <OutputPath>$(SolutionDir)build\$(Configuration)</OutputPath>
+    <IntermediateOutputPath>$(SolutionDir)build\obj\$(Configuration)</IntermediateOutputPath>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <Optimize>false</Optimize>    
+    <WarningLevel>4</WarningLevel>
+    <CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <Optimize>true</Optimize>
+    <WarningLevel>4</WarningLevel>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="mscorlib" />
+    <Reference Include="System.ComponentModel.Composition" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Numerics" />
+    <Reference Include="glfw-sharp">
+      <HintPath>..\packages\glfw-sharp.0.1.0\lib\netstandard2.0\glfw-sharp.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Runtime.CompilerServices.Unsafe">
+      <HintPath>..\packages\System.Runtime.CompilerServices.Unsafe.4.6.0-preview3.19128.7\lib\netstandard2.0\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="src\Buffer.cs" />
+    <Compile Include="src\CommandBuffer.cs" />
+    <Compile Include="src\CommandPool.cs" />
+    <Compile Include="src\DescriptorPool.cs" />
+    <Compile Include="src\DescriptorSet.cs" />
+    <Compile Include="src\DescriptorSetLayout.cs" />
+    <Compile Include="src\DescriptorSetWrites.cs" />
+    <Compile Include="src\Device.cs" />
+    <Compile Include="src\DeviceObject.cs" />
+    <Compile Include="src\ExtentionsMethods.cs" />
+    <Compile Include="src\FixedUtf8String.cs" />
+    <Compile Include="src\FrameBuffer.cs" />
+    <Compile Include="src\Image.cs" />
+    <Compile Include="src\Instance.cs" />
+    <Compile Include="src\NativeList.cs" />
+    <Compile Include="src\PhysicalDevice.cs" />
+    <Compile Include="src\Pipeline.cs" />
+    <Compile Include="src\PipelineLayout.cs" />
+    <Compile Include="src\Queue.cs" />
+    <Compile Include="src\RenderPass.cs" />
+    <Compile Include="src\SubPass.cs" />
+    <Compile Include="src\SwapChain.cs" />
+    <Compile Include="src\Utils.cs" />
+    <Compile Include="src\Version.cs" />
+    <Compile Include="src\VkWindow.cs" />
+    <Compile Include="src\DebugReport.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\vk.net\vk.net.csproj">
+      <Project>{7B9878B1-9A69-4577-AC32-2A7A5568C1E8}</Project>
+      <Name>vk.net</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />    
+</Project>
