@@ -120,7 +120,8 @@ namespace Triangle {
         float rotSpeed = 0.01f;
         double lastX, lastY;
         bool[] buttons = new bool[10];
-        protected override void HandleMouseButtonDelegate (IntPtr window, MouseButton button, InputAction action, Modifier mods) {
+
+        protected override void HandleMouseButtonDelegate (IntPtr window, Glfw.MouseButton button, InputAction action, Modifier mods) { 
 
             if (action == InputAction.Press)
                 buttons[(int)button] = true;

@@ -334,7 +334,7 @@ namespace Vulkan
     {
         public readonly ulong Handle;
         public VkFence(ulong existingHandle) { Handle = existingHandle; }
-        public static VkFence Null => new VkFence(0);
+        public static VkFence Null => 0;
         public static implicit operator VkFence(ulong handle) => new VkFence(handle);
         public static bool operator ==(VkFence left, VkFence right) => left.Handle == right.Handle;
         public static bool operator !=(VkFence left, VkFence right) => left.Handle != right.Handle;

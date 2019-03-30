@@ -63,6 +63,7 @@ namespace VKE {
         }
 
         public void Destroy () {
+            attachments.Dispose ();
             renderPass.dev.DestroyFramebuffer (handle);
         }
     }

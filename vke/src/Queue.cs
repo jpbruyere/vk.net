@@ -27,6 +27,8 @@ using System;
 using System.Collections;
 using Vulkan;
 
+using static Vulkan.VulkanNative;
+
 namespace VKE {
     public class QueueFamily {
         public VkQueueFlags Flags;
@@ -60,22 +62,21 @@ namespace VKE {
         }
 
         public void Present (VkPresentInfoKHR present) {
-            Utils.CheckResult (VulkanNative.vkQueuePresentKHR (handle, ref present));
+            Utils.CheckResult (vkQueuePresentKHR (handle, ref present));
         }
         public void Present (SwapChain swapChain, VkSemaphore wait) {
             unsafe {
                 VkPresentInfoKHR present = VkPresentInfoKHR.New ();
 
                 uint idx = swapChain.currentImageIndex;
-                VkSwapchainKHR sc = swapChain.swapchain;
-
+                VkSwapchainKHR sc = swapChain.handle;
                 present.swapchainCount = 1;
                 present.pSwapchains = &sc;
                 present.waitSemaphoreCount = 1;
                 present.pWaitSemaphores = &wait;
                 present.pImageIndices = &idx;
 
-                Utils.CheckResult (VulkanNative.vkQueuePresentKHR (handle, ref present));
+                Utils.CheckResult (vkQueuePresentKHR (handle, ref present));
             }
         }
     }
@@ -99,8 +100,11 @@ namespace VKE {
             dev.queues.Add (this);
         }
 
-        public void Submit (CommandBuffer cmd, VkSemaphore wait, VkSemaphore signal) {
-            cmd.Submit (handle, wait, signal);
+        public void Submit (CommandBuffer cmd, VkSemaphore wait = default(VkSemaphore), VkSemaphore signal = default (VkSemaphore), VkFence fence = default (VkFence)) {
+            cmd.Submit (handle, wait, signal, fence);
+        }
+        public void WaitIdle () {
+            Utils.CheckResult (vkQueueWaitIdle (handle));
         }
 
         uint searchQFamily (VkQueueFlags requestedFlags) {
@@ -119,7 +123,7 @@ namespace VKE {
         }
 
         internal void updateHandle () {
-            VulkanNative.vkGetDeviceQueue (dev.VkDev, qFamIndex, index, out handle);
+            vkGetDeviceQueue (dev.VkDev, qFamIndex, index, out handle);
         }
     }
 }

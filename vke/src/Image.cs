@@ -30,50 +30,122 @@ using Vulkan;
 using static Vulkan.VulkanNative;
 
 namespace VKE {
+    public abstract class Resource : IDisposable {
+        protected Device dev;
+        protected VkDeviceMemory devMem;
+        protected UInt64 memSize;
+        protected IntPtr mappedData;
 
+        public readonly VkMemoryPropertyFlags MemoryFlags;
+        public IntPtr MappedData => mappedData;
 
-    public class Image {
-        VkImage handle;
-        Device dev;
-        public readonly VkImageCreateInfo CreateInfo;
-        VkDeviceMemory devMem;
-        UInt64 memSize;
-        public VkDescriptorImageInfo Descriptor;
+        protected Resource (Device device, VkMemoryPropertyFlags memoryFlags) {
+            dev = device;
+            MemoryFlags = memoryFlags;
+        }
+
+        protected abstract VkMemoryRequirements getMemoryRequirements ();
+        protected abstract void bindMemory (ulong offset);
+
+        //memory is not allocated and bindind in here because Activate may be called in ctor of
+        //derrived classes, and appropriate virtual allocateMemory and bindMemory must be called
+        public virtual void Activate () {
+            if (isDisposed)
+                GC.ReRegisterForFinalize (this);
+        }
+
+        protected void allocateMemory () {
+            VkMemoryRequirements memReqs = getMemoryRequirements ();
+            VkMemoryAllocateInfo memInfo = VkMemoryAllocateInfo.New ();
+            memInfo.allocationSize = memReqs.size;
+            memInfo.memoryTypeIndex = dev.GetMemoryTypeIndex (memReqs.memoryTypeBits, MemoryFlags);
+
+            Utils.CheckResult (vkAllocateMemory (dev.VkDev, ref memInfo, IntPtr.Zero, out devMem));
+
+            memSize = memInfo.allocationSize;
+        }
+
+        public void Map (ulong size = WholeSize, ulong offset = 0) {
+            Utils.CheckResult (vkMapMemory (dev.VkDev, devMem, offset, size, 0, ref mappedData));
+        }
+        public void Unmap () {
+            vkUnmapMemory (dev.VkDev, devMem);
+            mappedData = IntPtr.Zero;
+        }
+        public void Update (object data, ulong size) {
+            GCHandle ptr = GCHandle.Alloc (data, GCHandleType.Pinned);
+            unsafe {
+                System.Buffer.MemoryCopy (ptr.AddrOfPinnedObject ().ToPointer (), mappedData.ToPointer (), size, size);
+                Flush ();
+            }
+            ptr.Free ();
+        }
+        public void Flush (ulong size = WholeSize, ulong offset = 0) {
+            VkMappedMemoryRange range = new VkMappedMemoryRange {
+                sType = VkStructureType.MappedMemoryRange,
+                memory = devMem,
+                offset = offset,
+                size = size,
+            };
+            vkFlushMappedMemoryRanges (dev.VkDev, 1, ref range);
+        }
+
+        #region IDisposable Support
+        protected bool isDisposed;
+
+        protected virtual void Dispose (bool disposing) {
+            if (!isDisposed) {
+                if (disposing) {
+                    // TODO: supprimer l'état managé (objets managés).
+                }
+
+                if (mappedData != IntPtr.Zero)
+                    Unmap ();
+                vkFreeMemory (dev.VkDev, devMem, IntPtr.Zero);
+
+                isDisposed = true;
+            }
+        }
+
+         ~Resource() {
+           Dispose(false);
+         }
+
+        public void Dispose () {
+            Dispose (true);
+            GC.SuppressFinalize(this);
+        }
+        #endregion
+    }
+
+    public class Image : Resource {
+        internal VkImage handle;
+        VkImageCreateInfo info = VkImageCreateInfo.New();
+
         bool imported = false;
 
-        //public Image (Device device, VkBufferUsageFlags usage, VkMemoryPropertyFlags _memoryPropertyFlags, UInt64 size, byte[] data)
-        //    : this (device, usage, _memoryPropertyFlags, size) {
-        //    Map ();
-        //    unsafe {
-        //        Marshal.Copy (data, 0, mappedData, data.Length);
-        //    }
-        //    Unmap ();
-        //}
+        public VkDescriptorImageInfo Descriptor;
+        public VkImageCreateInfo CreateInfo => info;
+        public VkExtent3D Extent => info.extent;
+        public VkFormat Format => info.format;
 
-        //public Image (Device device, VkBufferUsageFlags usage, VkMemoryPropertyFlags _memoryPropertyFlags, UInt64 size, IntPtr data)
-        //    : this (device, usage, _memoryPropertyFlags, size) {
-        //    Map ();
-        //    unsafe {
-        //        System.Buffer.MemoryCopy (data.ToPointer (), mappedData.ToPointer (), size, size);
-        //    }
-        //    Unmap ();
-        //}
         /// <summary>
         /// Import vkImage handle into a new Image class, handle will be preserve on destruction.
         /// </summary>
-        public Image (Device device, VkImage vkHandle, VkFormat format, VkImageUsageFlags usage, uint width, uint height) {
+        public Image (Device device, VkImage vkHandle, VkFormat format, VkImageUsageFlags usage, uint width, uint height)
+        : base (device, VkMemoryPropertyFlags.DeviceLocal) {
             dev = device;
 
-            CreateInfo.imageType = VkImageType.Image2D;
-            CreateInfo.format = format;
-            CreateInfo.extent.width = width;
-            CreateInfo.extent.height = height;
-            CreateInfo.extent.depth = 1;
-            CreateInfo.mipLevels = 1;
-            CreateInfo.arrayLayers = 1;
-            CreateInfo.samples = VkSampleCountFlags.Count1;
-            CreateInfo.tiling = VkImageTiling.Optimal;
-            CreateInfo.usage = usage;
+            info.imageType = VkImageType.Image2D;
+            info.format = format;
+            info.extent.width = width;
+            info.extent.height = height;
+            info.extent.depth = 1;
+            info.mipLevels = 1;
+            info.arrayLayers = 1;
+            info.samples = VkSampleCountFlags.Count1;
+            info.tiling = VkImageTiling.Optimal;
+            info.usage = usage;
 
             handle = vkHandle;
             imported = true;
@@ -81,12 +153,9 @@ namespace VKE {
         public Image (Device device, VkFormat format, VkImageUsageFlags usage, VkMemoryPropertyFlags _memoryPropertyFlags,
             uint width, uint height,
             VkImageType type = VkImageType.Image2D, VkSampleCountFlags samples = VkSampleCountFlags.Count1,
-            VkImageTiling tiling = VkImageTiling.Optimal, uint mipsLevels = 1, uint layers = 1) {
+            VkImageTiling tiling = VkImageTiling.Optimal, uint mipsLevels = 1, uint layers = 1)
+            : base (device, _memoryPropertyFlags) {
 
-            dev = device;
-
-            VkImageCreateInfo info = VkImageCreateInfo.New ();
-                    
             info.imageType = type;
             info.format = format;
             info.extent.width = width;
@@ -100,53 +169,43 @@ namespace VKE {
             info.initialLayout = (tiling == VkImageTiling.Optimal) ? VkImageLayout.Undefined : VkImageLayout.Preinitialized;
             info.sharingMode = VkSharingMode.Exclusive;
 
-            unsafe {
-                Utils.CheckResult (vkCreateImage (dev.VkDev, ref info, null, out handle));
-
-
-                VkMemoryRequirements memReqs;
-                vkGetImageMemoryRequirements (dev.VkDev, handle, out memReqs);
-
-                VkMemoryAllocateInfo memInfo = VkMemoryAllocateInfo.New ();
-                memInfo.allocationSize = memReqs.size;
-                memInfo.memoryTypeIndex = dev.GetMemoryTypeIndex (memReqs.memoryTypeBits, _memoryPropertyFlags);
-
-                Utils.CheckResult (vkAllocateMemory (device.VkDev, ref memInfo, IntPtr.Zero, out devMem));
-
-                memSize = memInfo.allocationSize;
-
-                Utils.CheckResult(vkBindImageMemory (dev.VkDev, handle, devMem, 0));
-            }
-
-            CreateInfo = info;
+            Activate ();//DONT OVERRIDE Activate in derived classes!!!!
         }
 
-        IntPtr mappedData;
-        public IntPtr MappedData => mappedData;
-
-        public void Map (ulong size = WholeSize, ulong offset = 0) {
-            Utils.CheckResult (vkMapMemory (dev.VkDev, devMem, offset, size, 0, ref mappedData));
+        protected override VkMemoryRequirements getMemoryRequirements () {
+            VkMemoryRequirements memReqs;
+            vkGetImageMemoryRequirements (dev.VkDev, handle, out memReqs);
+            return memReqs;
+        }
+        protected override void bindMemory (ulong offset) {
+            Utils.CheckResult (vkBindImageMemory (dev.VkDev, handle, devMem, offset));
+        }
+        public override void Activate () {
+            Utils.CheckResult (vkCreateImage (dev.VkDev, ref info, IntPtr.Zero, out handle));
+            allocateMemory ();
+            bindMemory (0);
+            base.Activate ();
         }
 
         public void CreateView (VkImageViewType type = VkImageViewType.Image2D, VkImageAspectFlags aspectFlags = VkImageAspectFlags.Color,
             uint baseMipLevel = 0, uint levelCount = 1, uint baseArrayLayer = 0, uint layerCount = 1) {
 
             VkImageView view = default(VkImageView);
-            VkImageViewCreateInfo info = VkImageViewCreateInfo.New ();
-            info.image = handle;
-            info.viewType = VkImageViewType.Image2D;
-            info.format = CreateInfo.format;
-            info.components.r = VkComponentSwizzle.R;
-            info.components.g = VkComponentSwizzle.G;
-            info.components.b = VkComponentSwizzle.B;
-            info.components.a = VkComponentSwizzle.A;
-            info.subresourceRange.aspectMask = aspectFlags;
-            info.subresourceRange.baseMipLevel = baseMipLevel;
-            info.subresourceRange.levelCount = levelCount;
-            info.subresourceRange.baseArrayLayer = baseArrayLayer;
-            info.subresourceRange.layerCount = layerCount;
+            VkImageViewCreateInfo viewInfo = VkImageViewCreateInfo.New ();
+            viewInfo.image = handle;
+            viewInfo.viewType = VkImageViewType.Image2D;
+            viewInfo.format = Format;
+            viewInfo.components.r = VkComponentSwizzle.R;
+            viewInfo.components.g = VkComponentSwizzle.G;
+            viewInfo.components.b = VkComponentSwizzle.B;
+            viewInfo.components.a = VkComponentSwizzle.A;
+            viewInfo.subresourceRange.aspectMask = aspectFlags;
+            viewInfo.subresourceRange.baseMipLevel = baseMipLevel;
+            viewInfo.subresourceRange.levelCount = levelCount;
+            viewInfo.subresourceRange.baseArrayLayer = baseArrayLayer;
+            viewInfo.subresourceRange.layerCount = layerCount;
 
-            Utils.CheckResult (vkCreateImageView (dev.VkDev, ref info, IntPtr.Zero, out view));
+            Utils.CheckResult (vkCreateImageView (dev.VkDev, ref viewInfo, IntPtr.Zero, out view));
 
             if (Descriptor.imageView.Handle != 0)
                 dev.DestroyImageView (Descriptor.imageView);
@@ -175,26 +234,160 @@ namespace VKE {
             Descriptor.sampler = sampler;
         }
 
-        public void SetupDescriptor () {
-            //descriptor.imageView;
-            //descriptor.imageLayout;
+        public void SetLayout (
+            CommandBuffer cmdbuffer,
+            VkImageAspectFlags aspectMask,
+            VkImageLayout oldImageLayout,
+            VkImageLayout newImageLayout,
+            VkPipelineStageFlags srcStageMask = VkPipelineStageFlags.AllCommands,
+            VkPipelineStageFlags dstStageMask = VkPipelineStageFlags.AllCommands) {
+            VkImageSubresourceRange subresourceRange = new VkImageSubresourceRange {
+                aspectMask = aspectMask,
+                baseMipLevel = 0,
+                levelCount = 1,
+                layerCount = 1,
+            };
+            SetLayout (cmdbuffer, aspectMask, oldImageLayout, newImageLayout, subresourceRange);
         }
 
-        public void Unmap () {
-            if (mappedData == IntPtr.Zero)
-                return;
-            vkUnmapMemory (dev.VkDev, devMem);
-            mappedData = IntPtr.Zero;
+        // Create an image memory barrier for changing the layout of
+        // an image and put it into an active command buffer
+        // See chapter 11.4 "Image Layout" for details
+        public void SetLayout (
+            CommandBuffer cmdbuffer,
+            VkImageAspectFlags aspectMask,
+            VkImageLayout oldImageLayout,
+            VkImageLayout newImageLayout,
+            VkImageSubresourceRange subresourceRange,
+            VkPipelineStageFlags srcStageMask = VkPipelineStageFlags.AllCommands,
+            VkPipelineStageFlags dstStageMask = VkPipelineStageFlags.AllCommands) {
+            // Create an image barrier object
+            VkImageMemoryBarrier imageMemoryBarrier = VkImageMemoryBarrier.New ();
+            imageMemoryBarrier.srcQueueFamilyIndex = VulkanNative.QueueFamilyIgnored;
+            imageMemoryBarrier.dstQueueFamilyIndex = VulkanNative.QueueFamilyIgnored;
+            imageMemoryBarrier.oldLayout = oldImageLayout;
+            imageMemoryBarrier.newLayout = newImageLayout;
+            imageMemoryBarrier.image = handle;
+            imageMemoryBarrier.subresourceRange = subresourceRange;
+
+            // Source layouts (old)
+            // Source access mask controls actions that have to be finished on the old layout
+            // before it will be transitioned to the new layout
+            switch (oldImageLayout) {
+                case VkImageLayout.Undefined:
+                    // Image layout is undefined (or does not matter)
+                    // Only valid as initial layout
+                    // No flags required, listed only for completeness
+                    imageMemoryBarrier.srcAccessMask = 0;
+                    break;
+
+                case VkImageLayout.Preinitialized:
+                    // Image is preinitialized
+                    // Only valid as initial layout for linear images, preserves memory contents
+                    // Make sure host writes have been finished
+                    imageMemoryBarrier.srcAccessMask = VkAccessFlags.HostWrite;
+                    break;
+
+                case VkImageLayout.ColorAttachmentOptimal:
+                    // Image is a color attachment
+                    // Make sure any writes to the color buffer have been finished
+                    imageMemoryBarrier.srcAccessMask = VkAccessFlags.ColorAttachmentWrite;
+                    break;
+
+                case VkImageLayout.DepthStencilAttachmentOptimal:
+                    // Image is a depth/stencil attachment
+                    // Make sure any writes to the depth/stencil buffer have been finished
+                    imageMemoryBarrier.srcAccessMask = VkAccessFlags.DepthStencilAttachmentWrite;
+                    break;
+
+                case VkImageLayout.TransferSrcOptimal:
+                    // Image is a transfer source 
+                    // Make sure any reads from the image have been finished
+                    imageMemoryBarrier.srcAccessMask = VkAccessFlags.TransferRead;
+                    break;
+
+                case VkImageLayout.TransferDstOptimal:
+                    // Image is a transfer destination
+                    // Make sure any writes to the image have been finished
+                    imageMemoryBarrier.srcAccessMask = VkAccessFlags.TransferWrite;
+                    break;
+
+                case VkImageLayout.ShaderReadOnlyOptimal:
+                    // Image is read by a shader
+                    // Make sure any shader reads from the image have been finished
+                    imageMemoryBarrier.srcAccessMask = VkAccessFlags.ShaderRead;
+                    break;
+            }
+
+            // Target layouts (new)
+            // Destination access mask controls the dependency for the new image layout
+            switch (newImageLayout) {
+                case VkImageLayout.TransferDstOptimal:
+                    // Image will be used as a transfer destination
+                    // Make sure any writes to the image have been finished
+                    imageMemoryBarrier.dstAccessMask = VkAccessFlags.TransferWrite;
+                    break;
+
+                case VkImageLayout.TransferSrcOptimal:
+                    // Image will be used as a transfer source
+                    // Make sure any reads from and writes to the image have been finished
+                    imageMemoryBarrier.srcAccessMask = imageMemoryBarrier.srcAccessMask | VkAccessFlags.TransferRead;
+                    imageMemoryBarrier.dstAccessMask = VkAccessFlags.TransferRead;
+                    break;
+
+                case VkImageLayout.ColorAttachmentOptimal:
+                    // Image will be used as a color attachment
+                    // Make sure any writes to the color buffer have been finished
+                    imageMemoryBarrier.srcAccessMask = VkAccessFlags.TransferRead;
+                    imageMemoryBarrier.dstAccessMask = VkAccessFlags.ColorAttachmentWrite;
+                    break;
+
+                case VkImageLayout.DepthStencilAttachmentOptimal:
+                    // Image layout will be used as a depth/stencil attachment
+                    // Make sure any writes to depth/stencil buffer have been finished
+                    imageMemoryBarrier.dstAccessMask = imageMemoryBarrier.dstAccessMask | VkAccessFlags.DepthStencilAttachmentWrite;
+                    break;
+
+                case VkImageLayout.ShaderReadOnlyOptimal:
+                    // Image will be read in a shader (sampler, input attachment)
+                    // Make sure any writes to the image have been finished
+                    if (imageMemoryBarrier.srcAccessMask == 0) {
+                        imageMemoryBarrier.srcAccessMask = VkAccessFlags.HostWrite | VkAccessFlags.TransferWrite;
+                    }
+                    imageMemoryBarrier.dstAccessMask = VkAccessFlags.ShaderRead;
+                    break;
+            }
+
+            // Put barrier inside setup command buffer
+            VulkanNative.vkCmdPipelineBarrier (
+                cmdbuffer.Handle,
+                srcStageMask,
+                dstStageMask,
+                0,
+                0,IntPtr.Zero,
+                0, IntPtr.Zero,
+                1, ref imageMemoryBarrier);
         }
 
-        public void Destroy () {
-            Unmap ();
-            if (Descriptor.imageView.Handle != 0)
-                dev.DestroyImageView (Descriptor.imageView);
-            if (imported)
-                return;
-            vkFreeMemory (dev.VkDev, devMem, IntPtr.Zero);
-            dev.DestroyImage (handle);
+        protected override void Dispose (bool disposing) {
+            if (!isDisposed) {
+                if (!disposing) 
+                    System.Diagnostics.Debug.WriteLine ($"An Image Ressource was not properly disposed.");
+
+                if (Descriptor.sampler.Handle != 0)
+                    dev.DestroySampler (Descriptor.sampler);
+                if (Descriptor.imageView.Handle != 0)
+                    dev.DestroyImageView (Descriptor.imageView);
+                if (imported)
+                    return;
+
+                if (!imported)
+                    base.Dispose (disposing);
+
+                dev.DestroyImage (handle);
+
+                isDisposed = true;
+            }
         }
     }
 }

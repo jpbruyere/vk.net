@@ -106,6 +106,9 @@ namespace VKE {
             Utils.CheckResult (vkCreateSemaphore (dev, &info, null, out tmp));
             return tmp;
         }
+        public void DestroySemaphore (VkSemaphore semaphore) {
+            vkDestroySemaphore (dev, semaphore, IntPtr.Zero);
+        }
         unsafe public VkFence CreateFence (bool signaled = false) {
             VkFence tmp;
             VkFenceCreateInfo info = VkFenceCreateInfo.New ();
@@ -113,12 +116,22 @@ namespace VKE {
             Utils.CheckResult (vkCreateFence (dev, &info, null, out tmp));
             return tmp;
         }
-        public void DestroySemaphore (VkSemaphore semaphore) {
-            vkDestroySemaphore (dev, semaphore, IntPtr.Zero);
-        }
         public void DestroyFence (VkFence fence) {
             vkDestroyFence (dev, fence, IntPtr.Zero);
         }
+        public void WaitForFence (VkFence fence, ulong timeOut = UInt64.MaxValue) {
+            vkWaitForFences (dev, 1, ref fence, true, timeOut);
+        }
+        public void ResetFence (VkFence fence) {
+            vkResetFences (dev, 1, ref fence);
+        }
+        public void WaitForFences (NativeList<VkFence> fences, ulong timeOut = UInt64.MaxValue) {
+            vkWaitForFences (dev, fences.Count, fences.Data, true, timeOut);
+        }
+        public void ResetFences (NativeList<VkFence> fences) {
+            vkResetFences (dev, fences.Count, fences.Data);
+        }
+
         public void DestroyShaderModule (VkShaderModule module) {
             vkDestroyShaderModule (VkDev, module, IntPtr.Zero);
         }
@@ -185,7 +198,7 @@ namespace VKE {
             VkCommandPoolCreateInfo infos = VkCommandPoolCreateInfo.New ();
             infos.queueFamilyIndex = qFamIdx;
             Utils.CheckResult (vkCreateCommandPool (dev, &infos, null, out pool));
-            return new CommandPool (dev, qFamIdx, pool);
+            return new CommandPool (this, qFamIdx, pool);
         }
         // This function is used to request a Device memory type that supports all the property flags we request (e.g. Device local, host visibile)
         // Upon success it will return the index of the memory type that fits our requestes memory properties

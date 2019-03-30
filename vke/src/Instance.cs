@@ -34,6 +34,8 @@ namespace VKE {
     public class Instance : IDisposable {
         VkInstance inst;
 
+        VkDebugReportFlagsEXT debugFlags;
+
         static class Strings {
             public static FixedUtf8String Name = "VKENGINE";
             public static FixedUtf8String VK_KHR_SURFACE_EXTENSION_NAME = "VK_KHR_surface";
@@ -58,7 +60,9 @@ namespace VKE {
             return (VkSurfaceKHR)surf;
         }
 
-        public Instance () {
+        public Instance (VkDebugReportFlagsEXT dbgFlags = VkDebugReportFlagsEXT.None) {
+            debugFlags = dbgFlags;
+
             init ();
         }
 
@@ -83,21 +87,20 @@ namespace VKE {
             } else {
                 throw new PlatformNotSupportedException ();
             }
+            if (debugFlags != VkDebugReportFlagsEXT.None)
+                instanceExtensions.Add (Strings.VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
 
             VkInstanceCreateInfo instanceCreateInfo = VkInstanceCreateInfo.New ();
             instanceCreateInfo.pApplicationInfo = &appInfo;
 
             if (instanceExtensions.Count > 0) {
-                if (enableValidation) {
-                    instanceExtensions.Add (Strings.VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
-                }
                 instanceCreateInfo.enabledExtensionCount = instanceExtensions.Count;
                 instanceCreateInfo.ppEnabledExtensionNames = instanceExtensions.Data;
             }
 
+            NativeList<IntPtr> enabledLayerNames = new NativeList<IntPtr> ();
 
             if (enableValidation) {
-                NativeList<IntPtr> enabledLayerNames = new NativeList<IntPtr> ();
                 enabledLayerNames.Add (Strings.StandardValidationLayeName);
                 //enabledLayerNames.Add (Strings.RenderdocCaptureLayerName);
                 instanceCreateInfo.enabledLayerCount = enabledLayerNames.Count;
@@ -108,11 +111,13 @@ namespace VKE {
             if (result != VkResult.Success) 
                 throw new InvalidOperationException ("Could not create Vulkan instance. Error: " + result);
 
-            DebugReport.InitDebug (this,
-                VkDebugReportFlagsEXT.ErrorEXT |
-                VkDebugReportFlagsEXT.InformationEXT |
-                VkDebugReportFlagsEXT.PerformanceWarningEXT |
-                VkDebugReportFlagsEXT.WarningEXT);
+            instanceExtensions.Dispose ();
+            enabledLayerNames.Dispose ();
+
+            if (debugFlags == VkDebugReportFlagsEXT.None)
+                return;
+
+            DebugReport.InitDebug (this, debugFlags);
         }
 
 
@@ -130,7 +135,8 @@ namespace VKE {
                 if (disposing) {
                     // TODO: supprimer l'état managé (objets managés).
                 }
-                DebugReport.Clean (this);
+                if (debugFlags != VkDebugReportFlagsEXT.None)
+                    DebugReport.Clean (this);
                 vkDestroyInstance (inst, IntPtr.Zero);
 
                 disposedValue = true;

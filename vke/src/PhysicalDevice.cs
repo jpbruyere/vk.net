@@ -68,9 +68,10 @@ namespace VKE {
             phys = new PhysicalDevice[gpuCount];
             Console.WriteLine ("gpu count " + gpuCount);
 
-            for (int i = 0; i < gpuCount; i++) {
+            for (int i = 0; i < gpuCount; i++)
                 phys[i] = new PhysicalDevice (gpus[i].Handle);
-            }
+
+            gpus.Dispose ();
         }
     }
     public class PhysicalDevice {

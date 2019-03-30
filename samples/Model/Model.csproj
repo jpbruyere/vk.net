@@ -16,36 +16,40 @@
     <DefineConstants>DEBUG;</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <Optimize>true</Optimize>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="main.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
+    <Compile Include="*.cs" />
+    <GLSLShader Include="shaders\**\*.frag;shaders\**\*.vert" />                
   </ItemGroup>
   <ItemGroup>
     <Reference Include="System.Numerics" />
-    <Reference Include="glfw-sharp">
-      <HintPath>..\..\packages\glfw-sharp.0.1.0\lib\netstandard2.0\glfw-sharp.dll</HintPath>
-    </Reference>        
+    <Reference Include="System" />
     <Reference Include="Newtonsoft.Json">
       <HintPath>..\..\packages\Newtonsoft.Json.10.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="glTFLoader">
       <HintPath>..\..\packages\glTF2Loader.1.1.3-alpha\lib\net35\glTFLoader.dll</HintPath>
     </Reference>
-  </ItemGroup>
-  <ItemGroup>
-    <GLSLShader Include="shaders\triangle.frag" />
-    <GLSLShader Include="shaders\triangle.vert" />
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="shaders\" />
+    <Reference Include="System.Buffers">
+      <HintPath>..\..\packages\System.Buffers.4.4.0\lib\netstandard2.0\System.Buffers.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Numerics.Vectors">
+      <HintPath>..\..\packages\System.Numerics.Vectors.4.5.0\lib\net46\System.Numerics.Vectors.dll</HintPath>
+    </Reference>
+    <Reference Include="mscorlib" />
+    <Reference Include="System.Runtime.CompilerServices.Unsafe">
+      <HintPath>..\..\packages\System.Runtime.CompilerServices.Unsafe.4.5.1\lib\netstandard2.0\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Memory">
+      <HintPath>..\..\packages\System.Memory.4.5.1\lib\netstandard2.0\System.Memory.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\vk.net\vk.net.csproj">
@@ -56,6 +60,9 @@
       <Project>{32B7E80D-BEA7-4811-B82D-CC2533069F0A}</Project>
       <Name>VKE</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)spirv.targets" />    

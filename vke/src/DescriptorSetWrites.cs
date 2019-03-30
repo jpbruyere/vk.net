@@ -68,20 +68,31 @@ namespace VKE {
         public void Update () {
             vkUpdateDescriptorSets (dev.VkDev, WriteDescriptorSets.Count, WriteDescriptorSets.Data, 0, IntPtr.Zero);
         }
-        void freeHandles () {
-            if (!disposed) {
+
+        #region IDisposable Support
+        private bool disposedValue = false; // Pour détecter les appels redondants
+
+        protected virtual void Dispose (bool disposing) {
+            if (!disposedValue) {
+                if (disposing) {
+                    WriteDescriptorSets.Dispose ();
+                }
+
                 foreach (GCHandle hnd in handles)
                     hnd.Free ();
+
+                disposedValue = true;
             }
         }
 
-        #region IDisposable Support
-        ~DescriptorSetWrites () {
-            freeHandles ();
+        ~DescriptorSetWrites() {
+            Dispose(false);
         }
+
+        // Ce code est ajouté pour implémenter correctement le modèle supprimable.
         public void Dispose () {
-            freeHandles ();
-            GC.SuppressFinalize (this);
+            Dispose (true);
+            GC.SuppressFinalize(this);
         }
         #endregion
     }

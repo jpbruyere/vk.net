@@ -31,7 +31,7 @@ namespace VKE {
     public class SwapChain {
         Device dev;
         PresentQueue presentQueue;
-        internal VkSwapchainKHR swapchain;
+        internal VkSwapchainKHR handle;
 
         public VkSemaphore presentComplete;
 
@@ -95,7 +95,7 @@ namespace VKE {
 
             createInfos.minImageCount = capabilities.minImageCount;
             createInfos.preTransform = capabilities.currentTransform;
-            createInfos.oldSwapchain = swapchain;
+            createInfos.oldSwapchain = handle;
 
             if (capabilities.currentExtent.width == 0xFFFFFFFF) {
                 if (createInfos.imageExtent.width < capabilities.minImageExtent.width)
@@ -111,22 +111,20 @@ namespace VKE {
                 createInfos.imageExtent = capabilities.currentExtent;
 
             VkSwapchainKHR newSwapChain = dev.CreateSwapChain (createInfos);
-            if (swapchain.Handle != 0)
+            if (handle.Handle != 0)
                 _destroy ();
-            swapchain = newSwapChain;
+            handle = newSwapChain;
 
-            VkImage[] tmp = dev.GetSwapChainImages (swapchain);
+            VkImage[] tmp = dev.GetSwapChainImages (handle);
             images = new Image[tmp.Length];
             for (int i = 0; i < tmp.Length; i++) {
                 images[i] = new Image (dev, tmp[i], ColorFormat, ImageUsage, Width, Height);
                 images[i].CreateView ();
             }
-
-            currentImageIndex = 0;
         }
 
         public int GetNextImage () {
-            VkResult res = vkAcquireNextImageKHR (dev.VkDev, swapchain, 999999999, presentComplete, VkFence.Null, ref currentImageIndex);
+            VkResult res = vkAcquireNextImageKHR (dev.VkDev, handle, UInt64.MaxValue, presentComplete, VkFence.Null, ref currentImageIndex);
             if (res == VkResult.ErrorOutOfDateKHR || res == VkResult.SuboptimalKHR) {
                 Create ();
                 return -1;
@@ -137,9 +135,9 @@ namespace VKE {
 
         void _destroy () {
             for (int i = 0; i < ImageCount; i++) 
-                images[i].Destroy();
+                images[i].Dispose ();
 
-            dev.DestroySwapChain (swapchain);
+            dev.DestroySwapChain (handle);
         }
 
         public void Destroy () {

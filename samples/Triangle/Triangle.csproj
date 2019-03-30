@@ -21,17 +21,11 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="main.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <GLSLShader Include="shaders\triangle.frag" />
-    <GLSLShader Include="shaders\triangle.vert" />
-  </ItemGroup>
+    <Compile Include="*.cs" />
+    <GLSLShader Include="shaders\**\*.frag;shaders\**\*.vert" />            
+  </ItemGroup>  
   <ItemGroup>
     <Reference Include="System.Numerics" />
-    <Reference Include="glfw-sharp">
-      <HintPath>..\..\packages\glfw-sharp.0.1.0\lib\netstandard2.0\glfw-sharp.dll</HintPath>
-    </Reference>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

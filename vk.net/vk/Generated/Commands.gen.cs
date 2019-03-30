@@ -9510,6 +9510,11 @@ namespace Vulkan
 
         private static IntPtr vkQueueWaitIdle_ptr;
 
+        [Generator.CalliRewrite]
+        public static unsafe VkResult vkQueueWaitIdle (VkQueue queue) {
+            throw new NotImplementedException ();
+        }
+
         private static IntPtr vkRegisterDeviceEventEXT_ptr;
 
         ///<remarks>Success codes:VK_SUCCESS. Error codes:</remarks>

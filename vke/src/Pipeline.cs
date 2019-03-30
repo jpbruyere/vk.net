@@ -69,9 +69,9 @@ namespace VKE {
 
         NativeList<VkPipelineColorBlendAttachmentState> blendAttachments = new NativeList<VkPipelineColorBlendAttachmentState>();
         NativeList<VkDynamicState> dynamicStates = new NativeList<VkDynamicState> ();
-        NativeList<VkVertexInputBindingDescription> vertexBindings = new NativeList<VkVertexInputBindingDescription> ();
-        NativeList<VkVertexInputAttributeDescription> vertexAttributes = new NativeList<VkVertexInputAttributeDescription> ();
-        List<ShaderInfo> shaders = new List<ShaderInfo>();
+        public NativeList<VkVertexInputBindingDescription> vertexBindings = new NativeList<VkVertexInputBindingDescription> ();
+        public NativeList<VkVertexInputAttributeDescription> vertexAttributes = new NativeList<VkVertexInputAttributeDescription> ();
+        public List<ShaderInfo> shaders = new List<ShaderInfo>();
 
         public PipelineLayout Layout;
         public RenderPass RenderPass;
@@ -115,15 +115,7 @@ namespace VKE {
 
             multisampleState.rasterizationSamples = VkSampleCountFlags.Count1;
 
-            vertexBindings.Add (new VkVertexInputBindingDescription { 
-                binding = 0, stride = 6 * sizeof(float) , inputRate = VkVertexInputRate.Vertex
-            });
 
-            vertexAttributes.Add (new VkVertexInputAttributeDescription {location = 0, format = VkFormat.R32g32b32Sfloat});
-            vertexAttributes.Add (new VkVertexInputAttributeDescription {location = 1, offset = 3 * sizeof(float), format = VkFormat.R32g32b32Sfloat});
-
-            shaders.Add (new ShaderInfo (VkShaderStageFlags.Vertex, "shaders/triangle.vert.spv"));
-            shaders.Add (new ShaderInfo (VkShaderStageFlags.Fragment, "shaders/triangle.frag.spv"));
 
         }
 

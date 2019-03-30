@@ -28,31 +28,34 @@ using Vulkan;
 using static Vulkan.VulkanNative;
 
 namespace VKE {
-    public class CommandBuffer : DeviceObject {
-        VkCommandPool pool;
+    public class CommandBuffer {
+        CommandPool pool;
         VkCommandBuffer handle;
+        internal bool isAllocated;
 
         public VkCommandBuffer Handle => handle;
 
-        internal CommandBuffer (VkDevice _dev, VkCommandPool _pool, VkCommandBuffer _buff)
-            :base (_dev)
+        internal CommandBuffer (VkDevice _dev, CommandPool _pool, VkCommandBuffer _buff)
         {
             pool = _pool;
             handle = _buff;
         }
-
-        unsafe public void Submit (VkQueue queue, VkSemaphore wait, VkSemaphore signal) {
+        unsafe public void Submit (VkQueue queue, VkSemaphore wait = default(VkSemaphore), VkSemaphore signal = default (VkSemaphore), VkFence fence = default(VkFence)) {
             VkSubmitInfo submit_info = VkSubmitInfo.New ();
             VkPipelineStageFlags dstStageMask = VkPipelineStageFlags.ColorAttachmentOutput;
             submit_info.commandBufferCount = 1;
-            submit_info.signalSemaphoreCount = 1;
             submit_info.pWaitDstStageMask = &dstStageMask;
-            submit_info.waitSemaphoreCount = 1;
-            submit_info.pSignalSemaphores = &signal;
-            submit_info.pWaitSemaphores = &wait;
+            if (signal != VkSemaphore.Null) {
+                submit_info.signalSemaphoreCount = 1;
+                submit_info.pSignalSemaphores = &signal;
+            }
+            if (wait != VkSemaphore.Null) {
+                submit_info.waitSemaphoreCount = 1;
+                submit_info.pWaitSemaphores = &wait;
+            }
             VkCommandBuffer cmd = handle;
             submit_info.pCommandBuffers = &cmd;
-            Utils.CheckResult (vkQueueSubmit (queue, 1, ref submit_info, VkFence.Null));
+            Utils.CheckResult (vkQueueSubmit (queue, 1, ref submit_info, fence));
         }
         public void Start () {
             VkCommandBufferBeginInfo cmdBufInfo = VkCommandBufferBeginInfo.New ();
@@ -95,10 +98,8 @@ namespace VKE {
         public void DrawIndexed (uint indexCount, uint instanceCount = 1, uint firstIndex = 0, int vertexOffset = 0, uint firstInstance = 1) {
             vkCmdDrawIndexed (Handle, indexCount, 1, 0, 0, 1);
         }
-        public override void Destroy () {
-            VkCommandBuffer tmp = handle;
-            vkFreeCommandBuffers (dev, pool, 1, ref tmp);
-            handle = IntPtr.Zero;
+        public void Destroy () {
+            pool.FreeCommandBuffers (this);
         }
     }
 }

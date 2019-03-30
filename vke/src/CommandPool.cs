@@ -28,30 +28,42 @@ using Vulkan;
 using static Vulkan.VulkanNative;
 
 namespace VKE {
-    public class CommandPool : DeviceObject {
+    public class CommandPool {
         public readonly uint QFamIndex;
-        VkCommandPool pool;
+        VkCommandPool handle;
+        internal Device dev;
 
-        internal CommandPool (VkDevice _dev, uint qFamIdx, VkCommandPool _pool)
-            : base (_dev)
+        internal CommandPool (Device _dev, uint qFamIdx, VkCommandPool _pool)
         {
             dev = _dev;
-            pool = _pool;
+            handle = _pool;
             QFamIndex = qFamIdx;
         }
-        public override void Destroy () {
-            vkDestroyCommandPool (dev, pool, IntPtr.Zero);
+        public void Destroy () {
+            vkDestroyCommandPool (dev.VkDev, handle, IntPtr.Zero);
         }
         unsafe public CommandBuffer AllocateCommandBuffer (VkCommandBufferLevel level = VkCommandBufferLevel.Primary) {
             VkCommandBuffer buff;
             VkCommandBufferAllocateInfo infos = VkCommandBufferAllocateInfo.New ();
-            infos.commandPool = pool;
+            infos.commandPool = handle;
             infos.level = level;
             infos.commandBufferCount = 1;
 
-            Utils.CheckResult (vkAllocateCommandBuffers (dev, &infos, out buff));
+            Utils.CheckResult (vkAllocateCommandBuffers (dev.VkDev, &infos, out buff));
 
-            return new CommandBuffer (dev, pool, buff);
+            return new CommandBuffer (dev.VkDev, this, buff);
+        }
+        public void FreeCommandBuffers (params CommandBuffer[] cmds) {
+            if (cmds.Length == 1) {
+                VkCommandBuffer hnd = cmds[0].Handle;
+                vkFreeCommandBuffers (dev.VkDev, handle, 1, ref hnd);
+                return;
+            }
+            using (NativeList<VkCommandBuffer> nlCmds = new NativeList<VkCommandBuffer> ((uint)cmds.Length, (uint)cmds.Length)) {
+                for (int i = 0; i < cmds.Length; i++) 
+                    nlCmds[i] = cmds[i].Handle;
+                vkFreeCommandBuffers (dev.VkDev, handle, (uint)cmds.Length, nlCmds.Data);
+            }
         }
     }
 }

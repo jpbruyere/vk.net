@@ -349,6 +349,14 @@ namespace Vulkan
         public uint mipLevel;
         public uint baseArrayLayer;
         public uint layerCount;
+
+        public VkImageSubresourceLayers (VkImageAspectFlags _aspectMask = VkImageAspectFlags.Color,
+            uint _layerCount = 1, uint _mipLevel = 0, uint _baseArrayLayer = 0) {
+            aspectMask = _aspectMask;
+            layerCount = _layerCount;
+            mipLevel = _mipLevel;
+            baseArrayLayer = _baseArrayLayer;
+        }
     }
 
     public unsafe partial struct VkImageSubresourceRange
