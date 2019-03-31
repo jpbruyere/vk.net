@@ -34,8 +34,6 @@ namespace VKE {
     public class Instance : IDisposable {
         VkInstance inst;
 
-        VkDebugReportFlagsEXT debugFlags;
-
         static class Strings {
             public static FixedUtf8String Name = "VKENGINE";
             public static FixedUtf8String VK_KHR_SURFACE_EXTENSION_NAME = "VK_KHR_surface";
@@ -60,26 +58,18 @@ namespace VKE {
             return (VkSurfaceKHR)surf;
         }
 
-        public Instance (VkDebugReportFlagsEXT dbgFlags = VkDebugReportFlagsEXT.None) {
-            debugFlags = dbgFlags;
-
+        public Instance () {
             init ();
         }
 
         public IntPtr Handle {
             get { return inst.Handle; }
         }
-        unsafe void init (bool enableValidation = true) {
+        unsafe void init () {        
+            NativeList<IntPtr> instanceExtensions = new NativeList<IntPtr> ();
+			NativeList<IntPtr> enabledLayerNames = new NativeList<IntPtr> ();
 
-            VkApplicationInfo appInfo = new VkApplicationInfo () {
-                sType = VkStructureType.ApplicationInfo,
-                apiVersion = new Vulkan.Version (1, 0, 0),
-                pApplicationName = Strings.Name,
-                pEngineName = Strings.Name,
-            };
-
-            NativeList<IntPtr> instanceExtensions = new NativeList<IntPtr> (2);
-            instanceExtensions.Add (Strings.VK_KHR_SURFACE_EXTENSION_NAME);
+			instanceExtensions.Add (Strings.VK_KHR_SURFACE_EXTENSION_NAME);
             if (RuntimeInformation.IsOSPlatform (OSPlatform.Windows)) {
                 instanceExtensions.Add (Strings.VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
             } else if (RuntimeInformation.IsOSPlatform (OSPlatform.Linux)) {
@@ -87,37 +77,39 @@ namespace VKE {
             } else {
                 throw new PlatformNotSupportedException ();
             }
-            if (debugFlags != VkDebugReportFlagsEXT.None)
-                instanceExtensions.Add (Strings.VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
 
-            VkInstanceCreateInfo instanceCreateInfo = VkInstanceCreateInfo.New ();
+#if DEBUG
+			instanceExtensions.Add (Strings.VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+			enabledLayerNames.Add (Strings.StandardValidationLayeName);
+#if RENDERDOC
+			enabledLayerNames.Add (Strings.RenderdocCaptureLayerName);
+#endif
+#endif
+			VkApplicationInfo appInfo = new VkApplicationInfo () {
+				sType = VkStructureType.ApplicationInfo,
+				apiVersion = new Vulkan.Version (1, 0, 0),
+				pApplicationName = Strings.Name,
+				pEngineName = Strings.Name,
+			};
+
+			VkInstanceCreateInfo instanceCreateInfo = VkInstanceCreateInfo.New ();
             instanceCreateInfo.pApplicationInfo = &appInfo;
 
             if (instanceExtensions.Count > 0) {
                 instanceCreateInfo.enabledExtensionCount = instanceExtensions.Count;
                 instanceCreateInfo.ppEnabledExtensionNames = instanceExtensions.Data;
             }
-
-            NativeList<IntPtr> enabledLayerNames = new NativeList<IntPtr> ();
-
-            if (enableValidation) {
-                enabledLayerNames.Add (Strings.StandardValidationLayeName);
-                enabledLayerNames.Add (Strings.RenderdocCaptureLayerName);
-                instanceCreateInfo.enabledLayerCount = enabledLayerNames.Count;
-                instanceCreateInfo.ppEnabledLayerNames = enabledLayerNames.Data;
-            }
+			if (enabledLayerNames.Count > 0) {
+				instanceCreateInfo.enabledLayerCount = enabledLayerNames.Count;
+				instanceCreateInfo.ppEnabledLayerNames = enabledLayerNames.Data;
+			}
 
             VkResult result = vkCreateInstance (ref instanceCreateInfo, IntPtr.Zero, out inst);
             if (result != VkResult.Success) 
                 throw new InvalidOperationException ("Could not create Vulkan instance. Error: " + result);
 
             instanceExtensions.Dispose ();
-            enabledLayerNames.Dispose ();
-
-            if (debugFlags == VkDebugReportFlagsEXT.None)
-                return;
-
-            DebugReport.InitDebug (this, debugFlags);
+            enabledLayerNames.Dispose ();            
         }
 
 
@@ -135,8 +127,7 @@ namespace VKE {
                 if (disposing) {
                     // TODO: supprimer l'état managé (objets managés).
                 }
-                if (debugFlags != VkDebugReportFlagsEXT.None)
-                    DebugReport.Clean (this);
+                
                 vkDestroyInstance (inst, IntPtr.Zero);
 
                 disposedValue = true;

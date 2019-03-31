@@ -8,8 +8,13 @@ using Buffer = VKE.Buffer;
 
 namespace ModelSample {
     class Program : VkWindow {
+		static void Main (string[] args) {
+			using (Program vke = new Program ()) {
+				vke.Run ();
+			}
+		}
 
-        struct Matrices {
+		struct Matrices {
             public Matrix4x4 projection;
             public Matrix4x4 view;
             public Matrix4x4 model;
@@ -137,11 +142,7 @@ namespace ModelSample {
         }
 
 
-        static void Main (string[] args) {
-            Program vke = new Program ();
-            vke.Run ();
-            vke.Destroy ();
-        }
+
 
         protected override void Prepare () {
 
@@ -183,19 +184,23 @@ namespace ModelSample {
             }
         }
 
-        protected override void Destroy () {
-            pipeline.Destroy ();
-            pipelineLayout.Destroy ();
-            dsLayout.Destroy ();
-            for (int i = 0; i < swapChain.ImageCount; i++)
-                frameBuffers[i].Destroy ();
-            descriptorPool.Destroy ();
-            renderPass.Destroy ();
-            depthTexture.Dispose ();
-            vbo.Dispose ();
-            ibo.Dispose ();
-            uboMats.Dispose ();
-            base.Destroy ();
-        }
+		protected override void Dispose (bool disposing) {
+			pipeline.Destroy ();
+			pipelineLayout.Destroy ();
+			dsLayout.Destroy ();
+			for (int i = 0; i < swapChain.ImageCount; i++)
+				frameBuffers[i].Destroy ();
+			descriptorPool.Destroy ();
+			renderPass.Destroy ();
+
+			if (disposing) {
+				depthTexture.Dispose ();
+				vbo.Dispose ();
+				ibo.Dispose ();
+				uboMats.Dispose ();
+			}
+
+			base.Dispose (disposing);
+		}
     }
 }

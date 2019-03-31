@@ -8,6 +8,11 @@ using Buffer = VKE.Buffer;
 
 namespace ModelSample {
 	class Program : VkWindow {
+		static void Main (string[] args) {
+			using (Program vke = new Program ()) {
+				vke.Run ();
+			}
+		}
 
 		struct Matrices {
 			public Matrix4x4 projection;
@@ -17,11 +22,7 @@ namespace ModelSample {
 
 		Matrices matrices;
 
-		HostBuffer ibo;
-		HostBuffer vbo;
 		HostBuffer uboMats;
-
-		GPUBuffer gpuBuff;
 
 		VkDescriptorSetLayoutBinding matricesBinding;
 		VkDescriptorSetLayoutBinding textureBinding;
@@ -38,26 +39,6 @@ namespace ModelSample {
 		VkFormat depthFormat;
 		Image depthTexture;
 
-		struct Vertex {
-			public Vector3 pos;
-			public Vector3 normal;
-			public Vector2 uv;
-
-			public Vertex (float x, float y, float z, float u, float v) {
-				pos = new Vector3 (x, y, z);
-				uv = new Vector2 (u, v);
-				normal = Vector3.Zero;
-			}
-		}
-
-		Vertex[] vertices = new Vertex[] {
-						new Vertex ( 1.0f,  1.0f, 0.0f ,  1.0f, 0.0f),
-						new Vertex (-1.0f,  1.0f, 0.0f ,  0.0f, 0.0f),
-						new Vertex (-1.0f, -1.0f, 0.0f ,  0.0f, 1.0f),
-						new Vertex ( 1.0f, -1.0f, 0.0f ,  1.0f, 1.0f),
-				};
-
-		uint[] indices = new uint[] { 0, 1, 2, 2, 0, 3 };
 
 		float rotSpeed = 0.01f;
 		double lastMouseX, lastMouseY;
@@ -82,8 +63,6 @@ namespace ModelSample {
 
 			loadAssets ();
 
-			vbo = new HostBuffer<Vertex> (dev, VkBufferUsageFlags.VertexBuffer, vertices);
-			ibo = new HostBuffer<uint> (dev, VkBufferUsageFlags.IndexBuffer, indices);
 			uboMats = new HostBuffer (dev, VkBufferUsageFlags.UniformBuffer, matrices);
 
 			depthFormat = dev.GetSuitableDepthFormat ();
@@ -94,14 +73,14 @@ namespace ModelSample {
 
 			pipeline = new Pipeline (pipelineLayout, renderPass);
 
-			pipeline.vertexBindings.Add (new VkVertexInputBindingDescription (0, (uint)Marshal.SizeOf<Vertex> ()));
+			pipeline.vertexBindings.Add (new VkVertexInputBindingDescription (0, (uint)Marshal.SizeOf<Model.Vertex> ()));
 
 			pipeline.vertexAttributes.Add (new VkVertexInputAttributeDescription (0, VkFormat.R32g32b32Sfloat));
 			pipeline.vertexAttributes.Add (new VkVertexInputAttributeDescription (1, VkFormat.R32g32b32Sfloat, 3 * sizeof (float)));
 			pipeline.vertexAttributes.Add (new VkVertexInputAttributeDescription (2, VkFormat.R32g32Sfloat, 6 * sizeof (float)));
 
-			pipeline.shaders.Add (new ShaderInfo (VkShaderStageFlags.Vertex, "shaders/triangle.vert.spv"));
-			pipeline.shaders.Add (new ShaderInfo (VkShaderStageFlags.Fragment, "shaders/triangle.frag.spv"));
+			pipeline.shaders.Add (new ShaderInfo (VkShaderStageFlags.Vertex, "shaders/model.vert.spv"));
+			pipeline.shaders.Add (new ShaderInfo (VkShaderStageFlags.Fragment, "shaders/model.frag.spv"));
 
 			pipeline.Activate ();
 
@@ -148,12 +127,6 @@ namespace ModelSample {
 			updateRequested = true;
 		}
 
-		static void Main (string[] args) {
-			Program vke = new Program ();
-			vke.Run ();
-			vke.Destroy ();
-		}
-
 		protected override void Prepare () {
 
 			if (depthTexture != null)
@@ -192,8 +165,7 @@ namespace ModelSample {
 			}
 		}
 
-		protected override void Destroy () {
-			helmet.Destroy ();
+		protected override void Dispose (bool disposing) {
 			pipeline.Destroy ();
 			pipelineLayout.Destroy ();
 			dsLayout.Destroy ();
@@ -201,11 +173,14 @@ namespace ModelSample {
 				frameBuffers[i].Destroy ();
 			descriptorPool.Destroy ();
 			renderPass.Destroy ();
-			depthTexture.Dispose ();
-			vbo.Dispose ();
-			ibo.Dispose ();
-			uboMats.Dispose ();
-			base.Destroy ();
+
+			if (disposing) {
+				helmet.Dispose ();
+				depthTexture.Dispose ();
+				uboMats.Dispose ();
+			}
+
+			base.Dispose (disposing);
 		}
 	}
 }

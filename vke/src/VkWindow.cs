@@ -31,10 +31,13 @@ using Vulkan;
 using static Vulkan.VulkanNative;
 
 namespace VKE {
-    public abstract class VkWindow {
+    public abstract class VkWindow : IDisposable {
         static VkWindow currentWindow;
 
-        IntPtr hWin;
+#if DEBUG
+#endif
+
+		IntPtr hWin;
 
         protected VkSurfaceKHR hSurf;
         protected Instance instance;
@@ -74,16 +77,23 @@ namespace VKE {
 
             initVulkan (vSync);
         }
-
-        void initVulkan (bool vSync) {
-            //instance = new Instance (
-            //VkDebugReportFlagsEXT.DebugEXT |
-            //VkDebugReportFlagsEXT.ErrorEXT |
-            //VkDebugReportFlagsEXT.PerformanceWarningEXT |
-            //VkDebugReportFlagsEXT.WarningEXT);
+#if DEBUG
+		DebugReport dbgRepport;
+#endif
+		void initVulkan (bool vSync) {
             instance = new Instance ();
 
-            hSurf = instance.CreateSurface (hWin);
+#if DEBUG
+			dbgRepport = new DebugReport (instance,
+				VkDebugReportFlagsEXT.ErrorEXT 
+				| VkDebugReportFlagsEXT.DebugEXT 
+				| VkDebugReportFlagsEXT.WarningEXT 
+				| VkDebugReportFlagsEXT.PerformanceWarningEXT 
+				//| VkDebugReportFlagsEXT.InformationEXT
+			);
+#endif
+
+			hSurf = instance.CreateSurface (hWin);
 
             phy = instance.GetAvailablePhysicalDevice ().Where (p => p.HasSwapChainSupport).FirstOrDefault ();
 
@@ -160,7 +170,6 @@ namespace VKE {
         }
 
         Stopwatch frameChrono;
-        ulong frameTime;
         uint fps;
         uint frameCount;
 
@@ -192,25 +201,48 @@ namespace VKE {
 
         protected abstract void Prepare ();
 
-        protected virtual void Destroy () {
-            dev.WaitIdle ();
 
-            for (int i = 0; i < swapChain.ImageCount; i++) {
-                dev.DestroySemaphore (drawComplete[i]);
-                cmds[i].Destroy ();
-            }
+		#region IDisposable Support
+		protected bool isDisposed;
 
-            swapChain.Destroy ();
+		protected virtual void Dispose (bool disposing) {
+			if (!isDisposed) {
+				dev.WaitIdle ();
 
-            vkDestroySurfaceKHR (instance.Handle, hSurf, IntPtr.Zero);
+				for (int i = 0; i < swapChain.ImageCount; i++) {
+					dev.DestroySemaphore (drawComplete[i]);
+					cmds[i].Destroy ();
+				}
 
-            cmdPool.Destroy ();
+				swapChain.Destroy ();
 
-            dev.Dispose ();
-            instance.Dispose ();
+				vkDestroySurfaceKHR (instance.Handle, hSurf, IntPtr.Zero);
 
-            Glfw3.DestroyWindow (hWin);
-            Glfw3.Terminate ();
-        }
-    }
+				cmdPool.Destroy ();
+
+				if (disposing) {
+					dev.Dispose ();
+#if DEBUG
+					dbgRepport.Dispose ();
+#endif
+					instance.Dispose ();
+				}
+
+				Glfw3.DestroyWindow (hWin);
+				Glfw3.Terminate ();
+
+
+				isDisposed = true;
+			}
+		}
+
+		~VkWindow () {
+			Dispose (false);
+		}
+		public void Dispose () {
+			Dispose (true);
+			GC.SuppressFinalize (this);
+		}
+		#endregion
+	}
 }
