@@ -24,7 +24,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 using System;
+using System.Numerics;
+
 namespace Vulkan {
+
     public static class Utils {
         public static void CheckResult (VkResult result, string errorString = "Call failed") {
             if (result != VkResult.Success)
@@ -32,6 +35,53 @@ namespace Vulkan {
         }
         public static float DegreesToRadians (float degrees) {
             return degrees * (float)Math.PI / 180f;
+        }
+        public static bool FromFloatArray (ref Vector3 v, float[] float3) {
+            if (float3?.Length != 3)
+                return false;
+            v.X = float3[0];
+            v.Y = float3[1];
+            v.Z = float3[2];
+            return true;
+        }
+        public static bool FromFloatArray (ref Vector4 v, float[] float4) {
+            if (float4?.Length != 4)
+                return false;
+            v.X = float4[0];
+            v.Y = float4[1];
+            v.Z = float4[2];
+            v.W = float4[3];
+            return true;
+        }
+        public static bool FromFloatArray (ref Quaternion v, float[] float4) {
+            if (float4?.Length != 4)
+                return false;
+            v.X = float4[0];
+            v.Y = float4[1];
+            v.Z = float4[2];
+            v.W = float4[3];
+            return true;
+        }
+        public static void FromByteArray (ref Vector2 v, byte[] byteArray, int offset) {
+            v.X = BitConverter.ToSingle (byteArray, offset);
+            v.Y = BitConverter.ToSingle (byteArray, offset + 4);
+        }
+        public static void FromByteArray (ref Vector3 v, byte[] byteArray, int offset) {
+            v.X = BitConverter.ToSingle (byteArray, offset);
+            v.Y = BitConverter.ToSingle (byteArray, offset + 4);
+            v.Z = BitConverter.ToSingle (byteArray, offset + 8);
+        }
+        public static void FromByteArray (ref Vector4 v, byte[] byteArray, int offset) {
+            v.X = BitConverter.ToSingle (byteArray, offset);
+            v.Y = BitConverter.ToSingle (byteArray, offset + 4);
+            v.Z = BitConverter.ToSingle (byteArray, offset + 8);
+            v.W = BitConverter.ToSingle (byteArray, offset + 12);
+        }
+        public static void FromByteArray (ref Quaternion v, byte[] byteArray, int offset) {
+            v.X = BitConverter.ToSingle (byteArray, offset);
+            v.Y = BitConverter.ToSingle (byteArray, offset + 4);
+            v.Z = BitConverter.ToSingle (byteArray, offset + 8);
+            v.W = BitConverter.ToSingle (byteArray, offset + 12);
         }
         // Fixed sub resource on first mip level and layer
         public static void setImageLayout (

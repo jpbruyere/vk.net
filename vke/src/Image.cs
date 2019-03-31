@@ -24,6 +24,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 using System;
+using System.IO;
 using System.Runtime.InteropServices;
 using Vulkan;
 
@@ -171,6 +172,56 @@ namespace VKE {
 
             Activate ();//DONT OVERRIDE Activate in derived classes!!!!
         }
+
+        public static Image Load (Device dev, string path) {
+            int width, height, channels;
+            IntPtr imgPtr = Stb.Load (path, out width, out height, out channels, 4);
+            long size = width * height * 4;
+
+            Image img = new Image(dev, VkFormat.R8g8b8a8Unorm, VkImageUsageFlags.Sampled,
+                VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent, (uint)width, (uint)height, VkImageType.Image2D,
+                VkSampleCountFlags.Count1, VkImageTiling.Linear);
+
+            img.Map ();
+            unsafe {
+                System.Buffer.MemoryCopy (imgPtr.ToPointer (), img.MappedData.ToPointer (), size, size);
+            }
+            img.Unmap ();
+
+            return img;
+        }
+
+        //public Image (Device dev, string path) {
+
+
+        //    stagging = new HostBuffer (dev, VkBufferUsageFlags.TransferSrc, (UInt64)size);
+
+        //    stagging.Map ((ulong)size);
+        //    unsafe {
+        //        System.Buffer.MemoryCopy (imgPtr.ToPointer (), stagging.MappedData.ToPointer (), size, size);
+        //    }
+        //    stagging.Unmap ();
+
+        //    Stb.FreeImage (imgPtr);
+
+        //    VKE.Image vkimg = new Image (dev, VkFormat.R8g8b8a8Unorm, VkImageUsageFlags.TransferDst | VkImageUsageFlags.Sampled,
+        //        VkMemoryPropertyFlags.DeviceLocal, (uint)width, (uint)height);
+
+        //    CommandBuffer cmd = cmdPool.AllocateCommandBuffer ();
+        //    cmd.Start ();
+
+        //    stagging.CopyTo (cmd, vkimg);
+
+        //    cmd.End ();
+
+        //    transferQ.Submit (cmd);
+
+        //    dev.WaitIdle ();
+        //    cmd.Destroy ();
+
+        //    stagging.Dispose ();
+        //}
+
 
         protected override VkMemoryRequirements getMemoryRequirements () {
             VkMemoryRequirements memReqs;

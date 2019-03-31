@@ -102,7 +102,7 @@ namespace VKE {
 
             if (enableValidation) {
                 enabledLayerNames.Add (Strings.StandardValidationLayeName);
-                //enabledLayerNames.Add (Strings.RenderdocCaptureLayerName);
+                enabledLayerNames.Add (Strings.RenderdocCaptureLayerName);
                 instanceCreateInfo.enabledLayerCount = enabledLayerNames.Count;
                 instanceCreateInfo.ppEnabledLayerNames = enabledLayerNames.Data;
             }

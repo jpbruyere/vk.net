@@ -1,13 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>        
-    <ProjectGuid>{96A2E0B9-91AE-4EB9-A435-185D01E24067}</ProjectGuid>
+    <ProjectGuid>{96A2E0B8-91AE-4EB9-A435-185D01E24067}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
     <RootNamespace>Triangle</RootNamespace>
-    <OutputPath>$(SolutionDir)build\$(Configuration)\samples\Triangle</OutputPath>
+    <OutputPath>$(SolutionDir)build\$(Configuration)\samples\Textured</OutputPath>
     <IntermediateOutputPath>$(SolutionDir)build\obj\$(Configuration)</IntermediateOutputPath>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -22,6 +20,9 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="*.cs" />
+    <None Include="data\**\*.*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <GLSLShader Include="shaders\**\*.frag;shaders\**\*.vert" />            
   </ItemGroup>  
   <ItemGroup>

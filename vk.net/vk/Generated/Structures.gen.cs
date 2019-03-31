@@ -602,6 +602,14 @@ namespace Vulkan
         public uint descriptorCount;
         public VkShaderStageFlags stageFlags;
         public VkSampler* pImmutableSamplers;
+
+        public VkDescriptorSetLayoutBinding (uint _binding, VkShaderStageFlags _stageFlags, VkDescriptorType _descriptorType, uint _descriptorCount = 1) {
+            binding = _binding;
+            descriptorType = _descriptorType;
+            descriptorCount = _descriptorCount;
+            stageFlags = _stageFlags;
+            pImmutableSamplers = null; 
+        }
     }
 
     public unsafe partial struct VkDescriptorSetLayoutCreateInfo
@@ -623,6 +631,11 @@ namespace Vulkan
     {
         public VkDescriptorType type;
         public uint descriptorCount;
+
+        public VkDescriptorPoolSize (VkDescriptorType descriptorType, uint count = 1) {
+            type = descriptorType;
+            descriptorCount = count;
+        }
     }
 
     public unsafe partial struct VkDescriptorPoolCreateInfo
@@ -710,6 +723,12 @@ namespace Vulkan
         public uint binding;
         public uint stride;
         public VkVertexInputRate inputRate;
+
+        public VkVertexInputBindingDescription (uint _binding, uint _stride, VkVertexInputRate _inputRate = VkVertexInputRate.Vertex) {
+            binding = _binding;
+            stride = _stride;
+            inputRate = _inputRate;
+        }
     }
 
     public unsafe partial struct VkVertexInputAttributeDescription
@@ -718,6 +737,19 @@ namespace Vulkan
         public uint binding;
         public VkFormat format;
         public uint offset;
+
+        public VkVertexInputAttributeDescription (uint _binding, uint _location, VkFormat _format, uint _offset = 0) {
+            location = _location;
+            binding = _binding;
+            format = _format;
+            offset = _offset;
+        }
+        public VkVertexInputAttributeDescription (uint _location, VkFormat _format, uint _offset = 0) {
+            location = _location;
+            binding = 0;
+            format = _format;
+            offset = _offset;
+        }
     }
 
     public unsafe partial struct VkPipelineVertexInputStateCreateInfo
