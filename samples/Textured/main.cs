@@ -6,10 +6,15 @@ using VKE;
 using Vulkan;
 using Buffer = VKE.Buffer;
 
-namespace ModelSample {
+namespace TextureSample {
     class Program : VkWindow {
+		static void Main (string[] args) {
+			using (Program vke = new Program ()) {
+				vke.Run ();
+			}
+		}
 
-        struct Matrices {
+		struct Matrices {
             public Matrix4x4 projection;
             public Matrix4x4 view;
             public Matrix4x4 model;
@@ -144,12 +149,6 @@ namespace ModelSample {
             updateRequested = true;
         }
 
-        static void Main (string[] args) {
-            Program vke = new Program ();
-            vke.Run ();
-            vke.Destroy ();
-        }
-
         protected override void Prepare () {
 
             if (depthTexture != null)
@@ -189,21 +188,24 @@ namespace ModelSample {
                 cmds[i].End ();
             }
         }
+		protected override void Dispose (bool disposing) {
+			pipeline.Destroy ();
+			pipelineLayout.Destroy ();
+			dsLayout.Destroy ();
+			for (int i = 0; i < swapChain.ImageCount; i++)
+				frameBuffers[i].Destroy ();
+			descriptorPool.Destroy ();
+			renderPass.Destroy ();
 
-        protected override void Destroy () {
-            texture.Dispose ();
-            pipeline.Destroy ();
-            pipelineLayout.Destroy ();
-            dsLayout.Destroy ();
-            for (int i = 0; i < swapChain.ImageCount; i++)
-                frameBuffers[i].Destroy ();
-            descriptorPool.Destroy ();
-            renderPass.Destroy ();
-            depthTexture.Dispose ();
-            vbo.Dispose ();
-            ibo.Dispose ();
-            uboMats.Dispose ();
-            base.Destroy ();
-        }
+			if (disposing) {
+				texture.Dispose ();
+				depthTexture.Dispose ();
+				vbo.Dispose ();
+				ibo.Dispose ();
+				uboMats.Dispose ();
+			}
+
+			base.Dispose (disposing);
+		}
     }
 }

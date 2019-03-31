@@ -29,16 +29,18 @@ using Vulkan;
 using static Vulkan.VulkanNative;
 
 namespace VKE {
-    public static class DebugReport {
+
+    public class DebugReport : IDisposable {
         public delegate VkResult PFN_vkCreateDebugReportCallbackEXT (VkInstance instance, ref VkDebugReportCallbackCreateInfoEXT pCreateInfo, IntPtr pAllocator, out VkDebugReportCallbackEXT pCallback);
         public delegate void PFN_vkDestroyDebugReportCallbackEXT (VkInstance instance, VkDebugReportCallbackEXT callback, IntPtr pAllocator);
+        public PFN_vkCreateDebugReportCallbackEXT CreateDebugReportCallback;
+        public PFN_vkDestroyDebugReportCallbackEXT DestroyDebugReportCallback;
+        
+        VkDebugReportCallbackEXT handle;
+		Instance inst;
 
-        public static PFN_vkCreateDebugReportCallbackEXT CreateDebugReportCallback;
-        public static PFN_vkDestroyDebugReportCallbackEXT DestroyDebugReportCallback;
+        PFN_vkDebugReportCallbackEXT debugCallbackDelegate = new PFN_vkDebugReportCallbackEXT (debugCallback);
 
-
-        static VkDebugReportCallbackEXT dbgCallbackHandle;
-        static PFN_vkDebugReportCallbackEXT debugCallbackDelegate = new PFN_vkDebugReportCallbackEXT (debugCallback);
         static VkBool32 debugCallback (VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, ulong obj,
             UIntPtr location, int messageCode, IntPtr pLayerPrefix, IntPtr pMessage, IntPtr pUserData) {
             string prefix = "";
@@ -65,8 +67,9 @@ namespace VKE {
             Console.WriteLine ("{0} {1}: {2}",prefix, messageCode, Marshal.PtrToStringAnsi(pMessage));
             return VkBool32.False;
         }
-
-        public static void InitDebug (Instance inst, VkDebugReportFlagsEXT flags = VkDebugReportFlagsEXT.ErrorEXT | VkDebugReportFlagsEXT.WarningEXT) {
+        
+        public DebugReport (Instance instance, VkDebugReportFlagsEXT flags = VkDebugReportFlagsEXT.ErrorEXT | VkDebugReportFlagsEXT.WarningEXT) {
+			inst = instance;
             inst.GetDelegate ("vkCreateDebugReportCallbackEXT", out CreateDebugReportCallback);
             inst.GetDelegate ("vkDestroyDebugReportCallbackEXT", out DestroyDebugReportCallback);
 
@@ -76,11 +79,31 @@ namespace VKE {
                 pfnCallback = Marshal.GetFunctionPointerForDelegate (debugCallbackDelegate)
             };
 
-            Utils.CheckResult (CreateDebugReportCallback (inst.Handle, ref dbgInfo, IntPtr.Zero, out dbgCallbackHandle));
+            Utils.CheckResult (CreateDebugReportCallback (inst.Handle, ref dbgInfo, IntPtr.Zero, out handle));
         }
 
-        public static void Clean (Instance inst) {
-            DestroyDebugReportCallback (inst.Handle, dbgCallbackHandle, IntPtr.Zero);
-        }
-    }
+		#region IDisposable Support
+		private bool disposedValue = false;
+
+		protected virtual void Dispose (bool disposing) {
+			if (!disposedValue) {
+				if (disposing) {
+					// TODO: supprimer l'état managé (objets managés).
+				}
+
+				DestroyDebugReportCallback (inst.Handle, handle, IntPtr.Zero);
+
+				disposedValue = true;
+			}
+		}
+
+		~DebugReport () {
+			Dispose (false);
+		}
+		public void Dispose () {
+			Dispose (true);
+			GC.SuppressFinalize (this);
+		}
+		#endregion
+	}
 }
