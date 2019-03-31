@@ -133,6 +133,10 @@ namespace VKE {
             presentQueue.WaitIdle ();
         }
 
+        bool[] buttons = new bool[10];
+
+        protected bool[] MouseButton => buttons;
+
         protected virtual void onMouseMove (double xPos, double yPos) { }
         protected virtual void onMouseButtonDown (Glfw.MouseButton button) { }
         protected virtual void onMouseButtonUp (Glfw.MouseButton button) { }
@@ -142,10 +146,13 @@ namespace VKE {
             currentWindow.onMouseMove (xPosition, yPosition);
         }
         static void HandleMouseButtonDelegate (IntPtr window, Glfw.MouseButton button, InputAction action, Modifier mods) {
-            if (action == InputAction.Press)
+            if (action == InputAction.Press) {
+                currentWindow.buttons[(int)button] = true;
                 currentWindow.onMouseButtonDown (button);
-            else
+            } else {
+                currentWindow.buttons[(int)button] = false;
                 currentWindow.onMouseButtonUp (button);
+            }
         }
         static void HandleKeyDelegate (IntPtr window, Key key, int scanCode, InputAction action, Modifier modifiers) {
             if (key == Key.F4 && modifiers == Modifier.Alt || key == Key.Escape)

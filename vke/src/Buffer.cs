@@ -29,6 +29,7 @@ using Vulkan;
 using System.Runtime.CompilerServices;
 
 using static Vulkan.VulkanNative;
+using System.Collections.Generic;
 
 namespace VKE {
     public class GPUBuffer : Buffer {
@@ -36,44 +37,35 @@ namespace VKE {
         : base (device, usage, VkMemoryPropertyFlags.DeviceLocal, size){ 
         }
     }
-
-    public class HostBuffer : Buffer {
-        public HostBuffer (Device device, VkBufferUsageFlags usage, UInt64 size)
-                    : base (device, usage, VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent, size) {
+    public class GPUBuffer<T> : GPUBuffer {
+        public GPUBuffer (Device device, VkBufferUsageFlags usage, int elementCount)
+            : base (device, usage, (ulong)(Marshal.SizeOf<T> () * elementCount)) {
         }
-        public HostBuffer (Device device, VkBufferUsageFlags usage, UInt64 size, object data)
-            : base (device, usage, VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent, size) {
+    }
+    public class HostBuffer<T> : HostBuffer {
+        public HostBuffer (Device device, VkBufferUsageFlags usage, IList<T> data)
+            : base (device, usage, (ulong)(Marshal.SizeOf<T> () * data.Count)) {
             Map ();
             Update (data, createInfo.size);
             Unmap ();
         }
-        public HostBuffer (Device device, VkBufferUsageFlags usage, int[] data)
-            : base (device, usage, VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent, (ulong)(sizeof (int) * data.Length)) {
+        public HostBuffer (Device device, VkBufferUsageFlags usage, T[] data)
+            : base (device, usage, (ulong)(Marshal.SizeOf<T> () * data.Length)) {
             Map ();
-            unsafe {
-                Marshal.Copy (data, 0, mappedData, data.Length);
-            }
+            Update (data, createInfo.size);
             Unmap ();
         }
-        public HostBuffer (Device device, VkBufferUsageFlags usage, uint[] data)
-            : base (device, usage, VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent, (ulong)(sizeof (uint) * data.Length)) {
-            Map ();
-            unsafe {
-                fixed (uint* ptr = data) {
-                    System.Buffer.MemoryCopy (ptr, mappedData.ToPointer (), createInfo.size, createInfo.size);
-                    Unmap ();
-                }
-            }
+    }
+    public class HostBuffer : Buffer {
+        public HostBuffer (Device device, VkBufferUsageFlags usage, UInt64 size)
+                    : base (device, usage, VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent, size) {
         }
-        public HostBuffer (Device device, VkBufferUsageFlags usage, float[] data)
-            : base (device, usage, VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent, (ulong)(sizeof (float) * data.Length)) {
+        public HostBuffer (Device device, VkBufferUsageFlags usage, object data)
+            : base (device, usage, VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent, (ulong)Marshal.SizeOf(data)) {
             Map ();
-            unsafe {
-                Marshal.Copy (data, 0, mappedData, data.Length);
-            }
+            Update (data, createInfo.size);
             Unmap ();
         }
-
         public HostBuffer (Device device, VkBufferUsageFlags usage, UInt64 size, IntPtr data)
             : base (device, usage, VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent, size) {
             Map ();
@@ -115,7 +107,7 @@ namespace VKE {
             Descriptor.offset = offset;
         }
 
-        public void CopyToImage (CommandBuffer cmd, Image img) {
+        public void CopyTo (CommandBuffer cmd, Image img) {
             img.SetLayout (cmd, VkImageAspectFlags.Color,
                 VkImageLayout.Undefined, VkImageLayout.TransferDstOptimal,
                 VkPipelineStageFlags.AllCommands, VkPipelineStageFlags.Transfer);
@@ -130,6 +122,14 @@ namespace VKE {
             img.SetLayout (cmd, VkImageAspectFlags.Color,
                 VkImageLayout.TransferDstOptimal, VkImageLayout.ShaderReadOnlyOptimal,
                 VkPipelineStageFlags.Transfer, VkPipelineStageFlags.TopOfPipe);
+        }
+        public void CopyTo (CommandBuffer cmd, Buffer buff, ulong size = 0, ulong srcOffset = 0, ulong dstOffset = 0) {
+            VkBufferCopy bufferCopy = new VkBufferCopy {
+                size = (size == 0) ? memSize : size,
+                srcOffset = srcOffset,
+                dstOffset = dstOffset
+            };
+            vkCmdCopyBuffer (cmd.Handle, handle, buff.handle, 1, ref bufferCopy);
         }
 
         protected override VkMemoryRequirements getMemoryRequirements () {

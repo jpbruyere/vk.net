@@ -23,7 +23,8 @@ namespace ModelSample {
 
         GPUBuffer gpuBuff;
 
-        VkDescriptorSetLayoutBinding dsBinding;
+        VkDescriptorSetLayoutBinding matricesBinding;
+        VkDescriptorSetLayoutBinding textureBinding;
         DescriptorSetLayout dsLayout;
         DescriptorPool descriptorPool;
         DescriptorSet descriptorSet;
@@ -39,32 +40,41 @@ namespace ModelSample {
 
         struct Vertex {
             Vector3 position;
-            Vector3 color;
+            Vector2 uv;
 
-            public Vertex (float x, float y, float z, float r, float g, float b) {
+            public Vertex (float x, float y, float z, float u, float v) {
                 position = new Vector3 (x, y, z);
-                color = new Vector3 (r, g, b);
+                uv = new Vector2 (u, v);
             }
         }
 
         Vertex[] vertices = new Vertex[] {
-            new Vertex ( 1.0f,  1.0f, 0.0f ,  1.0f, 0.0f, 0.0f),
-            new Vertex (-1.0f,  1.0f, 0.0f ,  0.0f, 1.0f, 0.0f),
-            new Vertex ( 0.0f, -1.0f, 0.0f ,  0.0f, 0.0f, 1.0f),
+            new Vertex ( 1.0f,  1.0f, 0.0f ,  1.0f, 0.0f),
+            new Vertex (-1.0f,  1.0f, 0.0f ,  0.0f, 0.0f),
+            new Vertex (-1.0f, -1.0f, 0.0f ,  0.0f, 1.0f),
+            new Vertex ( 1.0f, -1.0f, 0.0f ,  1.0f, 1.0f),
         };
 
-        ushort[] indices = new ushort[] { 0, 1, 2 };
+        ushort[] indices = new ushort[] { 0, 1, 2, 2, 0, 3 };
 
         float rotX, rotY, rotZ;
 
+        Image texture;
+
         Program () : base () {
+            texture = Image.Load (dev, "data/texture.jpg");
+            texture.CreateView ();
+            texture.CreateSampler ();
 
+            descriptorPool = new DescriptorPool (dev, 1,
+                new VkDescriptorPoolSize (VkDescriptorType.UniformBuffer),
+                new VkDescriptorPoolSize (VkDescriptorType.CombinedImageSampler)
+            );
 
-            descriptorPool = new DescriptorPool (dev, 1, new VkDescriptorPoolSize (VkDescriptorType.UniformBuffer));
+            matricesBinding = new VkDescriptorSetLayoutBinding(0, VkShaderStageFlags.Vertex, VkDescriptorType.UniformBuffer);
+            textureBinding = new VkDescriptorSetLayoutBinding  (1, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler);
 
-            dsBinding = new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Vertex, VkDescriptorType.UniformBuffer);
-
-            dsLayout = new DescriptorSetLayout (dev, dsBinding);
+            dsLayout = new DescriptorSetLayout (dev, matricesBinding, textureBinding);
             descriptorSet = descriptorPool.Allocate (dsLayout);
 
             pipelineLayout = new PipelineLayout (dev, dsLayout);
@@ -81,22 +91,20 @@ namespace ModelSample {
 
             pipeline = new Pipeline (pipelineLayout, renderPass);
 
-            pipeline.vertexBindings.Add (new VkVertexInputBindingDescription {
-                binding = 0,
-                stride = (uint)Marshal.SizeOf<Vertex> (),
-                inputRate = VkVertexInputRate.Vertex
-            });
+            pipeline.vertexBindings.Add (new VkVertexInputBindingDescription (0, (uint)Marshal.SizeOf<Vertex> ()));
 
-            pipeline.vertexAttributes.Add (new VkVertexInputAttributeDescription { location = 0, format = VkFormat.R32g32b32Sfloat });
-            pipeline.vertexAttributes.Add (new VkVertexInputAttributeDescription { location = 1, offset = 3 * sizeof (float), format = VkFormat.R32g32b32Sfloat });
+            pipeline.vertexAttributes.Add (new VkVertexInputAttributeDescription (0, VkFormat.R32g32b32Sfloat));
+            pipeline.vertexAttributes.Add (new VkVertexInputAttributeDescription (1, VkFormat.R32g32Sfloat, 3 * sizeof (float)));
 
-            pipeline.shaders.Add (new ShaderInfo (VkShaderStageFlags.Vertex, "shaders/triangle.vert.spv"));
-            pipeline.shaders.Add (new ShaderInfo (VkShaderStageFlags.Fragment, "shaders/triangle.frag.spv"));
+            pipeline.shaders.Add (new ShaderInfo (VkShaderStageFlags.Vertex, "shaders/main.vert.spv"));
+            pipeline.shaders.Add (new ShaderInfo (VkShaderStageFlags.Fragment, "shaders/main.frag.spv"));
 
             pipeline.Activate ();
 
+            texture.Descriptor.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
             using (DescriptorSetWrites uboUpdate = new DescriptorSetWrites (dev)) {
-                uboUpdate.AddWriteInfo (descriptorSet, dsBinding, uboMats.Descriptor);
+                uboUpdate.AddWriteInfo (descriptorSet, matricesBinding, uboMats.Descriptor);
+                uboUpdate.AddWriteInfo (descriptorSet, textureBinding, texture.Descriptor);
                 uboUpdate.Update ();
             }
 
@@ -135,7 +143,6 @@ namespace ModelSample {
 
             updateRequested = true;
         }
-
 
         static void Main (string[] args) {
             Program vke = new Program ();
@@ -184,6 +191,7 @@ namespace ModelSample {
         }
 
         protected override void Destroy () {
+            texture.Dispose ();
             pipeline.Destroy ();
             pipelineLayout.Destroy ();
             dsLayout.Destroy ();
