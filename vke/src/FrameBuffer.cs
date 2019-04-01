@@ -33,7 +33,7 @@ namespace VKE {
     public class Framebuffer : IDisposable {
         internal VkFramebuffer handle;
         RenderPass renderPass;
-        NativeList<VkImageView> attachments = new NativeList<VkImageView> ();
+        public NativeList<VkImageView> attachments = new NativeList<VkImageView> ();
         VkFramebufferCreateInfo createInfo = VkFramebufferCreateInfo.New ();
         public uint Width => createInfo.width;
         public uint Height => createInfo.height;
@@ -55,20 +55,15 @@ namespace VKE {
             Activate ();
         }
 
-        public unsafe void Activate () {
+        public void Activate () {
 			if (isDisposed) {
 				GC.ReRegisterForFinalize (this);
 				isDisposed = false;
 			}
 			createInfo.attachmentCount = attachments.Count;
-            createInfo.pAttachments = (VkImageView*)attachments.Data.ToPointer ();
+            createInfo.pAttachments = attachments.Data;
 
             Utils.CheckResult (vkCreateFramebuffer (renderPass.dev.VkDev, ref createInfo, IntPtr.Zero, out handle));
-        }
-
-        public void Destroy () {
-            attachments.Dispose ();
-            renderPass.dev.DestroyFramebuffer (handle);
         }
 
 		#region IDisposable Support

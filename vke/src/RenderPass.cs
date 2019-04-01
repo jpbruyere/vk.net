@@ -98,19 +98,26 @@ namespace VKE {
         /// <summary>
         /// Create default renderpass with one color and one depth attachments
         /// </summary>
-        public RenderPass (Device device, VkFormat colorFormat, VkFormat depthFormat)
+        public RenderPass (Device device, VkFormat colorFormat, VkFormat depthFormat, VkSampleCountFlags samples = VkSampleCountFlags.Count1)
             : this (device){
 
-            AddAttachment (colorFormat, VkImageLayout.PresentSrcKHR);
-            AddAttachment (depthFormat, VkImageLayout.DepthStencilAttachmentOptimal);
+			AddAttachment (colorFormat, (samples == VkSampleCountFlags.Count1) ? VkImageLayout.PresentSrcKHR : VkImageLayout.ColorAttachmentOptimal, samples);
+			AddAttachment (depthFormat, VkImageLayout.DepthStencilAttachmentOptimal, samples);
 
             ClearValues.Add (new VkClearValue { color = new VkClearColorValue (0.0f, 0.0f, 0.2f) });
             ClearValues.Add (new VkClearValue { depthStencil = new VkClearDepthStencilValue (1.0f, 0) });
 
-            SubPass subpass0 = new SubPass ();
+			SubPass subpass0 = new SubPass ();
 
-            subpass0.AddColorReference (0, VkImageLayout.ColorAttachmentOptimal);
-            subpass0.SetDepthReference (1, VkImageLayout.DepthStencilAttachmentOptimal);
+			subpass0.AddColorReference (0, VkImageLayout.ColorAttachmentOptimal);
+			subpass0.SetDepthReference (1, VkImageLayout.DepthStencilAttachmentOptimal);
+
+			if (samples != VkSampleCountFlags.Count1) {
+				AddAttachment (colorFormat, VkImageLayout.PresentSrcKHR, VkSampleCountFlags.Count1);
+				ClearValues.Add (new VkClearValue { color = new VkClearColorValue (0.0f, 0.0f, 0.2f) });
+				subpass0.AddResolveReference (2, VkImageLayout.ColorAttachmentOptimal);
+			}
+
 
             AddSubpass (subpass0);
 

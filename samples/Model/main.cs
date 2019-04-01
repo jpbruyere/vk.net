@@ -21,12 +21,11 @@ namespace ModelSample {
 			public Vector4 lightPos;
 		}
 
-		struct PushConstants {
+		public struct PushConstants {
 			public Matrix4x4 matrix;
 		}
 
 		Matrices matrices;
-		PushConstants pushCst;
 
 		HostBuffer uboMats;
 
@@ -42,8 +41,9 @@ namespace ModelSample {
 		PipelineLayout pipelineLayout;
 		Pipeline pipeline;
 
+		VkSampleCountFlags samples = VkSampleCountFlags.Count8;
 		VkFormat depthFormat;
-		Image depthTexture;
+		Image depthTexture, colorTexture;
 
 		float rotSpeed = 0.01f, zoomSpeed = 0.01f;
 		double lastMouseX, lastMouseY;
@@ -86,11 +86,13 @@ namespace ModelSample {
 
 			depthFormat = dev.GetSuitableDepthFormat ();
 
-			renderPass = new RenderPass (dev, swapChain.ColorFormat, depthFormat);
+			renderPass = new RenderPass (dev, swapChain.ColorFormat, depthFormat, samples);
 
 			frameBuffers = new Framebuffer[swapChain.ImageCount];
 
 			pipeline = new Pipeline (pipelineLayout, renderPass);
+
+			pipeline.multisampleState.rasterizationSamples = samples;
 
 			pipeline.vertexBindings.Add (new VkVertexInputBindingDescription (0, (uint)Marshal.SizeOf<Model.Vertex> ()));
 
@@ -115,22 +117,33 @@ namespace ModelSample {
 		}
 
 		protected override void Prepare () {
-
-			if (depthTexture != null)
-				depthTexture.Dispose ();
+		
+			depthTexture?.Dispose ();
+			colorTexture?.Dispose ();
 
 			depthTexture = new Image (dev, depthFormat, VkImageUsageFlags.DepthStencilAttachment,
-					VkMemoryPropertyFlags.DeviceLocal, swapChain.Width, swapChain.Height);
+					VkMemoryPropertyFlags.DeviceLocal, swapChain.Width, swapChain.Height, VkImageType.Image2D, samples);
 			depthTexture.CreateView (VkImageViewType.Image2D, VkImageAspectFlags.Depth);
-
-			for (int i = 0; i < swapChain.ImageCount; ++i) {
-				if (frameBuffers[i] != null)
-					frameBuffers[i].Destroy ();
+			if (samples != VkSampleCountFlags.Count1) {
+				colorTexture = new Image (dev, swapChain.ColorFormat, VkImageUsageFlags.ColorAttachment,
+						VkMemoryPropertyFlags.DeviceLocal, swapChain.Width, swapChain.Height, VkImageType.Image2D, samples);
+				colorTexture.CreateView ();
 			}
 
+			for (int i = 0; i < swapChain.ImageCount; ++i)
+				frameBuffers[i]?.Dispose ();
+
 			for (int i = 0; i < swapChain.ImageCount; ++i) {
+
 				frameBuffers[i] = new Framebuffer (renderPass, swapChain.Width, swapChain.Height,
-						new VkImageView[] { swapChain.images[i].Descriptor.imageView, depthTexture.Descriptor.imageView });
+					(samples == VkSampleCountFlags.Count1) ? new VkImageView[] {
+						swapChain.images[i].Descriptor.imageView,
+						depthTexture.Descriptor.imageView
+					} : new VkImageView[] {
+						colorTexture.Descriptor.imageView,
+						depthTexture.Descriptor.imageView,
+						swapChain.images[i].Descriptor.imageView
+					});					
 
 				cmds[i] = cmdPool.AllocateCommandBuffer ();
 				cmds[i].Start ();
@@ -209,9 +222,10 @@ namespace ModelSample {
 					descLayoutMatrix.Dispose ();
 					descLayoutTextures.Dispose ();
 					for (int i = 0; i < swapChain.ImageCount; i++)
-						frameBuffers[i].Dispose ();
+						frameBuffers[i]?.Dispose ();
 					descriptorPool.Dispose ();
 					renderPass.Dispose ();
+					colorTexture?.Dispose ();
 					depthTexture.Dispose ();
 					uboMats.Dispose ();
 				}
