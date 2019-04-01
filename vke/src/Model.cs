@@ -44,7 +44,10 @@ namespace VKE {
 		Color,
 		Normal,
 		AmbientOcclusion,
-		MetalRoughness
+		Metal,
+		Roughness,
+		MetalRoughness,
+		Emissive,
 	};
 
 	public class Model : IDisposable {
@@ -60,10 +63,10 @@ namespace VKE {
 		public List<Scene> Scenes;
 		public int DefaultScene;
 
-		public GPUBuffer uboMaterials;
         public GPUBuffer vbo;
         public GPUBuffer ibo;
 
+		//public GPUBuffer uboMaterials;
 		//[StructLayout (LayoutKind.Explicit, Size = 80)]
 		//public struct Material {
 		//	[FieldOffset (0)] public Vector4 baseColorFactor;
@@ -99,8 +102,8 @@ namespace VKE {
 		//	}
 		//}
 
-		
-        public class Material {
+
+		public class Material {
             public Vector4 baseColorFactor;
             public AlphaMode alphaMode;
             public float alphaCutoff;
@@ -173,7 +176,6 @@ namespace VKE {
             public Dimensions dims;
         }
 
-
         public struct InstanceData {
             public UInt32 materialIndex;
             public Matrix4x4 modelMat;
@@ -206,8 +208,6 @@ namespace VKE {
 				loadMeshes (ctx);
 				loadScenes (ctx);
 			}
-
-
 		}
 
 		public void WriteMaterialsDescriptorSets (DescriptorSetLayout layout, params ShaderBinding[] attachments) {
@@ -257,17 +257,24 @@ namespace VKE {
 							break;
 						case ShaderBinding.MetalRoughness:
 							uboUpdate.AddWriteInfo (mat.descriptorSet, dslb, textures[(int)mat.metallicRoughnessTexture].Descriptor);
-							break;						
+							break;
+						case ShaderBinding.Metal:
+							break;
+						case ShaderBinding.Roughness:
+							break;
+						case ShaderBinding.Emissive:
+							uboUpdate.AddWriteInfo (mat.descriptorSet, dslb, textures[(int)mat.emissiveTexture].Descriptor);
+							break;
 					}
 				}
 				uboUpdate.Update ();
 			}
 		}
 
-        /// <summary>
-        /// Loading context with I as the vertex index type (uint16,uint32)
-        /// </summary>
-        class LoadingContext<I> : IDisposable {
+		/// <summary>
+		/// Loading context with I as the vertex index type (uint16,uint32)
+		/// </summary>
+		class LoadingContext<I> : IDisposable {
 			public Queue transferQ;
 			public CommandPool cmdPool;
 
@@ -700,10 +707,11 @@ namespace VKE {
 				if (disposing) {
 					ibo?.Dispose ();
 					vbo?.Dispose ();
+					descriptorPool?.Dispose ();
 					foreach (Image txt in textures) {
 						txt.Dispose ();
 					}
-					uboMaterials?.Dispose ();
+					//uboMaterials?.Dispose ();
 				} else
 					Debug.WriteLine ("model was not disposed");
 				isDisposed = true;

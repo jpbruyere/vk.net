@@ -64,7 +64,9 @@ namespace ModelSample {
 			descLayoutTextures = new DescriptorSetLayout (dev, 
 				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
 				new VkDescriptorSetLayoutBinding (1, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
-				new VkDescriptorSetLayoutBinding (2, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler)
+				new VkDescriptorSetLayoutBinding (2, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
+				new VkDescriptorSetLayoutBinding (3, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
+				new VkDescriptorSetLayoutBinding (4, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler)
 			);
 
 			descriptorSet = descriptorPool.Allocate (descLayoutMatrix);
@@ -166,7 +168,12 @@ namespace ModelSample {
 		void loadAssets () {
 			//helmet = new Model (dev, presentQueue, cmdPool, "/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/Sponza/glTF/Sponza.gltf");
 			helmet = new Model (dev, presentQueue, cmdPool, "data/DamagedHelmet.gltf");
-			helmet.WriteMaterialsDescriptorSets (descLayoutTextures, ShaderBinding.Color, ShaderBinding.Normal, ShaderBinding.AmbientOcclusion);
+			helmet.WriteMaterialsDescriptorSets (descLayoutTextures,
+				ShaderBinding.Color,
+				ShaderBinding.Normal,
+				ShaderBinding.AmbientOcclusion,
+				ShaderBinding.MetalRoughness,
+				ShaderBinding.Emissive);
 		}
 		void updateMatrices () {
 			matrices.projection = Matrix4x4.CreatePerspectiveFieldOfView (Utils.DegreesToRadians (60f), (float)swapChain.Width / (float)swapChain.Height, 0.01f, 1024.0f);
