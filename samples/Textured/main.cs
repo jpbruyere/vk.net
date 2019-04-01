@@ -151,18 +151,15 @@ namespace TextureSample {
         }
 
         protected override void Prepare () {
-
-            if (depthTexture != null)
-                depthTexture.Dispose ();
+        
+            depthTexture?.Dispose ();
 
             depthTexture = new Image (dev, depthFormat, VkImageUsageFlags.DepthStencilAttachment,
                 VkMemoryPropertyFlags.DeviceLocal, swapChain.Width, swapChain.Height);
             depthTexture.CreateView (VkImageViewType.Image2D, VkImageAspectFlags.Depth);
 
-            for (int i = 0; i < swapChain.ImageCount; ++i) {
-                if (frameBuffers[i] != null)
-                    frameBuffers[i].Destroy ();
-            }
+            for (int i = 0; i < swapChain.ImageCount; ++i) 
+				frameBuffers[i]?.Dispose ();				
 
             for (int i = 0; i < swapChain.ImageCount; ++i) {
                 frameBuffers[i] = new Framebuffer (renderPass, swapChain.Width, swapChain.Height,

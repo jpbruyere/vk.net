@@ -67,7 +67,7 @@ namespace VKE {
         NativeList<VkAttachmentReference> colorRefs;
         NativeList<VkAttachmentReference> inputRefs;
         MarshaledObject<VkAttachmentReference> depthRef;
-        MarshaledObject<VkAttachmentReference> resolveRef;
+        NativeList<VkAttachmentReference> resolveRefs;
         NativeList<uint> preservedRefs;
 
         public SubPass () {
@@ -97,18 +97,20 @@ namespace VKE {
         public void SetDepthReference (uint attachment, VkImageLayout layout = VkImageLayout.DepthStencilAttachmentOptimal) {
             DepthReference = new VkAttachmentReference { attachment = attachment, layout = layout };
         }
-        public VkAttachmentReference DepthReference {
+		public void AddResolveReference (params VkAttachmentReference[] refs) {
+			if (resolveRefs == null)
+				resolveRefs = new NativeList<VkAttachmentReference> ((uint)refs.Length);
+			for (int i = 0; i < refs.Length; i++)
+				resolveRefs.Add (refs[i]);
+		}
+		public void AddResolveReference (uint attachment, VkImageLayout layout = VkImageLayout.ColorAttachmentOptimal) {
+			AddResolveReference (new VkAttachmentReference { attachment = attachment, layout = layout });
+		}
+		public VkAttachmentReference DepthReference {
             set {
                 if (depthRef != null)
                     depthRef.Dispose ();
                 depthRef = new MarshaledObject<VkAttachmentReference> (value);
-            }
-        }
-        public VkAttachmentReference ResolveReference {
-            set {
-                if (resolveRef != null)
-                    resolveRef.Dispose ();
-                resolveRef = new MarshaledObject<VkAttachmentReference> (value);
             }
         }
 
@@ -118,21 +120,21 @@ namespace VKE {
                 subpassDescription.pipelineBindPoint = VkPipelineBindPoint.Graphics;
                 if (colorRefs?.Count > 0) {
                     subpassDescription.colorAttachmentCount = colorRefs.Count;
-                    subpassDescription.pColorAttachments = (VkAttachmentReference*)colorRefs.Data.ToPointer (); ; 
+                    subpassDescription.pColorAttachments = colorRefs.Data; ; 
                 }
                 if (inputRefs?.Count > 0) {
                     subpassDescription.inputAttachmentCount = inputRefs.Count;
-                    subpassDescription.pInputAttachments = (VkAttachmentReference*)inputRefs.Data.ToPointer (); ;
+                    subpassDescription.pInputAttachments = inputRefs.Data; ;
                 }
                 if (preservedRefs?.Count > 0) {
                     subpassDescription.preserveAttachmentCount = preservedRefs.Count;
-                    subpassDescription.pPreserveAttachments = (uint*)preservedRefs.Data.ToPointer (); ;
+                    subpassDescription.pPreserveAttachments = preservedRefs.Data; ;
                 }
+				if (resolveRefs?.Count > 0)
+					subpassDescription.pResolveAttachments = resolveRefs.Data;
 
-                if (depthRef != null)
-                    subpassDescription.pDepthStencilAttachment = (VkAttachmentReference*)depthRef.Pointer.ToPointer();
-                if (resolveRef != null)
-                    subpassDescription.pResolveAttachments = (VkAttachmentReference*)resolveRef.Pointer.ToPointer ();
+				if (depthRef != null)
+                    subpassDescription.pDepthStencilAttachment = depthRef.Pointer;
 
                 return subpassDescription;
             }        
@@ -145,7 +147,7 @@ namespace VKE {
                 inputRefs?.Dispose ();
                 preservedRefs?.Dispose ();
                 depthRef?.Dispose ();
-                resolveRef?.Dispose ();
+                resolveRefs?.Dispose ();
             }
         }
         public void Dispose () {

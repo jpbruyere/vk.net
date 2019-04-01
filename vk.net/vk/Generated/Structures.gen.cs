@@ -1149,13 +1149,13 @@ namespace Vulkan
         public VkSubpassDescriptionFlags flags;
         public VkPipelineBindPoint pipelineBindPoint;
         public uint inputAttachmentCount;
-        public VkAttachmentReference* pInputAttachments;
+        public IntPtr pInputAttachments;
         public uint colorAttachmentCount;
-        public VkAttachmentReference* pColorAttachments;
-        public VkAttachmentReference* pResolveAttachments;
-        public VkAttachmentReference* pDepthStencilAttachment;
+        public IntPtr pColorAttachments;
+        public IntPtr pResolveAttachments;
+        public IntPtr pDepthStencilAttachment;
         public uint preserveAttachmentCount;
-        public uint* pPreserveAttachments;
+        public IntPtr pPreserveAttachments;
     }
 
     public unsafe partial struct VkSubpassDependency
@@ -1436,7 +1436,7 @@ namespace Vulkan
         public uint flags;
         public VkRenderPass renderPass;
         public uint attachmentCount;
-        public VkImageView* pAttachments;
+        public IntPtr pAttachments;
         public uint width;
         public uint height;
         public uint layers;
