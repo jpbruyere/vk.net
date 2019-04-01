@@ -114,12 +114,10 @@ namespace VKE {
             depthStencilState.front = depthStencilState.back;
 
             multisampleState.rasterizationSamples = VkSampleCountFlags.Count1;
-
-
-
         }
 
         public unsafe void Activate () {
+
             VkGraphicsPipelineCreateInfo info = VkGraphicsPipelineCreateInfo.New ();
             info.renderPass = RenderPass.handle;
             info.layout = Layout.handle;

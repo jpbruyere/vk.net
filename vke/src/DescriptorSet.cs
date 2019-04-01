@@ -46,7 +46,7 @@ namespace VKE {
         public NativeList<VkWriteDescriptorSet> CreateWriteDescritprSet (params DescriptorSetLayout[] dsLayouts) {
             NativeList<VkWriteDescriptorSet> wdss = new NativeList<VkWriteDescriptorSet> ();
             foreach (DescriptorSetLayout dsl in dsLayouts) {
-                foreach (VkDescriptorSetLayoutBinding binding in dsl.layoutBindings) {
+                foreach (VkDescriptorSetLayoutBinding binding in dsl.Bindings) {
                     VkWriteDescriptorSet wds = VkWriteDescriptorSet.New ();
                     wds.descriptorType = binding.descriptorType;
                     wds.descriptorCount = binding.descriptorCount;
@@ -57,5 +57,9 @@ namespace VKE {
             }
             return wdss;
         }
+
+		public void Free () {
+			pool.FreeDescriptorSet (this);
+		}
     }
 }

@@ -49,7 +49,7 @@ namespace VKE {
             infos.level = level;
             infos.commandBufferCount = 1;
 
-            Utils.CheckResult (vkAllocateCommandBuffers (dev.VkDev, &infos, out buff));
+            Utils.CheckResult (vkAllocateCommandBuffers (dev.VkDev, ref infos, out buff));
 
             return new CommandBuffer (dev.VkDev, this, buff);
         }

@@ -31,7 +31,7 @@ using System.Runtime.InteropServices;
 
 namespace VKE {
     public static class ExtensionMethods {
-        public static Dictionary<object, GCHandle> handles;
+        public static Dictionary<object, GCHandle> handles = new Dictionary<object, GCHandle>();
         public static Vector3 Transform (this Vector3 v, ref Matrix4x4 mat, bool translate = false) {
             Vector4 v4 = Vector4.Transform (new Vector4 (v, translate ? 1f : 0f), mat);
             return new Vector3 (v4.X, v4.Y, v4.Z);

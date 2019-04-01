@@ -10,6 +10,9 @@
   <Target Name="CompileShaders" BeforeTargets="Build">        
     <Message Importance="High" Text="Compiling shaders to spirv with glslc" />
     <MakeDir Directories="$(OutputPath)%(GLSLShader.RelativeDir)"/>
-    <Exec Command="glslc %(GLSLShader.Identity) -o $(OutputPath)%(RelativeDir)%(Filename)%(Extension).spv"/>
+    <Exec Command="glslc %(GLSLShader.Identity) -o $(OutputPath)%(RelativeDir)%(Filename)%(Extension).spv"
+          ConsoleToMSBuild="true" EchoOff="true">
+        <Output TaskParameter="ConsoleOutput" PropertyName="OutputOfExec" />
+    </Exec>
   </Target>
 </Project>

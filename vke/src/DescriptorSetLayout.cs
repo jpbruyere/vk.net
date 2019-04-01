@@ -28,11 +28,11 @@ using Vulkan;
 using static Vulkan.VulkanNative;
 
 namespace VKE {
-    public class DescriptorSetLayout {
+    public class DescriptorSetLayout : IDisposable {
         internal VkDescriptorSetLayout handle;
         internal Device dev;
 
-        internal NativeList<VkDescriptorSetLayoutBinding> layoutBindings = new NativeList<VkDescriptorSetLayoutBinding> ();
+        public NativeList<VkDescriptorSetLayoutBinding> Bindings = new NativeList<VkDescriptorSetLayoutBinding> ();
 
         public DescriptorSetLayout (Device device) {
             dev = device;
@@ -40,19 +40,41 @@ namespace VKE {
         public DescriptorSetLayout (Device device, params VkDescriptorSetLayoutBinding[] bindings)
         : this (device) {
             foreach (VkDescriptorSetLayoutBinding b in bindings) 
-                layoutBindings.Add (b);
+                Bindings.Add (b);
             Activate ();
         }
         public void Activate () {
-            VkDescriptorSetLayoutCreateInfo info = VkDescriptorSetLayoutCreateInfo.New ();
-            unsafe {
-                info.bindingCount = layoutBindings.Count;
-                info.pBindings = (VkDescriptorSetLayoutBinding*)layoutBindings.Data.ToPointer ();
-                Utils.CheckResult (vkCreateDescriptorSetLayout (dev.VkDev, ref info, IntPtr.Zero, out handle));
-            }
+			if (isDisposed) {
+				GC.ReRegisterForFinalize (this);
+				isDisposed = false;
+			}
+            VkDescriptorSetLayoutCreateInfo info = VkDescriptorSetLayoutCreateInfo.New ();            
+            info.bindingCount = Bindings.Count;
+            info.pBindings = Bindings.Data;
+
+            Utils.CheckResult (vkCreateDescriptorSetLayout (dev.VkDev, ref info, IntPtr.Zero, out handle));            
         }
-        public void Destroy () {
-            vkDestroyDescriptorSetLayout (dev.VkDev, handle, IntPtr.Zero);
-        }
-    }
+		#region IDisposable Support
+		private bool isDisposed = false; // Pour détecter les appels redondants
+
+		protected virtual void Dispose (bool disposing) {
+			if (!isDisposed) {
+				if (disposing) {
+					Bindings.Dispose ();
+				} else
+					System.Diagnostics.Debug.WriteLine ("A descriptorSetLayout has not been disposed.");
+				vkDestroyDescriptorSetLayout (dev.VkDev, handle, IntPtr.Zero);
+				isDisposed = true;
+			}
+		}
+
+		~DescriptorSetLayout() {
+			Dispose(false);
+		}
+		public void Dispose () {
+			Dispose (true);
+			GC.SuppressFinalize(this);
+		}
+		#endregion
+	}
 }
