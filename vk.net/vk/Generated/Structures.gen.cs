@@ -618,7 +618,7 @@ namespace Vulkan
         public IntPtr pNext;
         public VkDescriptorSetLayoutCreateFlags flags;
         public uint bindingCount;
-        public VkDescriptorSetLayoutBinding* pBindings;
+        public IntPtr pBindings;
         public static VkDescriptorSetLayoutCreateInfo New()
         {
             VkDescriptorSetLayoutCreateInfo ret = new VkDescriptorSetLayoutCreateInfo();
@@ -995,9 +995,9 @@ namespace Vulkan
         public IntPtr pNext;
         public uint flags;
         public uint setLayoutCount;
-        public VkDescriptorSetLayout* pSetLayouts;
+        public IntPtr pSetLayouts;
         public uint pushConstantRangeCount;
-        public VkPushConstantRange* pPushConstantRanges;
+        public IntPtr pPushConstantRanges;
         public static VkPipelineLayoutCreateInfo New()
         {
             VkPipelineLayoutCreateInfo ret = new VkPipelineLayoutCreateInfo();

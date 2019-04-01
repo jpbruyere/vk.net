@@ -217,8 +217,8 @@ namespace Vulkan {
                 srcStageMask,
                 dstStageMask,
                 0,
-                0, null,
-                0, null,
+                0, IntPtr.Zero,
+                0, IntPtr.Zero,
                 1, ref imageMemoryBarrier);
         }
     }

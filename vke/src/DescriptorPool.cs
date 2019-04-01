@@ -52,7 +52,7 @@ namespace VKE {
             info.pPoolSizes = (VkDescriptorPoolSize*)PoolSizes.Data.ToPointer ();
             info.maxSets = MaxSets;
 
-            Utils.CheckResult (vkCreateDescriptorPool (dev.VkDev, &info, IntPtr.Zero, out handle));
+            Utils.CheckResult (vkCreateDescriptorPool (dev.VkDev, ref info, IntPtr.Zero, out handle));
         }
         /// <summary>
         /// Destroy Descriptor pool and free remaining allocated descritor sets
@@ -74,7 +74,7 @@ namespace VKE {
             allocInfo.descriptorSetCount = descriptorSet.descriptorSetLayouts.Count;
             allocInfo.pSetLayouts = (VkDescriptorSetLayout*)descriptorSet.descriptorSetLayouts.Data.ToPointer ();
 
-            Utils.CheckResult (vkAllocateDescriptorSets (dev.VkDev, &allocInfo, out descriptorSet.handle));
+            Utils.CheckResult (vkAllocateDescriptorSets (dev.VkDev, ref allocInfo, out descriptorSet.handle));
         }
         public void FreeDescriptorSet (params DescriptorSet[] descriptorSets) {
             if (descriptorSets.Length == 1) {

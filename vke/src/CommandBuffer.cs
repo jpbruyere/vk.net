@@ -24,6 +24,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 using System;
+using System.Runtime.InteropServices;
 using Vulkan;
 using static Vulkan.VulkanNative;
 
@@ -86,8 +87,8 @@ namespace VKE {
         public void BindPipeline (Pipeline pipeline) {
             vkCmdBindPipeline (handle, VkPipelineBindPoint.Graphics, pipeline.handle);
         }
-        public void BindDescriptorSet (PipelineLayout pipelineLayout, DescriptorSet descriptorSet) {
-            vkCmdBindDescriptorSets (handle, VkPipelineBindPoint.Graphics, pipelineLayout.handle, 0, 1, ref descriptorSet.handle, 0, IntPtr.Zero);
+        public void BindDescriptorSet (PipelineLayout pipelineLayout, DescriptorSet descriptorSet, uint firstSet = 0) {
+            vkCmdBindDescriptorSets (handle, VkPipelineBindPoint.Graphics, pipelineLayout.handle, firstSet, 1, ref descriptorSet.handle, 0, IntPtr.Zero);
         }
         public void BindVertexBuffer (Buffer vertices, ulong offset = 0) {
             vkCmdBindVertexBuffers (handle, 0, 1, ref vertices.handle, ref offset);
@@ -98,7 +99,11 @@ namespace VKE {
         public void DrawIndexed (uint indexCount, uint instanceCount = 1, uint firstIndex = 0, int vertexOffset = 0, uint firstInstance = 1) {
             vkCmdDrawIndexed (Handle, indexCount, 1, 0, 0, 1);
         }
-        public void Destroy () {
+		public void PushConstant (PipelineLayout pipelineLayout, VkShaderStageFlags stageFlags, Object data, uint offset = 0) {
+			vkCmdPushConstants (handle, pipelineLayout.handle, stageFlags, offset, (uint)Marshal.SizeOf (data), data.Pin ());
+			data.Unpin ();
+		}
+		public void Destroy () {
             pool.FreeCommandBuffers (this);
         }
     }

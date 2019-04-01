@@ -62,7 +62,7 @@ namespace VKE {
                 throw new Exception ("No GPU found");
             NativeList<VkPhysicalDevice> gpus = new NativeList<VkPhysicalDevice> (gpuCount, gpuCount);
             //fixed (IntPtr* physicalDevices = gpus) {
-            CheckResult (vkEnumeratePhysicalDevices (inst, &gpuCount, gpus.Data),
+            CheckResult (vkEnumeratePhysicalDevices (inst, ref gpuCount, gpus.Data),
                     "Could not enumerate physical devices.");
             //}
             phys = new PhysicalDevice[gpuCount];
@@ -111,18 +111,18 @@ namespace VKE {
             if (queueFamilyCount <= 0)
                 throw new Exception ("No queues found for physical device");
 
-            fixed (VkQueueFamilyProperties* ptr = QueueFamilies) {
-                vkGetPhysicalDeviceQueueFamilyProperties (phy, ref queueFamilyCount, ptr);
-            }
+			vkGetPhysicalDeviceQueueFamilyProperties (phy, ref queueFamilyCount, QueueFamilies.Pin ());
+			QueueFamilies.Unpin ();
 
             uint propCount = 0;
 
-            vkEnumerateDeviceExtensionProperties (phy, (byte*)null, ref propCount, IntPtr.Zero);
+            vkEnumerateDeviceExtensionProperties (phy, IntPtr.Zero, out propCount, null);
 
             VkExtensionProperties[] extProps = new VkExtensionProperties[propCount];
-            fixed (VkExtensionProperties* ptr = extProps) {
-                vkEnumerateDeviceExtensionProperties (phy, (byte*)null, ref propCount, ptr);
-            }
+
+			vkEnumerateDeviceExtensionProperties (phy, IntPtr.Zero, out propCount, extProps.Pin ());
+			extProps.Unpin ();
+
             for (int i = 0; i < extProps.Length; i++)
             {
                 fixed (VkExtensionProperties* ep = extProps) {
@@ -151,20 +151,22 @@ namespace VKE {
 
         unsafe public VkSurfaceFormatKHR[] GetSurfaceFormats (VkSurfaceKHR surf) {
             uint count = 0;
-            vkGetPhysicalDeviceSurfaceFormatsKHR (phy, surf, ref count, null);
+            vkGetPhysicalDeviceSurfaceFormatsKHR (phy, surf, ref count, IntPtr.Zero);
             VkSurfaceFormatKHR[] formats = new VkSurfaceFormatKHR[count];
-            fixed (VkSurfaceFormatKHR* ptr = formats) {
-                vkGetPhysicalDeviceSurfaceFormatsKHR (phy, surf, ref count, ptr);
-            }
+            
+            vkGetPhysicalDeviceSurfaceFormatsKHR (phy, surf, ref count, formats.Pin());
+			formats.Unpin ();
+            
             return formats;
         }
         unsafe public VkPresentModeKHR[] GetSurfacePresentModes (VkSurfaceKHR surf) {
             uint count = 0;
-            vkGetPhysicalDeviceSurfacePresentModesKHR (phy, surf, ref count, null);
+            vkGetPhysicalDeviceSurfacePresentModesKHR (phy, surf, ref count, IntPtr.Zero);
             VkPresentModeKHR[] modes = new VkPresentModeKHR[count];
-            fixed (VkPresentModeKHR* ptr = modes) {
-                vkGetPhysicalDeviceSurfacePresentModesKHR (phy, surf, ref count, ptr);
-            }
+            
+            vkGetPhysicalDeviceSurfacePresentModesKHR (phy, surf, ref count, modes.Pin());
+			modes.Unpin ();
+            
             return modes;
         }
         public VkFormatProperties GetFormatProperties (VkFormat format) {

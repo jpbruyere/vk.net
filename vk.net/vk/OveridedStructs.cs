@@ -107,12 +107,15 @@ namespace Vulkan
 
     public static unsafe partial class VulkanNative
     {
-        [Generator.CalliRewrite]
-        public static unsafe void vkGetPhysicalDeviceMemoryProperties (VkPhysicalDevice physicalDevice, IntPtr pMemoryProperties)
-        {
-            throw new NotImplementedException ();
-        }
-        [Generator.CalliRewrite]
+		[Generator.CalliRewrite]
+		public static unsafe void vkGetPhysicalDeviceMemoryProperties (VkPhysicalDevice physicalDevice, IntPtr pMemoryProperties) {
+			throw new NotImplementedException ();
+		}
+		[Generator.CalliRewrite]
+		public static unsafe void vkGetPhysicalDeviceMemoryProperties (VkPhysicalDevice physicalDevice, out VkPhysicalDeviceMemoryProperties pMemoryProperties) {
+			throw new NotImplementedException ();
+		}
+		[Generator.CalliRewrite]
         public static unsafe VkResult vkMapMemory (VkDevice device, VkDeviceMemory memory, ulong offset, ulong size, uint flags, ref IntPtr ppData)
         {
             throw new NotImplementedException ();

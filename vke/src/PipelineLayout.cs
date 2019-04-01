@@ -24,30 +24,77 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Vulkan;
 using static Vulkan.VulkanNative;
 
 namespace VKE {
-    public class PipelineLayout {
+
+	public class PipelineLayout : IDisposable {
         internal VkPipelineLayout handle;
         internal Device dev;
 
-        public PipelineLayout (Device device, params DescriptorSetLayout[] descriptorSetLayouts) {
-            dev = device;
-            VkDescriptorSetLayout[] dsls = descriptorSetLayouts.Select (dsl => dsl.handle).ToArray ();
-            VkPipelineLayoutCreateInfo info = VkPipelineLayoutCreateInfo.New ();
-            unsafe {
-                fixed (VkDescriptorSetLayout* ptr = dsls) {
-                    info.setLayoutCount = (uint)dsls.Length;
-                    info.pSetLayouts = ptr;
+		public List<DescriptorSetLayout> DescriptorSetLayouts = new List<DescriptorSetLayout> ();
+		public NativeList<VkPushConstantRange> PushConstantRanges = new NativeList<VkPushConstantRange> ();
 
-                    Utils.CheckResult (vkCreatePipelineLayout (dev.VkDev, ref info, IntPtr.Zero, out handle));
-                }
-            }
+		public PipelineLayout (Device device) {
+			dev = device;
+		}
+		public PipelineLayout (Device device, VkPushConstantRange pushConstantRange, params DescriptorSetLayout[] descriptorSetLayouts) 
+		: this (device, descriptorSetLayouts) {
+			PushConstantRanges.Add (pushConstantRange);
+		}
+		public PipelineLayout (Device device, params DescriptorSetLayout[] descriptorSetLayouts)
+			:this (device) {
+            
+			if (descriptorSetLayouts.Length > 0)
+				DescriptorSetLayouts.AddRange (descriptorSetLayouts);
         }
-        public void Destroy () {
-            vkDestroyPipelineLayout (dev.VkDev, handle, IntPtr.Zero);
-        }
-    }
+
+		public PipelineLayout Activate () {
+			if (isDisposed) {
+				isDisposed = false;
+				GC.ReRegisterForFinalize (this);
+				PushConstantRanges = new NativeList<VkPushConstantRange> ();
+			}
+			VkPipelineLayoutCreateInfo info = VkPipelineLayoutCreateInfo.New ();
+			VkDescriptorSetLayout[] dsls = DescriptorSetLayouts.Select (dsl => dsl.handle).ToArray ();
+			if (dsls.Length > 0) {
+				info.setLayoutCount = (uint)dsls.Length;
+				info.pSetLayouts = dsls.Pin ();
+			}
+			if (PushConstantRanges.Count > 0) {
+				info.pushConstantRangeCount = (uint)PushConstantRanges.Count;
+				info.pPushConstantRanges = PushConstantRanges.Data;
+			}
+			Utils.CheckResult (vkCreatePipelineLayout (dev.VkDev, ref info, IntPtr.Zero, out handle));
+			dsls.Unpin ();
+			return this;
+		}
+
+		#region IDisposable Support
+		private bool isDisposed = false; // Pour détecter les appels redondants
+
+		protected virtual void Dispose (bool disposing) {
+			if (!isDisposed) {
+				if (disposing) {
+					PushConstantRanges.Dispose ();
+				} else
+					System.Diagnostics.Debug.WriteLine ("One Pipeline layout was not disposed");
+
+				vkDestroyPipelineLayout (dev.VkDev, handle, IntPtr.Zero);
+				isDisposed = true;
+			}
+		}
+
+		~PipelineLayout() {
+			Dispose(false);
+		}
+		public void Dispose () {
+			Dispose (true);
+			GC.SuppressFinalize(this);
+		}
+		#endregion
+	}
 }

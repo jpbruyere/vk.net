@@ -90,7 +90,7 @@ namespace VKE {
                 deviceCreateInfo.ppEnabledExtensionNames = deviceExtensions.Data;
             }
 
-            Utils.CheckResult (vkCreateDevice (phy.Handle, &deviceCreateInfo, null, out dev));
+            Utils.CheckResult (vkCreateDevice (phy.Handle, ref deviceCreateInfo, IntPtr.Zero, out dev));
 
             qInfos.Dispose ();
             priorities.Dispose ();
@@ -103,7 +103,7 @@ namespace VKE {
         unsafe public VkSemaphore CreateSemaphore () {
             VkSemaphore tmp;
             VkSemaphoreCreateInfo info = VkSemaphoreCreateInfo.New ();
-            Utils.CheckResult (vkCreateSemaphore (dev, &info, null, out tmp));
+            Utils.CheckResult (vkCreateSemaphore (dev, ref info, IntPtr.Zero, out tmp));
             return tmp;
         }
         public void DestroySemaphore (VkSemaphore semaphore) {
@@ -113,7 +113,7 @@ namespace VKE {
             VkFence tmp;
             VkFenceCreateInfo info = VkFenceCreateInfo.New ();
             info.flags = signaled ? VkFenceCreateFlags.Signaled : VkFenceCreateFlags.None;
-            Utils.CheckResult (vkCreateFence (dev, &info, null, out tmp));
+            Utils.CheckResult (vkCreateFence (dev, ref info, IntPtr.Zero, out tmp));
             return tmp;
         }
         public void DestroyFence (VkFence fence) {
@@ -156,13 +156,14 @@ namespace VKE {
         }
         unsafe public VkImage[] GetSwapChainImages (VkSwapchainKHR swapchain) {
             uint imageCount = 0;
-            Utils.CheckResult (vkGetSwapchainImagesKHR (dev, swapchain, ref imageCount, null));
+            Utils.CheckResult (vkGetSwapchainImagesKHR (dev, swapchain, ref imageCount, IntPtr.Zero));
             if (imageCount == 0)
                 throw new Exception ("Swapchain image count is 0.");
             VkImage[] imgs = new VkImage[imageCount];
-            fixed (VkImage* ptr = imgs) {
-                Utils.CheckResult (vkGetSwapchainImagesKHR (dev, swapchain, ref imageCount, ptr));
-            }
+            
+            Utils.CheckResult (vkGetSwapchainImagesKHR (dev, swapchain, ref imageCount, imgs.Pin()));
+			imgs.Unpin ();
+            
             return imgs;
         }
         unsafe public VkImageView CreateImageView (VkImage image, VkFormat format, VkImageViewType viewType = VkImageViewType.Image2D, VkImageAspectFlags aspectFlags = VkImageAspectFlags.Color) {
@@ -174,7 +175,7 @@ namespace VKE {
             infos.components = new VkComponentMapping { r = VkComponentSwizzle.R, g = VkComponentSwizzle.G, b = VkComponentSwizzle.B, a = VkComponentSwizzle.A };
             infos.subresourceRange = new VkImageSubresourceRange (aspectFlags);
                     
-            Utils.CheckResult (vkCreateImageView (dev, &infos, IntPtr.Zero, out view));
+            Utils.CheckResult (vkCreateImageView (dev, ref infos, IntPtr.Zero, out view));
             return view;
         }
         public void DestroyImageView (VkImageView view) {
@@ -197,7 +198,7 @@ namespace VKE {
             VkCommandPool pool;
             VkCommandPoolCreateInfo infos = VkCommandPoolCreateInfo.New ();
             infos.queueFamilyIndex = qFamIdx;
-            Utils.CheckResult (vkCreateCommandPool (dev, &infos, null, out pool));
+            Utils.CheckResult (vkCreateCommandPool (dev, ref infos, IntPtr.Zero, out pool));
             return new CommandPool (this, qFamIdx, pool);
         }
         // This function is used to request a Device memory type that supports all the property flags we request (e.g. Device local, host visibile)

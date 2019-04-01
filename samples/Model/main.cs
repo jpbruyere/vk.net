@@ -18,15 +18,21 @@ namespace ModelSample {
 			public Matrix4x4 projection;
 			public Matrix4x4 view;
 			public Matrix4x4 model;
+			public Vector4 lightPos;
+		}
+
+		struct PushConstants {
+			public Matrix4x4 matrix;
 		}
 
 		Matrices matrices;
+		PushConstants pushCst;
 
 		HostBuffer uboMats;
 
-		VkDescriptorSetLayoutBinding matricesBinding;
-		VkDescriptorSetLayoutBinding textureBinding;
-		DescriptorSetLayout dsLayout;
+		DescriptorSetLayout descLayoutMatrix;
+		DescriptorSetLayout descLayoutTextures;
+
 		DescriptorPool descriptorPool;
 		DescriptorSet descriptorSet;
 
@@ -39,27 +45,40 @@ namespace ModelSample {
 		VkFormat depthFormat;
 		Image depthTexture;
 
-
-		float rotSpeed = 0.01f;
+		float rotSpeed = 0.01f, zoomSpeed = 0.01f;
 		double lastMouseX, lastMouseY;
 		float rotX = -1.5f, rotY = 2.7f, rotZ = 0f;
+		float zoom = 1.0f;
 
 		Model helmet;
 
 		Program () : base () {
 		
-			descriptorPool = new DescriptorPool (dev, 2,
+			descriptorPool = new DescriptorPool (dev, 27,
 				new VkDescriptorPoolSize (VkDescriptorType.UniformBuffer),
-				new VkDescriptorPoolSize (VkDescriptorType.CombinedImageSampler)
+				new VkDescriptorPoolSize (VkDescriptorType.CombinedImageSampler,3*26)
+				//new VkDescriptorPoolSize (VkDescriptorType.CombinedImageSampler),
+				//new VkDescriptorPoolSize (VkDescriptorType.CombinedImageSampler)
+			);				
+
+			descLayoutMatrix = new DescriptorSetLayout (dev,
+				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Vertex, VkDescriptorType.UniformBuffer));
+
+			descLayoutTextures = new DescriptorSetLayout (dev, 
+				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
+				new VkDescriptorSetLayoutBinding (1, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
+				new VkDescriptorSetLayoutBinding (2, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler)
 			);
 
-			matricesBinding = new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Vertex, VkDescriptorType.UniformBuffer);
-			textureBinding = new VkDescriptorSetLayoutBinding (1, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler);
+			descriptorSet = descriptorPool.Allocate (descLayoutMatrix);
 
-			dsLayout = new DescriptorSetLayout (dev, matricesBinding, textureBinding);
-			descriptorSet = descriptorPool.Allocate (dsLayout);
+			VkPushConstantRange pushConstantRange = new VkPushConstantRange { 
+				stageFlags = VkShaderStageFlags.Vertex,
+				size = (uint)Marshal.SizeOf<PushConstants>(),
+				offset = 0
+			};
 
-			pipelineLayout = new PipelineLayout (dev, dsLayout);
+			pipelineLayout = new PipelineLayout (dev, pushConstantRange, descLayoutMatrix, descLayoutTextures).Activate ();
 
 			loadAssets ();
 
@@ -84,47 +103,15 @@ namespace ModelSample {
 
 			pipeline.Activate ();
 
-			helmet.textures[0].Descriptor.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
 			using (DescriptorSetWrites uboUpdate = new DescriptorSetWrites (dev)) {
-				uboUpdate.AddWriteInfo (descriptorSet, matricesBinding, uboMats.Descriptor);
-				uboUpdate.AddWriteInfo (descriptorSet, textureBinding, helmet.textures[0].Descriptor);
+				uboUpdate.AddWriteInfo (descriptorSet, descLayoutMatrix.Bindings[0], uboMats.Descriptor);
 				uboUpdate.Update ();
 			}
 
+			matrices.lightPos = new Vector4 (0.0f, 0.0f, -2.0f, 1.0f);
+
 			uboMats.Map ();//permanent map
 			updateMatrices ();
-		}
-
-		void loadAssets () {
-			helmet = new Model (dev, presentQueue, cmdPool, "data/DamagedHelmet.gltf");
-		}
-		public override void Update () {
-			updateMatrices ();
-			updateRequested = false;
-		}
-
-		void updateMatrices () {
-			matrices.projection = Matrix4x4.CreatePerspectiveFieldOfView (Utils.DegreesToRadians (60f), (float)swapChain.Width / (float)swapChain.Height, 0.1f, 256.0f);
-			matrices.view = Matrix4x4.CreateTranslation (0, 0, -2.5f);
-			matrices.model =
-					Matrix4x4.CreateFromAxisAngle (Vector3.UnitX, rotX) *
-					Matrix4x4.CreateFromAxisAngle (Vector3.UnitY, rotY) *
-					Matrix4x4.CreateFromAxisAngle (Vector3.UnitZ, rotZ);
-
-			uboMats.Update (matrices, (uint)Marshal.SizeOf<Matrices> ());
-		}
-
-		protected override void onMouseMove (double xPos, double yPos) {
-			double diffX = lastMouseX - xPos;
-			double diffY = lastMouseY - yPos;
-			if (MouseButton[0]) {
-				rotY -= rotSpeed * (float)diffX;
-				rotX -= rotSpeed * (float)diffY;
-			}
-			lastMouseX = xPos;
-			lastMouseY = yPos;
-
-			updateRequested = true;
 		}
 
 		protected override void Prepare () {
@@ -157,7 +144,8 @@ namespace ModelSample {
 
 				cmds[i].BindPipeline (pipeline);
 
-				helmet.DrawAll (cmds[i]);
+				helmet.Bind (cmds[i]);
+				helmet.DrawAll (cmds[i], pipelineLayout);
 
 				renderPass.End (cmds[i]);
 
@@ -165,10 +153,58 @@ namespace ModelSample {
 			}
 		}
 
+		void loadAssets () {
+			//helmet = new Model (dev, presentQueue, cmdPool, "/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/Sponza/glTF/Sponza.gltf");
+			helmet = new Model (dev, presentQueue, cmdPool, "data/DamagedHelmet.gltf");
+			foreach (Model.Material mat in helmet.materials) {
+				mat.descriptorSet = descriptorPool.Allocate (descLayoutTextures);
+				using (DescriptorSetWrites uboUpdate = new DescriptorSetWrites (dev)) {
+					uboUpdate.AddWriteInfo (mat.descriptorSet, descLayoutTextures.Bindings[0], helmet.textures[(int)mat.baseColorTexture].Descriptor);
+					uboUpdate.AddWriteInfo (mat.descriptorSet, descLayoutTextures.Bindings[1], helmet.textures[(int)mat.normalTexture].Descriptor);
+					uboUpdate.AddWriteInfo (mat.descriptorSet, descLayoutTextures.Bindings[2], helmet.textures[(int)mat.occlusionTexture].Descriptor);
+					uboUpdate.Update ();
+				}
+			}
+
+			helmet.PipelineLayout = pipelineLayout;
+		}
+		void updateMatrices () {
+			matrices.projection = Matrix4x4.CreatePerspectiveFieldOfView (Utils.DegreesToRadians (60f), (float)swapChain.Width / (float)swapChain.Height, 0.01f, 1024.0f);
+			//matrices.view = Matrix4x4.CreateLookAt (new Vector3 (0, 0, -1), new Vector3 (0, 0, 0), Vector3.UnitY);//Matrix4x4.CreateTranslation (0, 0, -2.5f);
+			matrices.view = Matrix4x4.CreateTranslation (0, 0, -2.5f * zoom);
+			matrices.model =
+					Matrix4x4.CreateFromAxisAngle (Vector3.UnitX, rotX) *
+					Matrix4x4.CreateFromAxisAngle (Vector3.UnitY, rotY) *
+					Matrix4x4.CreateFromAxisAngle (Vector3.UnitZ, rotZ);
+
+			uboMats.Update (matrices, (uint)Marshal.SizeOf<Matrices> ());
+		}
+
+		public override void Update () {
+			updateMatrices ();
+			updateRequested = false;
+		}
+		protected override void onMouseMove (double xPos, double yPos) {
+			double diffX = lastMouseX - xPos;
+			double diffY = lastMouseY - yPos;
+			if (MouseButton[0]) {
+				rotY -= rotSpeed * (float)diffX;
+				rotX -= rotSpeed * (float)diffY;
+			} else if (MouseButton[1]) {
+				zoom += zoomSpeed * (float)diffY;
+			}
+			lastMouseX = xPos;
+			lastMouseY = yPos;
+
+			updateRequested = true;
+		}
+
+
 		protected override void Dispose (bool disposing) {
 			pipeline.Destroy ();
-			pipelineLayout.Destroy ();
-			dsLayout.Destroy ();
+			pipelineLayout.Dispose ();
+			descLayoutMatrix.Dispose ();
+			descLayoutTextures.Dispose ();
 			for (int i = 0; i < swapChain.ImageCount; i++)
 				frameBuffers[i].Destroy ();
 			descriptorPool.Destroy ();

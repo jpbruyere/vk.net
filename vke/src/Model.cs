@@ -48,29 +48,66 @@ namespace VKE {
 
 
         public List<VKE.Image> textures = new List<Image> ();
-        public Dictionary<string, List<Primitive>> primitives = new Dictionary<string, List<Primitive>> ();
+		public List<Material> materials = new List<Material> ();
+		public List<Mesh> Meshes = new List<Mesh> ();
+		public List<Scene> Scenes;
+		public int DefaultScene;
 
-        public GPUBuffer uboMaterials;
+		public GPUBuffer uboMaterials;
         public GPUBuffer vbo;
         public GPUBuffer ibo;
 
+		//[StructLayout (LayoutKind.Explicit, Size = 80)]
+		//public struct Material {
+		//	[FieldOffset (0)] public Vector4 baseColorFactor;
+		//	[FieldOffset (16)] public AlphaMode alphaMode;
+		//	[FieldOffset (20)] public float alphaCutoff;
+		//	[FieldOffset (24)] public float metallicFactor;
+		//	[FieldOffset (28)] public float roughnessFactor;
 
-        [StructLayout (LayoutKind.Explicit, Size = 80)]
-        public struct Material {
-            [FieldOffset (0)] public Vector4 baseColorFactor;
-            [FieldOffset (16)] public AlphaMode alphaMode;
-            [FieldOffset (20)] public float alphaCutoff;
-            [FieldOffset (24)] public float metallicFactor;
-            [FieldOffset (28)] public float roughnessFactor;
+		//	[FieldOffset (32)] public UInt32 baseColorTexture;
+		//	[FieldOffset (36)] public UInt32 metallicRoughnessTexture;
+		//	[FieldOffset (40)] public UInt32 normalTexture;
+		//	[FieldOffset (44)] public UInt32 occlusionTexture;
 
-            [FieldOffset (32)] public UInt32 baseColorTexture;
-            [FieldOffset (36)] public UInt32 metallicRoughnessTexture;
-            [FieldOffset (40)] public UInt32 normalTexture;
-            [FieldOffset (44)] public UInt32 occlusionTexture;
+		//	[FieldOffset (48)] public UInt32 emissiveTexture;
 
-            [FieldOffset (48)] public UInt32 emissiveTexture;
+		//	[FieldOffset (64)] public Vector4 emissiveFactor;
 
-            [FieldOffset (64)] public Vector4 emissiveFactor;
+		//	public Material (
+		//		UInt32 _baseColorTexture = 0, UInt32 _metallicRoughnessTexture = 0, UInt32 _normalTexture = 0, UInt32 _occlusionTexture = 0) {
+		//		baseColorFactor = new Vector4 (1f);
+		//		alphaMode = AlphaMode.Opaque;
+		//		alphaCutoff = 1f;
+		//		metallicFactor = 1f;
+		//		roughnessFactor = 1f;
+
+		//		baseColorTexture = _baseColorTexture;
+		//		metallicRoughnessTexture = _metallicRoughnessTexture;
+		//		normalTexture = _normalTexture;
+		//		occlusionTexture = _occlusionTexture;
+
+		//		emissiveTexture = 0;
+		//		emissiveFactor = new Vector4 (0.0f);
+		//	}
+		//}
+
+		
+        public class Material {
+            public Vector4 baseColorFactor;
+            public AlphaMode alphaMode;
+            public float alphaCutoff;
+            public float metallicFactor;
+            public float roughnessFactor;
+
+            public UInt32 baseColorTexture;
+            public UInt32 metallicRoughnessTexture;
+            public UInt32 normalTexture;
+            public UInt32 occlusionTexture;
+
+            public UInt32 emissiveTexture;
+
+            public Vector4 emissiveFactor;
 
             public Material (
                 UInt32 _baseColorTexture = 0, UInt32 _metallicRoughnessTexture = 0, UInt32 _normalTexture = 0, UInt32 _occlusionTexture = 0) {
@@ -87,8 +124,10 @@ namespace VKE {
 
                 emissiveTexture = 0;
                 emissiveFactor = new Vector4 (0.0f);
-
             }
+
+			public DescriptorSet descriptorSet;
+
         }
 
         public enum AlphaMode : UInt32 {
@@ -116,7 +155,7 @@ namespace VKE {
             }
         }
 
-        public struct Primitive {
+        public class Primitive {
             public string name;
             public UInt32 indexBase;
             public Int32 vertexBase;
@@ -126,13 +165,30 @@ namespace VKE {
             public Dimensions dims;
         }
 
+
         public struct InstanceData {
             public UInt32 materialIndex;
             public Matrix4x4 modelMat;
             public Vector4 color;
         };
 
-        public Model (Device device, Queue _transferQ, CommandPool _cmdPool, string path) {
+		public class Mesh {
+			public string Name;
+			public List<Primitive> Primitives = new List<Primitive>();
+		}
+		public class Scene {
+			public string Name;
+			public Node Root;
+		}
+
+		public class Node {
+			public Node Parent;
+			public List<Node> Children;
+			public Matrix4x4 matrix;
+			public Mesh Mesh;
+		}
+
+		public Model (Device device, Queue _transferQ, CommandPool _cmdPool, string path) {
             dev = device;
             transferQ = _transferQ;
             cmdPool = _cmdPool;
@@ -142,9 +198,10 @@ namespace VKE {
 				loadImages (ctx);
 				loadMaterial (ctx);
 				loadMeshes (ctx);
-				//loadScenes (ctx);
+				loadScenes (ctx);
 			}
         }
+
         /// <summary>
         /// Loading context with I as the vertex index type (uint16,uint32)
         /// </summary>
@@ -219,9 +276,6 @@ namespace VKE {
 			#endregion
 		}
 
-
-
-
 		void loadMeshes<I> (LoadingContext<I> ctx) {
 			//compute size of stagging buf
 			foreach (GL.Mesh mesh in ctx.gltf.Meshes) {
@@ -254,8 +308,7 @@ namespace VKE {
 						meshName = "mesh_" + autoNamedMesh.ToString ();
 						autoNamedMesh++;
 					}
-
-					primitives.Add (meshName, new List<Primitive> ());
+					Mesh m = new Mesh { Name = meshName };
 
 					foreach (GL.MeshPrimitive p in mesh.Primitives) {
 						GL.Accessor AccPos = null, AccNorm = null, AccUv = null;
@@ -341,10 +394,11 @@ namespace VKE {
 							indexCount += acc.Count;
 						}
 
-						primitives[meshName].Add (prim);
+						m.Primitives.Add (prim);
 
 						vertexCount += AccPos.Count;
 					}
+					Meshes.Add (m);
 				}
 			}
 
@@ -369,169 +423,79 @@ namespace VKE {
 			stagging.Dispose ();
 		}
 
-		//void loadNode<I> (LoadingContext<I> ctx, GL.Node node, Matrix4x4 parentTransform) {
+		void loadScenes<I> (LoadingContext<I> ctx) {
+			if (ctx.gltf.Scene == null)
+				return;
 
-		//    Vector3 translation = new Vector3 ();
-		//    Quaternion rotation = new Quaternion ();
-		//    Vector3 scale = new Vector3 ();
-		//    Matrix4x4 localTransform = Matrix4x4.Identity;
+			Scenes = new List<Scene> ();
+			DefaultScene = (int)ctx.gltf.Scene;
+			for (int i = 0; i < ctx.gltf.Scenes.Length; i++) {
+				GL.Scene scene = ctx.gltf.Scenes[i];
+				Debug.WriteLine ("Loading Scene {0}", scene.Name);
 
+				Scenes.Add (new Scene {
+					Name = scene.Name,
+				});
 
-		//    if (node.Matrix == null) {
-		//        FromFloatArray (ref translation, node.Translation);
-		//        FromFloatArray (ref rotation, node.Rotation);
-		//        FromFloatArray (ref scale, node.Scale);
+				if (scene.Nodes.Length == 0)
+					continue;
 
-		//        localTransform =
-		//            Matrix4x4.CreateTranslation (translation) *
-		//            Matrix4x4.CreateFromQuaternion (rotation) *
-		//            Matrix4x4.CreateScale (scale);
+				Scenes[i].Root = new Node {
+					matrix = Matrix4x4.Identity,
+					Children = new List<Node> ()
+				};
 
-		//    } else {
-		//        unsafe {
-		//            long size = (long)Marshal.SizeOf<Matrix4x4> ();
-		//            GCHandle ptr = GCHandle.Alloc (localTransform, GCHandleType.Pinned);
-		//            fixed (float* m = node.Matrix) {
-		//                System.Buffer.MemoryCopy (m, ptr.AddrOfPinnedObject ().ToPointer (), size, size);
-		//            }
-		//            ptr.Free ();
-		//        }
-		//    }
+				foreach (int nodeIdx in scene.Nodes)
+					loadNode (ctx, Scenes[i].Root, ctx.gltf.Nodes[nodeIdx]);					
+			}
 
-		//    localTransform = parentTransform * localTransform;
+		}
 
-		//    for (int i = 0; i < node.Children?.Length; i++)
-		//        loadNode (ctx, ctx.gltf.Nodes[node.Children[i]], localTransform);
+		void loadNode<I> (LoadingContext<I> ctx, Node parentNode, GL.Node gltfNode) {
+			Debug.WriteLine ("Loading node {0}", gltfNode.Name);
 
-		//    if (node.Mesh != null) {
-		//        GL.Mesh mesh = ctx.gltf.Meshes[(int)node.Mesh];
+		    Vector3 translation = new Vector3 ();
+		    Quaternion rotation = new Quaternion ();
+		    Vector3 scale = new Vector3 ();
+		    Matrix4x4 localTransform = Matrix4x4.Identity;
 
-		//        List<Primitive> primitives = new List<Primitive> ();
+		    if (gltfNode.Matrix == null) {
+		        FromFloatArray (ref translation, gltfNode.Translation);
+		        FromFloatArray (ref rotation, gltfNode.Rotation);
+		        FromFloatArray (ref scale, gltfNode.Scale);
 
-		//        for (int i = 0; i < mesh.Primitives.Length; i++) {
-		//            GL.MeshPrimitive p = mesh.Primitives[i];
+		        localTransform =
+		            Matrix4x4.CreateTranslation (translation) *
+		            Matrix4x4.CreateFromQuaternion (rotation) *
+		            Matrix4x4.CreateScale (scale);
 
-		//            Primitive prim = new Primitive {
-		//                indexBase = (uint)ctx.indices.Count,
-		//                vertexBase = (uint)ctx.vertices.Count,
-		//                material = (uint)p.Material,
-		//                attributs = new List<Primitive.Attribut> ()
-		//            };
+		    } else {
+		        unsafe {
+		            long size = (long)Marshal.SizeOf<Matrix4x4> ();
+		            GCHandle ptr = GCHandle.Alloc (localTransform, GCHandleType.Pinned);
+		            fixed (float* m = gltfNode.Matrix) {
+		                System.Buffer.MemoryCopy (m, ptr.AddrOfPinnedObject ().ToPointer (), size, size);
+		            }
+		            ptr.Free ();
+		        }
+		    }
 
-		//            #region Vertices loading
+			Node node = new Node {
+				matrix = localTransform,
+				Parent = parentNode
+			};
+			parentNode.Children.Add (node);
 
-		//            int accessorIdx;
-		//            if (p.Attributes.TryGetValue ("POSITION", out accessorIdx)) {
-		//                GL.Accessor acc = ctx.gltf.Accessors[accessorIdx];
-		//                GL.BufferView bv = ctx.gltf.BufferViews[(int)acc.BufferView];
+			if (gltfNode.Children != null) {
+				node.Children = new List<Node> ();
+				for (int i = 0; i < gltfNode.Children.Length; i++)
+					loadNode (ctx, node, ctx.gltf.Nodes[gltfNode.Children[i]]);
+			}
+		        
+		    if (gltfNode.Mesh != null)
+				node.Mesh = Meshes[(int)gltfNode.Mesh];		    
+		}
 
-		//                ensureBufferIsLoaded (ctx, bv.Buffer);
-
-		//                prim.vertexCount = (uint)acc.Count;
-
-		//                prim.attributs.Add (new Primitive.Attribut { 
-		//                    type = Primitive.AttributType.Position,
-		//                    idx = bv.Buffer,
-		//                    offset = acc.ByteOffset + bv.ByteOffset
-		//                });
-		//            }
-		//            if (p.Attributes.TryGetValue ("NORMAL", out accessorIdx)) {
-		//                GL.Accessor acc = ctx.gltf.Accessors[accessorIdx];
-		//                GL.BufferView bv = ctx.gltf.BufferViews[(int)acc.BufferView];
-
-		//                ensureBufferIsLoaded (ctx, bv.Buffer);
-
-		//                prim.vertexCount = (uint)acc.Count;
-
-		//                prim.attributs.Add (new Primitive.Attribut {
-		//                    type = Primitive.AttributType.Position,
-		//                    idx = bv.Buffer,
-		//                    offset = acc.ByteOffset + bv.ByteOffset
-		//                });
-		//            }
-		//            if (p.Attributes.TryGetValue ("TEXCOORD_0", out accessorIdx)) {
-		//                GL.Accessor acc = ctx.gltf.Accessors[accessorIdx];
-		//                GL.BufferView bv = ctx.gltf.BufferViews[(int)acc.BufferView];
-
-		//                ensureBufferIsLoaded (ctx, bv.Buffer);
-
-		//                prim.vertexCount = (uint)acc.Count;
-
-		//                prim.attributs.Add (new Primitive.Attribut {
-		//                    type = Primitive.AttributType.Position,
-		//                    idx = bv.Buffer,
-		//                    offset = acc.ByteOffset + bv.ByteOffset
-		//                });
-		//            }
-
-
-		//            for (int j = 0; j < prim.vertexCount; j++) {
-		//                Vertex v = new Vertex ();
-		//                foreach (Primitive.Attribut att in prim.attributs) {
-		//                    switch (att.type) {
-		//                        case Primitive.AttributType.Position:
-		//                            FromByteArray (ref v.pos, ctx.loadedBuffers[att.idx], att.offset);
-		//                            v.pos = v.pos.Transform(ref localTransform, true);
-		//                            break;
-		//                        case Primitive.AttributType.Normal:
-		//                            FromByteArray (ref v.normal, ctx.loadedBuffers[att.idx], att.offset);
-		//                            v.normal = v.normal.Transform (ref localTransform, false);
-		//                            break;
-		//                        case Primitive.AttributType.uv:
-		//                            FromByteArray (ref v.uv, ctx.loadedBuffers[att.idx], att.offset);
-		//                            break;                                
-		//                    }
-		//                }
-
-		//                ctx.vertices.Add (v);
-		//            }
-		//            #endregion
-
-		//            #region Indices loading
-		//            if (p.Indices != null) {
-		//                GL.Accessor acc = ctx.gltf.Accessors[(int)p.Indices];
-		//                GL.BufferView bv = ctx.gltf.BufferViews[(int)acc.BufferView];
-
-		//                ensureBufferIsLoaded (ctx, bv.Buffer);
-
-		//                prim.indexAcc = acc;
-		//                prim.indexView = bv;
-
-		//                #region check index type
-		//                VkIndexType idxType;
-		//                if (acc.ComponentType == GL.Accessor.ComponentTypeEnum.UNSIGNED_SHORT)
-		//                    idxType = VkIndexType.Uint16;
-		//                else if (acc.ComponentType == GL.Accessor.ComponentTypeEnum.UNSIGNED_INT)
-		//                    idxType = VkIndexType.Uint32;
-		//                else 
-		//                    throw new NotImplementedException();
-
-		//                if (idxType != ctx.IndexType)
-		//                    throw new Exception ("primitive index type different from loadingContext index type");
-
-		//                #endregion
-		//            }
-
-		//            #endregion
-
-		//            primitives.Add (prim);
-		//        }
-
-		//        ctx.primitives[mesh.Name] = primitives;
-		//    }
-
-
-		//}
-
-		//void loadScenes<I> (LoadingContext<I> ctx) {
-		//    if (ctx.gltf.Scene == null)
-		//        return;
-		//    GL.Scene scene = ctx.gltf.Scenes[(int)ctx.gltf.Scene];
-
-		//    foreach (int nodeIdx in scene.Nodes) 
-		//        loadNode (ctx, ctx.gltf.Nodes[nodeIdx], Matrix4x4.Identity);
-
-		//}
 		void loadImages<I> (LoadingContext<I> ctx) {
 			HostBuffer stagging;
 			if (ctx.gltf.Images == null)
@@ -572,6 +536,7 @@ namespace VKE {
 
 				vkimg.CreateView ();
 				vkimg.CreateSampler ();
+				vkimg.Descriptor.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
 
 				textures.Add (vkimg);
 			}
@@ -580,35 +545,34 @@ namespace VKE {
 		void loadMaterial<I> (LoadingContext<I> ctx) {
 			if (ctx.gltf.Materials == null)
 				return;
-			using (NativeList<Material> materials = new NativeList<Material> ()) {
 
-				foreach (GL.Material mat in ctx.gltf.Materials) {
-					Debug.WriteLine ("loading material: " + mat.Name);
-					Material pbr = new Material ();
+			foreach (GL.Material mat in ctx.gltf.Materials) {
+				Debug.WriteLine ("loading material: " + mat.Name);
+				Material pbr = new Material ();
 
-					pbr.alphaCutoff = mat.AlphaCutoff;
-					pbr.alphaMode = (AlphaMode)mat.AlphaMode;
-					FromFloatArray (ref pbr.emissiveFactor, mat.EmissiveFactor);
-					if (mat.EmissiveTexture != null)
-						pbr.emissiveTexture = (uint)mat.EmissiveTexture.Index;
-					if (mat.NormalTexture != null)
-						pbr.normalTexture = (uint)mat.NormalTexture.Index;
-					if (mat.OcclusionTexture != null)
-						pbr.occlusionTexture = (uint)mat.OcclusionTexture.Index;
+				pbr.alphaCutoff = mat.AlphaCutoff;
+				pbr.alphaMode = (AlphaMode)mat.AlphaMode;
+				FromFloatArray (ref pbr.emissiveFactor, mat.EmissiveFactor);
+				if (mat.EmissiveTexture != null)
+					pbr.emissiveTexture = (uint)mat.EmissiveTexture.Index;
+				if (mat.NormalTexture != null)
+					pbr.normalTexture = (uint)mat.NormalTexture.Index;
+				if (mat.OcclusionTexture != null)
+					pbr.occlusionTexture = (uint)mat.OcclusionTexture.Index;
 
-					if (mat.PbrMetallicRoughness != null) {
-						if (mat.PbrMetallicRoughness.BaseColorTexture != null)
-							pbr.baseColorTexture = (uint)mat.PbrMetallicRoughness.BaseColorTexture.Index;
-						FromFloatArray (ref pbr.baseColorFactor, mat.PbrMetallicRoughness.BaseColorFactor);
-						if (mat.PbrMetallicRoughness.MetallicRoughnessTexture != null)
-							pbr.metallicRoughnessTexture = (uint)mat.PbrMetallicRoughness.MetallicRoughnessTexture.Index;
-						pbr.metallicFactor = mat.PbrMetallicRoughness.MetallicFactor;
-						pbr.roughnessFactor = mat.PbrMetallicRoughness.RoughnessFactor;
-					}
-
-					materials.Add (pbr);
+				if (mat.PbrMetallicRoughness != null) {
+					if (mat.PbrMetallicRoughness.BaseColorTexture != null)
+						pbr.baseColorTexture = (uint)mat.PbrMetallicRoughness.BaseColorTexture.Index;
+					FromFloatArray (ref pbr.baseColorFactor, mat.PbrMetallicRoughness.BaseColorFactor);
+					if (mat.PbrMetallicRoughness.MetallicRoughnessTexture != null)
+						pbr.metallicRoughnessTexture = (uint)mat.PbrMetallicRoughness.MetallicRoughnessTexture.Index;
+					pbr.metallicFactor = mat.PbrMetallicRoughness.MetallicFactor;
+					pbr.roughnessFactor = mat.PbrMetallicRoughness.RoughnessFactor;
 				}
 
+				materials.Add (pbr);
+
+				/*
 				ulong size = (ulong)(materials.Count * Marshal.SizeOf<Material> ());
 
 				uboMaterials = new GPUBuffer (dev, VkBufferUsageFlags.UniformBuffer | VkBufferUsageFlags.TransferDst, size);
@@ -625,17 +589,40 @@ namespace VKE {
 					dev.WaitIdle ();
 					cmd.Destroy ();
 				}
+				*/
 			}
 		}
 
 
-		public void DrawAll (CommandBuffer cmd) {
+		public void Bind (CommandBuffer cmd) {
 			cmd.BindVertexBuffer (vbo);
 			cmd.BindIndexBuffer (ibo, VkIndexType.Uint16);
+		}
 
-			foreach (string mesh in primitives.Keys) {
-				foreach (Primitive p in primitives[mesh]) {
+		public PipelineLayout PipelineLayout;
+
+		public void RenderNode (CommandBuffer cmd, Node node, Matrix4x4 currentTransform) {
+			Matrix4x4 localMat = currentTransform * node.matrix;
+
+			cmd.PushConstant (PipelineLayout, VkShaderStageFlags.Vertex, localMat);
+
+			if (node.Mesh != null) {
+				foreach (Primitive p in node.Mesh.Primitives) {
+					cmd.BindDescriptorSet (PipelineLayout, materials[(int)p.material].descriptorSet, 1);
 					cmd.DrawIndexed (p.indexCount, 1, p.indexBase, p.vertexBase, 0);
+				}
+			}
+			if (node.Children == null)
+				return;
+			foreach (Node child in node.Children) 
+				RenderNode (cmd, child, localMat);
+		}
+
+		public void DrawAll (CommandBuffer cmd, PipelineLayout pipelineLayout) {
+
+			foreach (Scene sc in Scenes) {
+				foreach (Node node in sc.Root.Children) {
+					RenderNode (cmd, node, Matrix4x4.Identity);
 				}
 			}
 		}
@@ -652,7 +639,8 @@ namespace VKE {
 						txt.Dispose ();
 					}
 					uboMaterials?.Dispose ();
-				}
+				} else
+					Debug.WriteLine ("model was not disposed");
 				isDisposed = true;
 			}
 		}
