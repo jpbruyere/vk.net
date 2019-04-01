@@ -39,12 +39,19 @@ using System.IO;
 namespace VKE {
     using static Utils;
 
-    public class Model : IDisposable {
-        Device dev;
-        Queue transferQ;
-        CommandPool cmdPool;
+	public enum ShaderBinding {
+		None,
+		Color,
+		Normal,
+		AmbientOcclusion,
+		MetalRoughness
+	};
+
+	public class Model : IDisposable {
+        Device dev;        
 
         UInt32 textureSize = 1024; //texture array size w/h
+		DescriptorPool descriptorPool;
 
 
         public List<VKE.Image> textures = new List<Image> ();
@@ -128,7 +135,7 @@ namespace VKE {
 
 			public DescriptorSet descriptorSet;
 
-        }
+        }        
 
         public enum AlphaMode : UInt32 {
             Opaque,
@@ -143,6 +150,7 @@ namespace VKE {
                 return pos.ToString () + ";" + normal.ToString () + ";" + uv.ToString ();
             }
         };
+
         public struct Dimensions {
             public Vector3 min;
             public Vector3 max;
@@ -188,25 +196,82 @@ namespace VKE {
 			public Mesh Mesh;
 		}
 
-		public Model (Device device, Queue _transferQ, CommandPool _cmdPool, string path) {
+		public Model (Device device, Queue transferQ, CommandPool cmdPool, string path) {
             dev = device;
-            transferQ = _transferQ;
-            cmdPool = _cmdPool;
 
-			using (LoadingContext<UInt16> ctx = new LoadingContext<UInt16> (path)) {
+			using (LoadingContext<UInt16> ctx = new LoadingContext<UInt16> (path, transferQ, cmdPool)) {
 
 				loadImages (ctx);
 				loadMaterial (ctx);
 				loadMeshes (ctx);
 				loadScenes (ctx);
 			}
-        }
+
+
+		}
+
+		public void WriteMaterialsDescriptorSets (DescriptorSetLayout layout, params ShaderBinding[] attachments) {
+			if (attachments.Length == 0)
+				throw new InvalidOperationException ("At least one attachment is required for Model.WriteMaterialDescriptor");
+
+			descriptorPool = new DescriptorPool (dev, (uint)materials.Count,
+				new VkDescriptorPoolSize (VkDescriptorType.CombinedImageSampler, (uint)(attachments.Length * materials.Count))
+			);
+
+			foreach (Model.Material mat in materials) 
+				WriteMaterialDescriptorSet (mat, layout, attachments);
+		}
+		/// <summary>
+		/// Allocate and Write descriptorSet for material
+		/// </summary>
+		/// <param name="mat">Material</param>
+		/// <param name="layout">Descriptor Layout for texture</param>
+		/// <param name="attachments">Layout Attachments meaning</param>
+		public void WriteMaterialDescriptorSet (Material mat, DescriptorSetLayout layout, params ShaderBinding[] attachments) {
+			mat.descriptorSet = descriptorPool.Allocate (layout);
+			WriteMaterialDescriptorSet (mat, attachments);
+		}
+		/// <summary>
+		/// Update Writes already allocated material descriptor set.
+		/// </summary>
+		/// <param name="mat">Material</param>
+		/// <param name="attachments">Layout Attachments meaning</param>
+		public void WriteMaterialDescriptorSet (Material mat, params ShaderBinding[] attachments) {
+			VkDescriptorSetLayoutBinding dslb =
+				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler);
+
+			using (DescriptorSetWrites uboUpdate = new DescriptorSetWrites (dev)) {
+				for (uint i = 0; i < attachments.Length; i++) {
+					dslb.binding = i;
+					switch (attachments[i]) {
+						case ShaderBinding.None:
+							break;
+						case ShaderBinding.Color:
+							uboUpdate.AddWriteInfo (mat.descriptorSet, dslb, textures[(int)mat.baseColorTexture].Descriptor);
+							break;
+						case ShaderBinding.Normal:
+							uboUpdate.AddWriteInfo (mat.descriptorSet, dslb, textures[(int)mat.normalTexture].Descriptor);
+							break;
+						case ShaderBinding.AmbientOcclusion:
+							uboUpdate.AddWriteInfo (mat.descriptorSet, dslb, textures[(int)mat.occlusionTexture].Descriptor);
+							break;
+						case ShaderBinding.MetalRoughness:
+							uboUpdate.AddWriteInfo (mat.descriptorSet, dslb, textures[(int)mat.metallicRoughnessTexture].Descriptor);
+							break;						
+					}
+				}
+				uboUpdate.Update ();
+			}
+		}
 
         /// <summary>
         /// Loading context with I as the vertex index type (uint16,uint32)
         /// </summary>
         class LoadingContext<I> : IDisposable {
-            public GL.Gltf gltf;
+			public Queue transferQ;
+			public CommandPool cmdPool;
+
+			public GL.Gltf gltf;
             public string baseDirectory;
             
             public VkIndexType IndexType;
@@ -217,7 +282,9 @@ namespace VKE {
             public int VertexCount;
             public int IndexCount;
 
-            public LoadingContext (string path) {
+            public LoadingContext (string path, Queue _transferQ, CommandPool _cmdPool) {
+				transferQ = _transferQ;
+				cmdPool = _cmdPool;
                 baseDirectory = System.IO.Path.GetDirectoryName (path);
                 gltf = Interface.LoadModel (path); ;
                 loadedBuffers = new byte[gltf.Buffers.Length][];
@@ -407,7 +474,7 @@ namespace VKE {
 			vbo = new GPUBuffer (dev, VkBufferUsageFlags.VertexBuffer | VkBufferUsageFlags.TransferDst, vertSize);
 			ibo = new GPUBuffer (dev, VkBufferUsageFlags.IndexBuffer | VkBufferUsageFlags.TransferDst, idxSize);
 
-			CommandBuffer cmd = cmdPool.AllocateCommandBuffer ();
+			CommandBuffer cmd = ctx.cmdPool.AllocateCommandBuffer ();
 			cmd.Start ();
 
 			stagging.CopyTo (cmd, vbo, vertSize, 0, 0);
@@ -415,7 +482,7 @@ namespace VKE {
 
 			cmd.End ();
 
-			transferQ.Submit (cmd);
+			ctx.transferQ.Submit (cmd);
 
 			dev.WaitIdle ();
 			cmd.Destroy ();
@@ -520,14 +587,14 @@ namespace VKE {
 				VKE.Image vkimg = new Image (dev, VkFormat.R8g8b8a8Unorm, VkImageUsageFlags.TransferDst | VkImageUsageFlags.Sampled,
 					VkMemoryPropertyFlags.DeviceLocal, (uint)width, (uint)height);
 
-				CommandBuffer cmd = cmdPool.AllocateCommandBuffer ();
+				CommandBuffer cmd = ctx.cmdPool.AllocateCommandBuffer ();
 				cmd.Start ();
 
 				stagging.CopyTo (cmd, vkimg);
 
 				cmd.End ();
 
-				transferQ.Submit (cmd);
+				ctx.transferQ.Submit (cmd);
 
 				dev.WaitIdle ();
 				cmd.Destroy ();
@@ -598,31 +665,29 @@ namespace VKE {
 			cmd.BindVertexBuffer (vbo);
 			cmd.BindIndexBuffer (ibo, VkIndexType.Uint16);
 		}
-
-		public PipelineLayout PipelineLayout;
-
-		public void RenderNode (CommandBuffer cmd, Node node, Matrix4x4 currentTransform) {
+		//TODO:destset for binding must be variable
+		public void RenderNode (CommandBuffer cmd, PipelineLayout pipelineLayout, Node node, Matrix4x4 currentTransform) {
 			Matrix4x4 localMat = currentTransform * node.matrix;
 
-			cmd.PushConstant (PipelineLayout, VkShaderStageFlags.Vertex, localMat);
+			cmd.PushConstant (pipelineLayout, VkShaderStageFlags.Vertex, localMat);
 
 			if (node.Mesh != null) {
 				foreach (Primitive p in node.Mesh.Primitives) {
-					cmd.BindDescriptorSet (PipelineLayout, materials[(int)p.material].descriptorSet, 1);
+					cmd.BindDescriptorSet (pipelineLayout, materials[(int)p.material].descriptorSet, 1);
 					cmd.DrawIndexed (p.indexCount, 1, p.indexBase, p.vertexBase, 0);
 				}
 			}
 			if (node.Children == null)
 				return;
 			foreach (Node child in node.Children) 
-				RenderNode (cmd, child, localMat);
+				RenderNode (cmd, pipelineLayout, child, localMat);
 		}
 
 		public void DrawAll (CommandBuffer cmd, PipelineLayout pipelineLayout) {
 
 			foreach (Scene sc in Scenes) {
 				foreach (Node node in sc.Root.Children) {
-					RenderNode (cmd, node, Matrix4x4.Identity);
+					RenderNode (cmd, pipelineLayout, node, Matrix4x4.Identity);
 				}
 			}
 		}
