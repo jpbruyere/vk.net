@@ -30,7 +30,7 @@ using static Vulkan.VulkanNative;
 
 namespace VKE {
 
-    public class Framebuffer {
+    public class Framebuffer : IDisposable {
         internal VkFramebuffer handle;
         RenderPass renderPass;
         NativeList<VkImageView> attachments = new NativeList<VkImageView> ();
@@ -55,8 +55,12 @@ namespace VKE {
             Activate ();
         }
 
-        public unsafe void Activate () {        
-            createInfo.attachmentCount = attachments.Count;
+        public unsafe void Activate () {
+			if (isDisposed) {
+				GC.ReRegisterForFinalize (this);
+				isDisposed = false;
+			}
+			createInfo.attachmentCount = attachments.Count;
             createInfo.pAttachments = (VkImageView*)attachments.Data.ToPointer ();
 
             Utils.CheckResult (vkCreateFramebuffer (renderPass.dev.VkDev, ref createInfo, IntPtr.Zero, out handle));
@@ -66,5 +70,29 @@ namespace VKE {
             attachments.Dispose ();
             renderPass.dev.DestroyFramebuffer (handle);
         }
-    }
+
+		#region IDisposable Support
+		private bool isDisposed = false; // Pour détecter les appels redondants
+
+		protected virtual void Dispose (bool disposing) {
+			if (!isDisposed) {
+				if (disposing) {
+					attachments.Dispose ();
+				} else
+					System.Diagnostics.Debug.WriteLine ("A FrameBuffer has not been disposed.");
+				renderPass.dev.DestroyFramebuffer (handle);
+				isDisposed = true;
+			}
+		}
+
+		~Framebuffer () {
+			Dispose (false);
+		}
+		public void Dispose () {
+			Dispose (true);
+			GC.SuppressFinalize (this);
+		}
+		#endregion
+
+	}
 }

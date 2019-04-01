@@ -226,7 +226,8 @@ namespace VKE {
 					dbgRepport.Dispose ();
 #endif
 					instance.Dispose ();
-				}
+				} else
+					Debug.WriteLine ("a VkWindow has not been correctly disposed");
 
 				Glfw3.DestroyWindow (hWin);
 				Glfw3.Terminate ();
