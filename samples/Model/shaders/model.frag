@@ -6,6 +6,8 @@
 layout (set = 1, binding = 0) uniform sampler2D samplerColor;
 layout (set = 1, binding = 1) uniform sampler2D samplerNormal;
 layout (set = 1, binding = 2) uniform sampler2D samplerOcclusion;
+layout (set = 1, binding = 3) uniform sampler2D samplerMetalRoughness;
+layout (set = 1, binding = 4) uniform sampler2D samplerEmissive;
 
 layout (location = 0) in vec2 inUV;
 layout (location = 1) in vec3 inN;
@@ -49,7 +51,10 @@ vec3 perturb_normal( vec3 N, vec3 V, vec2 texcoord )
 
 void main() 
 {
-    vec4 diff = texture(samplerColor, inUV);
+    vec4 base_color = texture(samplerColor, inUV);    
+    float rough = texture(samplerMetalRoughness, inUV).g;
+    float metallic = texture(samplerMetalRoughness, inUV).b;
+    vec3 emit = texture(samplerEmissive, inUV).rgb;
     
     vec3 n = normalize(inN);
     vec3 l = normalize(light);
@@ -57,8 +62,14 @@ void main()
     
     float lambert = max(0.0, dot(pn, l));
     
-    diff.rgb *= lambert * texture(samplerOcclusion, inUV).rgb;
-    vec3 spec = vec3(0);
+    vec3 f0 = vec3(0.04);
+    vec3 diff = base_color.rgb * (vec3(1.0) - f0);
+    diff *= 1.0 - metallic;
+    diff *= lambert * texture(samplerOcclusion, inUV).r;
+    diff += emit;
+    
+    vec3 spec = mix(f0, base_color.rgb, metallic);
+    
     vec3 amb = vec3(0.1);
     if (lambert >= 0.0) {
        vec3 rd = reflect(-l, pn);
@@ -67,5 +78,5 @@ void main()
              pow(max(0.0, s), 10.0); //0.5 = mat shininess
     }
 
-    outFragColor = vec4(diff.rgb + amb + spec , diff.a);  // 
+    outFragColor = vec4(diff + amb + spec , base_color.a);  // 
 }
