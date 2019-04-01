@@ -30,7 +30,7 @@ using Vulkan;
 using static Vulkan.VulkanNative;
 
 namespace VKE {
-    public class RenderPass {
+    public class RenderPass : IDisposable {
         internal VkRenderPass handle;
         internal Device dev;
 
@@ -124,22 +124,23 @@ namespace VKE {
             Activate ();
         }
         public void Activate () {
-            using (NativeList<VkSubpassDescription> spDescs = new NativeList<VkSubpassDescription> ((uint)subpasses.Count)) {
+			if (isDisposed) {
+				GC.ReRegisterForFinalize (this);
+				isDisposed = false;
+			}
+			using (NativeList<VkSubpassDescription> spDescs = new NativeList<VkSubpassDescription> ((uint)subpasses.Count)) {
                 foreach (SubPass sp in subpasses)
                     spDescs.Add (sp.SubpassDescription);
+                    
+                VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.New ();
+                renderPassInfo.attachmentCount = attachments.Count;
+                renderPassInfo.pAttachments = attachments.Data;
+                renderPassInfo.subpassCount = spDescs.Count;
+                renderPassInfo.pSubpasses = spDescs.Data;
+                renderPassInfo.dependencyCount = dependencies.Count;
+                renderPassInfo.pDependencies = dependencies.Data;
 
-                unsafe {
-
-                    VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.New ();
-                    renderPassInfo.attachmentCount = attachments.Count;
-                    renderPassInfo.pAttachments = (VkAttachmentDescription*)attachments.Data.ToPointer ();
-                    renderPassInfo.subpassCount = spDescs.Count;
-                    renderPassInfo.pSubpasses = (VkSubpassDescription*)spDescs.Data.ToPointer ();
-                    renderPassInfo.dependencyCount = dependencies.Count;
-                    renderPassInfo.pDependencies = (VkSubpassDependency*)dependencies.Data.ToPointer ();
-
-                    handle = dev.CreateRenderPass (renderPassInfo);
-                }
+                handle = dev.CreateRenderPass (renderPassInfo);            
             }
         }
         /// <summary>
@@ -166,9 +167,30 @@ namespace VKE {
         public void End (CommandBuffer cmd) {
             vkCmdEndRenderPass (cmd.Handle);
         }
+        
+		#region IDisposable Support
+		private bool isDisposed = false; // Pour détecter les appels redondants
 
-        public void Destroy () {
-            dev.DestroyRenderPass (handle);
-        }
-    }
+		protected virtual void Dispose (bool disposing) {
+			if (!isDisposed) {
+				if (disposing) {
+					attachments.Dispose ();
+					ClearValues.Dispose ();
+					dependencies.Dispose ();
+				} else
+					System.Diagnostics.Debug.WriteLine ("A Renderpass has not been disposed.");
+				dev.DestroyRenderPass (handle);
+				isDisposed = true;
+			}
+		}
+
+		~RenderPass () {
+			Dispose (false);
+		}
+		public void Dispose () {
+			Dispose (true);
+			GC.SuppressFinalize (this);
+		}
+		#endregion
+	}
 }

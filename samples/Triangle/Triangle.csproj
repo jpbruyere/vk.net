@@ -26,6 +26,7 @@
   </ItemGroup>  
   <ItemGroup>
     <Reference Include="System.Numerics" />
+    <Reference Include="System" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\vk.net\vk.net.csproj">

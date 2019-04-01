@@ -73,6 +73,7 @@ namespace ModelSample {
             descriptorSet = descriptorPool.Allocate (dsLayout);
 
             pipelineLayout = new PipelineLayout (dev, dsLayout);
+			pipelineLayout.Activate ();
 
             vbo = new HostBuffer<Vertex> (dev, VkBufferUsageFlags.VertexBuffer, vertices);
             ibo = new HostBuffer<ushort> (dev, VkBufferUsageFlags.IndexBuffer, indices);
@@ -185,19 +186,20 @@ namespace ModelSample {
         }
 
 		protected override void Dispose (bool disposing) {
-			pipeline.Destroy ();
-			pipelineLayout.Destroy ();
-			dsLayout.Destroy ();
-			for (int i = 0; i < swapChain.ImageCount; i++)
-				frameBuffers[i].Destroy ();
-			descriptorPool.Destroy ();
-			renderPass.Destroy ();
-
 			if (disposing) {
-				depthTexture.Dispose ();
-				vbo.Dispose ();
-				ibo.Dispose ();
-				uboMats.Dispose ();
+				if (!isDisposed) {
+					pipeline.Dispose ();
+					pipelineLayout.Dispose ();
+					dsLayout.Dispose ();
+					for (int i = 0; i < swapChain.ImageCount; i++)
+						frameBuffers[i].Dispose ();
+					descriptorPool.Dispose ();
+					renderPass.Dispose ();
+					depthTexture.Dispose ();
+					vbo.Dispose ();
+					ibo.Dispose ();
+					uboMats.Dispose ();
+				}
 			}
 
 			base.Dispose (disposing);

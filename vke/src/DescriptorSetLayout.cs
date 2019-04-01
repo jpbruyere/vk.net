@@ -54,6 +54,7 @@ namespace VKE {
 
             Utils.CheckResult (vkCreateDescriptorSetLayout (dev.VkDev, ref info, IntPtr.Zero, out handle));            
         }
+
 		#region IDisposable Support
 		private bool isDisposed = false; // Pour détecter les appels redondants
 

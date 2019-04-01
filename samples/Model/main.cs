@@ -201,19 +201,20 @@ namespace ModelSample {
 
 
 		protected override void Dispose (bool disposing) {
-			pipeline.Destroy ();
-			pipelineLayout.Dispose ();
-			descLayoutMatrix.Dispose ();
-			descLayoutTextures.Dispose ();
-			for (int i = 0; i < swapChain.ImageCount; i++)
-				frameBuffers[i].Destroy ();
-			descriptorPool.Destroy ();
-			renderPass.Destroy ();
-
 			if (disposing) {
-				helmet.Dispose ();
-				depthTexture.Dispose ();
-				uboMats.Dispose ();
+				if (!isDisposed) {
+					helmet.Dispose ();
+					pipeline.Dispose ();
+					pipelineLayout.Dispose ();
+					descLayoutMatrix.Dispose ();
+					descLayoutTextures.Dispose ();
+					for (int i = 0; i < swapChain.ImageCount; i++)
+						frameBuffers[i].Dispose ();
+					descriptorPool.Dispose ();
+					renderPass.Dispose ();
+					depthTexture.Dispose ();
+					uboMats.Dispose ();
+				}
 			}
 
 			base.Dispose (disposing);

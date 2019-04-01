@@ -28,7 +28,7 @@ using Vulkan;
 using static Vulkan.VulkanNative;
 
 namespace VKE {
-    public class DescriptorPool {
+    public class DescriptorPool : IDisposable {
         internal VkDescriptorPool handle;
         internal Device dev;
         public uint MaxSets;
@@ -46,19 +46,17 @@ namespace VKE {
                 PoolSizes.Add (poolSize);
             Activate ();            
         }
-        public unsafe void Activate () {
-            VkDescriptorPoolCreateInfo info = VkDescriptorPoolCreateInfo.New ();
+        public void Activate () {
+			if (isDisposed) {
+				GC.ReRegisterForFinalize (this);
+				isDisposed = false;
+			}
+			VkDescriptorPoolCreateInfo info = VkDescriptorPoolCreateInfo.New ();
             info.poolSizeCount = PoolSizes.Count;
-            info.pPoolSizes = (VkDescriptorPoolSize*)PoolSizes.Data.ToPointer ();
+            info.pPoolSizes = PoolSizes.Data;
             info.maxSets = MaxSets;
 
             Utils.CheckResult (vkCreateDescriptorPool (dev.VkDev, ref info, IntPtr.Zero, out handle));
-        }
-        /// <summary>
-        /// Destroy Descriptor pool and free remaining allocated descritor sets
-        /// </summary>
-        public void Destroy () {
-            dev.DestroyDescriptorPool (handle);
         }
         /// <summary>
         /// Create and allocate a new DescriptorSet
@@ -90,5 +88,29 @@ namespace VKE {
         public void Reset () {
             Utils.CheckResult (vkResetDescriptorPool (dev.VkDev, handle, 0));
         }
-    }
+
+		#region IDisposable Support
+		private bool isDisposed = false; // Pour détecter les appels redondants
+
+		protected virtual void Dispose (bool disposing) {
+			if (!isDisposed) {
+				if (disposing) {
+					PoolSizes.Dispose ();
+				} else
+					System.Diagnostics.Debug.WriteLine ("A descriptorPool has not been disposed.");
+				dev.DestroyDescriptorPool (handle); 
+				isDisposed = true;
+			}
+		}
+
+		~DescriptorPool () {
+			Dispose (false);
+		}
+		public void Dispose () {
+			Dispose (true);
+			GC.SuppressFinalize (this);
+		}
+		#endregion
+
+	}
 }

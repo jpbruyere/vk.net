@@ -645,7 +645,7 @@ namespace Vulkan
         public VkDescriptorPoolCreateFlags flags;
         public uint maxSets;
         public uint poolSizeCount;
-        public VkDescriptorPoolSize* pPoolSizes;
+        public IntPtr pPoolSizes;
         public static VkDescriptorPoolCreateInfo New()
         {
             VkDescriptorPoolCreateInfo ret = new VkDescriptorPoolCreateInfo();
@@ -1175,11 +1175,11 @@ namespace Vulkan
         public IntPtr pNext;
         public uint flags;
         public uint attachmentCount;
-        public VkAttachmentDescription* pAttachments;
+        public IntPtr pAttachments;
         public uint subpassCount;
-        public VkSubpassDescription* pSubpasses;
+        public IntPtr pSubpasses;
         public uint dependencyCount;
-        public VkSubpassDependency* pDependencies;
+        public IntPtr pDependencies;
         public static VkRenderPassCreateInfo New()
         {
             VkRenderPassCreateInfo ret = new VkRenderPassCreateInfo();

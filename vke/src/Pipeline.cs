@@ -57,7 +57,7 @@ namespace VKE {
         #endregion
     }
 
-    public class Pipeline {
+    public class Pipeline : IDisposable {
         internal VkPipeline handle;
         Device dev;
 
@@ -117,8 +117,11 @@ namespace VKE {
         }
 
         public unsafe void Activate () {
-
-            VkGraphicsPipelineCreateInfo info = VkGraphicsPipelineCreateInfo.New ();
+			if (isDisposed) {
+				GC.ReRegisterForFinalize (this);
+				isDisposed = false;
+			}
+			VkGraphicsPipelineCreateInfo info = VkGraphicsPipelineCreateInfo.New ();
             info.renderPass = RenderPass.handle;
             info.layout = Layout.handle;
 
@@ -171,9 +174,31 @@ namespace VKE {
 
             shaderStages.Dispose ();
         }
+        
+		#region IDisposable Support
+		private bool isDisposed = false; // Pour détecter les appels redondants
 
-        public void Destroy () {
-            VulkanNative.vkDestroyPipeline (dev.VkDev, handle, IntPtr.Zero);
-        }
-    }
+		protected virtual void Dispose (bool disposing) {
+			if (!isDisposed) {
+				if (disposing) {
+					blendAttachments.Dispose ();
+					dynamicStates.Dispose ();
+					vertexBindings.Dispose ();
+					vertexAttributes.Dispose ();
+				} else
+					System.Diagnostics.Debug.WriteLine ("A Pipeline has not been disposed.");
+				VulkanNative.vkDestroyPipeline (dev.VkDev, handle, IntPtr.Zero);
+				isDisposed = true;
+			}
+		}
+
+		~Pipeline () {
+			Dispose (false);
+		}
+		public void Dispose () {
+			Dispose (true);
+			GC.SuppressFinalize (this);
+		}
+		#endregion
+	}
 }
