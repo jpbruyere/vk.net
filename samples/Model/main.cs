@@ -54,11 +54,8 @@ namespace ModelSample {
 
 		Program () : base () {
 		
-			descriptorPool = new DescriptorPool (dev, 27,
-				new VkDescriptorPoolSize (VkDescriptorType.UniformBuffer),
-				new VkDescriptorPoolSize (VkDescriptorType.CombinedImageSampler,3*26)
-				//new VkDescriptorPoolSize (VkDescriptorType.CombinedImageSampler),
-				//new VkDescriptorPoolSize (VkDescriptorType.CombinedImageSampler)
+			descriptorPool = new DescriptorPool (dev, 1,
+				new VkDescriptorPoolSize (VkDescriptorType.UniformBuffer)
 			);				
 
 			descLayoutMatrix = new DescriptorSetLayout (dev,
@@ -169,17 +166,7 @@ namespace ModelSample {
 		void loadAssets () {
 			//helmet = new Model (dev, presentQueue, cmdPool, "/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/Sponza/glTF/Sponza.gltf");
 			helmet = new Model (dev, presentQueue, cmdPool, "data/DamagedHelmet.gltf");
-			foreach (Model.Material mat in helmet.materials) {
-				mat.descriptorSet = descriptorPool.Allocate (descLayoutTextures);
-				using (DescriptorSetWrites uboUpdate = new DescriptorSetWrites (dev)) {
-					uboUpdate.AddWriteInfo (mat.descriptorSet, descLayoutTextures.Bindings[0], helmet.textures[(int)mat.baseColorTexture].Descriptor);
-					uboUpdate.AddWriteInfo (mat.descriptorSet, descLayoutTextures.Bindings[1], helmet.textures[(int)mat.normalTexture].Descriptor);
-					uboUpdate.AddWriteInfo (mat.descriptorSet, descLayoutTextures.Bindings[2], helmet.textures[(int)mat.occlusionTexture].Descriptor);
-					uboUpdate.Update ();
-				}
-			}
-
-			helmet.PipelineLayout = pipelineLayout;
+			helmet.WriteMaterialsDescriptorSets (descLayoutTextures, ShaderBinding.Color, ShaderBinding.Normal, ShaderBinding.AmbientOcclusion);
 		}
 		void updateMatrices () {
 			matrices.projection = Matrix4x4.CreatePerspectiveFieldOfView (Utils.DegreesToRadians (60f), (float)swapChain.Width / (float)swapChain.Height, 0.01f, 1024.0f);
