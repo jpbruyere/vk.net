@@ -15,6 +15,10 @@ namespace Vulkan
         public int x;
         public int y;
         public int z;
+
+		public VkOffset3D (int _x = 0, int _y = 0, int _z = 0) {
+			x = _x; y = _y; z = _z;
+		}
     }
 
     public unsafe partial struct VkExtent2D
@@ -359,14 +363,24 @@ namespace Vulkan
         }
     }
 
-    public unsafe partial struct VkImageSubresourceRange
+    public struct VkImageSubresourceRange
     {
         public VkImageAspectFlags aspectMask;
         public uint baseMipLevel;
         public uint levelCount;
         public uint baseArrayLayer;
         public uint layerCount;
-    }
+		public VkImageSubresourceRange (
+			VkImageAspectFlags aspectMask,
+			uint baseMipLevel = 0, uint levelCount = 1,
+			uint baseArrayLayer = 0, uint layerCount = 1) {
+			this.aspectMask = aspectMask;
+			this.baseMipLevel = baseMipLevel;
+			this.levelCount = levelCount;
+			this.baseArrayLayer = baseArrayLayer;
+			this.layerCount = layerCount;
+		}
+	}
 
     public unsafe partial struct VkMemoryBarrier
     {
@@ -1086,13 +1100,12 @@ namespace Vulkan
         public VkStructureType sType;
         public IntPtr pNext;
         public VkCommandBufferUsageFlags flags;
-        public VkCommandBufferInheritanceInfo* pInheritanceInfo;
-        public static VkCommandBufferBeginInfo New()
-        {
-            VkCommandBufferBeginInfo ret = new VkCommandBufferBeginInfo();
-            ret.sType = VkStructureType.CommandBufferBeginInfo;
-            return ret;
-        }
+        public IntPtr pInheritanceInfo;
+		public VkCommandBufferBeginInfo (VkCommandBufferUsageFlags usage = VkCommandBufferUsageFlags.None) {
+			sType = VkStructureType.CommandBufferBeginInfo;
+			pNext = pInheritanceInfo = IntPtr.Zero;
+			flags = usage;
+		}
     }
 
     public unsafe partial struct VkRenderPassBeginInfo

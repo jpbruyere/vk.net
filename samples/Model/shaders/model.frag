@@ -15,6 +15,26 @@ layout (location = 2) in vec3 inV;//ViewDir
 
 layout (location = 0) out vec4 outFragColor;
 
+layout(push_constant) uniform PushConsts {
+    layout(offset = 64)
+    vec4 baseColorFactor;
+    vec4 emissiveFactor;
+    uint availableAttachments;
+    uint alphaMode;
+    float alphaCutoff;
+    float metallicFactor;
+    float roughnessFactor;
+} pc;
+
+const uint MAP_COLOR = 0x1;
+const uint MAP_NORMAL = 0x2;
+const uint MAP_AMBIENTOCCLUSION = 0x4;
+const uint MAP_METAL = 0x8;
+const uint MAP_ROUGHNESS = 0x16;
+const uint MAP_METALROUGHNESS = 0x32;
+const uint MAP_EMISSIVE = 0x64;
+const float M_PI = 3.141592653589793;
+
 vec3 light = vec3(1.0,.0,1.0);
 
 // http://www.thetenthplanet.de/archives/1180
@@ -46,15 +66,23 @@ vec3 perturb_normal( vec3 N, vec3 V, vec2 texcoord )
     mat3 TBN = cotangent_frame(N, -V, texcoord);
     return normalize(TBN * map);
 }
-
-
+        
 
 void main() 
 {
-    vec4 base_color = texture(samplerColor, inUV);    
-    float rough = texture(samplerMetalRoughness, inUV).g;
-    float metallic = texture(samplerMetalRoughness, inUV).b;
-    vec3 emit = texture(samplerEmissive, inUV).rgb;
+    vec4 base_color = pc.baseColorFactor;
+    if ((pc.availableAttachments & MAP_COLOR) == MAP_COLOR)
+        base_color *= texture(samplerColor, inUV);    
+    float rough = pc.roughnessFactor;
+    float metallic = pc.metallicFactor;
+    if ((pc.availableAttachments & MAP_METALROUGHNESS) == MAP_METALROUGHNESS) {
+        rough *= texture(samplerMetalRoughness, inUV).g;
+        metallic *= texture(samplerMetalRoughness, inUV).b;
+    }
+    
+    vec3 emit;
+    if ((pc.availableAttachments & MAP_EMISSIVE) == MAP_EMISSIVE)   
+        emit = pc.emissiveFactor.rgb * texture(samplerEmissive, inUV).rgb;
     
     vec3 n = normalize(inN);
     vec3 l = normalize(light);

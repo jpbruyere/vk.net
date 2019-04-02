@@ -24,13 +24,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 using System;
+using System.Diagnostics;
 using Vulkan;
 
 using static Vulkan.VulkanNative;
 
 namespace VKE {
-    
-
     public class Image : Resource {
         internal VkImage handle;
         VkImageCreateInfo info = VkImageCreateInfo.New();
@@ -85,14 +84,78 @@ namespace VKE {
             Activate ();//DONT OVERRIDE Activate in derived classes!!!!
         }
 
-        public static Image Load (Device dev, string path) {
-            int width, height, channels;
+		/// <summary>
+		/// Load bitmap into Image with stagging and mipmap generation if necessary
+		/// and usage.
+		/// </summary>
+		public static Image Load (Device dev, Queue staggingQ, CommandPool staggingCmdPool,
+			string path, VkFormat format = VkFormat.R8g8b8a8Unorm,
+			VkMemoryPropertyFlags memoryProps = VkMemoryPropertyFlags.DeviceLocal,
+			VkImageTiling tiling = VkImageTiling.Optimal, bool generateMipmaps = true,
+			VkImageType imageType = VkImageType.Image2D,
+			VkImageUsageFlags usage = VkImageUsageFlags.Sampled | VkImageUsageFlags.TransferSrc | VkImageUsageFlags.TransferDst) {
+
+			int width, height, channels;
+			IntPtr imgPtr = Stb.Load (path, out width, out height, out channels, 4);
+			long size = width * height * 4;
+
+			uint mipLevels = generateMipmaps ? (uint)Math.Floor (Math.Log (Math.Max (width, height))) + 1 : 1;
+
+			Image img = new Image (dev, format, usage, memoryProps, (uint)width, (uint)height, imageType, VkSampleCountFlags.Count1, tiling, mipLevels);
+
+			if (img.MemoryFlags.HasFlag (VkMemoryPropertyFlags.HostVisible)) {
+				img.Map ();
+				unsafe {
+					System.Buffer.MemoryCopy (imgPtr.ToPointer (), img.MappedData.ToPointer (), size, size);
+				}
+				img.Unmap ();
+
+				Stb.FreeImage (imgPtr);
+
+				if (generateMipmaps)
+					img.BuildMipmaps (staggingQ, staggingCmdPool);
+			} else {
+				using (HostBuffer stagging = new HostBuffer (dev, VkBufferUsageFlags.TransferSrc, (UInt64)size, imgPtr)) {
+
+					Stb.FreeImage (imgPtr);
+
+					CommandBuffer cmd = staggingCmdPool.AllocateCommandBuffer ();
+
+					cmd.Start (VkCommandBufferUsageFlags.OneTimeSubmit);
+
+					stagging.CopyTo (cmd, img);
+					if (generateMipmaps)
+						img.BuildMipmaps (cmd);
+
+					cmd.End ();
+
+					staggingQ.Submit (cmd);
+					staggingQ.WaitIdle ();
+
+					cmd.Free ();
+				}
+			}
+
+			return img;
+		}
+
+		/// <summary>
+		/// create host visible linear image without command
+		/// </summary>
+		public static Image Load (Device dev,
+			string path, VkFormat format = VkFormat.R8g8b8a8Unorm, bool reserveSpaceForMipmaps = true,
+			VkMemoryPropertyFlags memoryProps = VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent,
+			VkImageTiling tiling = VkImageTiling.Linear, 
+			VkImageType imageType = VkImageType.Image2D, 
+			VkImageUsageFlags usage = VkImageUsageFlags.Sampled) {
+
+			int width, height, channels;
             IntPtr imgPtr = Stb.Load (path, out width, out height, out channels, 4);
             long size = width * height * 4;
 
-            Image img = new Image(dev, VkFormat.R8g8b8a8Unorm, VkImageUsageFlags.Sampled,
-                VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent, (uint)width, (uint)height, VkImageType.Image2D,
-                VkSampleCountFlags.Count1, VkImageTiling.Linear);
+			uint mipLevels = reserveSpaceForMipmaps ? (uint)Math.Floor (Math.Log (Math.Max (width, height))) + 1 : 1;
+
+			Image img = new Image(dev, format, usage, memoryProps, (uint)width, (uint)height, imageType, VkSampleCountFlags.Count1, tiling, mipLevels);
 
             img.Map ();
             unsafe {
@@ -100,53 +163,23 @@ namespace VKE {
             }
             img.Unmap ();
 
+			Stb.FreeImage (imgPtr);
+
             return img;
         }
-
-        //public Image (Device dev, string path) {
-
-
-        //    stagging = new HostBuffer (dev, VkBufferUsageFlags.TransferSrc, (UInt64)size);
-
-        //    stagging.Map ((ulong)size);
-        //    unsafe {
-        //        System.Buffer.MemoryCopy (imgPtr.ToPointer (), stagging.MappedData.ToPointer (), size, size);
-        //    }
-        //    stagging.Unmap ();
-
-        //    Stb.FreeImage (imgPtr);
-
-        //    VKE.Image vkimg = new Image (dev, VkFormat.R8g8b8a8Unorm, VkImageUsageFlags.TransferDst | VkImageUsageFlags.Sampled,
-        //        VkMemoryPropertyFlags.DeviceLocal, (uint)width, (uint)height);
-
-        //    CommandBuffer cmd = cmdPool.AllocateCommandBuffer ();
-        //    cmd.Start ();
-
-        //    stagging.CopyTo (cmd, vkimg);
-
-        //    cmd.End ();
-
-        //    transferQ.Submit (cmd);
-
-        //    dev.WaitIdle ();
-        //    cmd.Destroy ();
-
-        //    stagging.Dispose ();
-        //}
-
 
         protected override VkMemoryRequirements getMemoryRequirements () {
             VkMemoryRequirements memReqs;
             vkGetImageMemoryRequirements (dev.VkDev, handle, out memReqs);
             return memReqs;
         }
-        protected override void bindMemory (ulong offset) {
+        protected override void bindMemory (ulong offset = 0) {
             Utils.CheckResult (vkBindImageMemory (dev.VkDev, handle, devMem, offset));
         }
         public override void Activate () {
             Utils.CheckResult (vkCreateImage (dev.VkDev, ref info, IntPtr.Zero, out handle));
             allocateMemory ();
-            bindMemory (0);
+            bindMemory ();
             base.Activate ();
         }
 
@@ -177,20 +210,22 @@ namespace VKE {
 
         public void CreateSampler (VkFilter minFilter = VkFilter.Linear, VkFilter magFilter = VkFilter.Linear,
                                VkSamplerMipmapMode mipmapMode = VkSamplerMipmapMode.Linear, VkSamplerAddressMode addressMode = VkSamplerAddressMode.Repeat,
-            float maxAnisotropy = 1.0f, float minLod = 1.0f, float maxLod = 1.0f) {
+            float maxAnisotropy = 1.0f, float minLod = 0.0f, float maxLod = -1f) {
             VkSampler sampler;
-            VkSamplerCreateInfo info = VkSamplerCreateInfo.New ();
-            info.maxAnisotropy = maxAnisotropy;
-            info.addressModeU = addressMode;
-            info.addressModeV = addressMode;
-            info.addressModeW = addressMode;
-            info.magFilter = magFilter;
-            info.minFilter = minFilter;
-            info.mipmapMode = mipmapMode;
-            info.minLod = minLod;
-            info.maxLod = maxLod;
+            VkSamplerCreateInfo sampInfo = VkSamplerCreateInfo.New ();
+            sampInfo.maxAnisotropy = maxAnisotropy;
+			//samplerInfo.maxAnisotropy = device->enabledFeatures.samplerAnisotropy ? device->properties.limits.maxSamplerAnisotropy : 1.0f;
+			//samplerInfo.anisotropyEnable = device->enabledFeatures.samplerAnisotropy;
+			sampInfo.addressModeU = addressMode;
+            sampInfo.addressModeV = addressMode;
+            sampInfo.addressModeW = addressMode;
+            sampInfo.magFilter = magFilter;
+            sampInfo.minFilter = minFilter;
+            sampInfo.mipmapMode = mipmapMode;
+            sampInfo.minLod = minLod;
+            sampInfo.maxLod = maxLod < 0f ? info.mipLevels : maxLod;
 
-            Utils.CheckResult (vkCreateSampler (dev.VkDev, ref info, IntPtr.Zero, out sampler));
+            Utils.CheckResult (vkCreateSampler (dev.VkDev, ref sampInfo, IntPtr.Zero, out sampler));
 
             if (Descriptor.sampler.Handle != 0)
                 dev.DestroySampler (Descriptor.sampler);
@@ -207,18 +242,17 @@ namespace VKE {
             VkImageSubresourceRange subresourceRange = new VkImageSubresourceRange {
                 aspectMask = aspectMask,
                 baseMipLevel = 0,
-                levelCount = 1,
-                layerCount = 1,
+                levelCount = CreateInfo.mipLevels,
+                layerCount = CreateInfo.arrayLayers,
             };
-            SetLayout (cmdbuffer, aspectMask, oldImageLayout, newImageLayout, subresourceRange);
+            SetLayout (cmdbuffer, oldImageLayout, newImageLayout, subresourceRange, srcStageMask, dstStageMask);
         }
 
         // Create an image memory barrier for changing the layout of
         // an image and put it into an active command buffer
         // See chapter 11.4 "Image Layout" for details
         public void SetLayout (
-            CommandBuffer cmdbuffer,
-            VkImageAspectFlags aspectMask,
+            CommandBuffer cmdbuffer,            
             VkImageLayout oldImageLayout,
             VkImageLayout newImageLayout,
             VkImageSubresourceRange subresourceRange,
@@ -331,6 +365,48 @@ namespace VKE {
                 0, IntPtr.Zero,
                 1, ref imageMemoryBarrier);
         }
+
+		public void BuildMipmaps (Queue copyQ, CommandPool copyCmdPool) {
+			if (info.mipLevels == 1) {
+				Debug.WriteLine ("Invoking BuildMipmaps on image that has only one mipLevel");
+				return;
+			}
+			CommandBuffer cmd = copyCmdPool.AllocateCommandBuffer ();
+
+			cmd.Start (VkCommandBufferUsageFlags.OneTimeSubmit);
+			BuildMipmaps (cmd);
+			cmd.End ();
+
+			copyQ.Submit (cmd);
+			copyQ.WaitIdle ();
+
+			cmd.Free ();
+		}
+		public void BuildMipmaps (CommandBuffer cmd) {
+			VkImageSubresourceRange mipSubRange = new VkImageSubresourceRange (VkImageAspectFlags.Color, 0, 1, 0, info.arrayLayers);
+
+			SetLayout (cmd, VkImageLayout.Undefined, VkImageLayout.TransferSrcOptimal, mipSubRange,
+					VkPipelineStageFlags.Transfer, VkPipelineStageFlags.Transfer);
+
+			for (int i = 1; i < info.mipLevels; i++) {
+				VkImageBlit imageBlit = new VkImageBlit {
+					srcSubresource = new VkImageSubresourceLayers(VkImageAspectFlags.Color, info.arrayLayers, (uint)i - 1),
+					srcOffsets_1 = new VkOffset3D((int)info.extent.width >> (i - 1), (int)info.extent.height >> (i - 1),1),
+					dstSubresource = new VkImageSubresourceLayers (VkImageAspectFlags.Color, info.arrayLayers, (uint)i),
+					dstOffsets_1 = new VkOffset3D ((int)info.extent.width >> i, (int)info.extent.height >> i, 1),
+				};
+
+				mipSubRange.baseMipLevel = (uint)i;
+
+				SetLayout (cmd, VkImageLayout.Undefined, VkImageLayout.TransferDstOptimal, mipSubRange,
+					VkPipelineStageFlags.Transfer, VkPipelineStageFlags.Transfer);
+				vkCmdBlitImage (cmd.Handle, handle, VkImageLayout.TransferSrcOptimal, handle, VkImageLayout.TransferDstOptimal, 1, ref imageBlit, VkFilter.Linear);
+				SetLayout (cmd, VkImageLayout.TransferDstOptimal, VkImageLayout.TransferSrcOptimal, mipSubRange,
+					VkPipelineStageFlags.Transfer, VkPipelineStageFlags.Transfer);
+			}
+			SetLayout (cmd, VkImageAspectFlags.Color, VkImageLayout.TransferSrcOptimal, VkImageLayout.ShaderReadOnlyOptimal,
+					VkPipelineStageFlags.Transfer, VkPipelineStageFlags.FragmentShader);
+		}
 
         protected override void Dispose (bool disposing) {
             if (!isDisposed) {

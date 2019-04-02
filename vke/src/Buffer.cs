@@ -121,7 +121,7 @@ namespace VKE {
 
             img.SetLayout (cmd, VkImageAspectFlags.Color,
                 VkImageLayout.TransferDstOptimal, VkImageLayout.ShaderReadOnlyOptimal,
-                VkPipelineStageFlags.Transfer, VkPipelineStageFlags.TopOfPipe);
+                VkPipelineStageFlags.Transfer, VkPipelineStageFlags.AllGraphics);
         }
         public void CopyTo (CommandBuffer cmd, Buffer buff, ulong size = 0, ulong srcOffset = 0, ulong dstOffset = 0) {
             VkBufferCopy bufferCopy = new VkBufferCopy {

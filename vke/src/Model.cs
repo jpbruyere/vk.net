@@ -39,15 +39,16 @@ using System.IO;
 namespace VKE {
     using static Utils;
 
-	public enum ShaderBinding {
+	[Flags]
+	public enum ShaderBinding : UInt32 {
 		None,
-		Color,
-		Normal,
-		AmbientOcclusion,
-		Metal,
-		Roughness,
-		MetalRoughness,
-		Emissive,
+		Color = 0x1,
+		Normal = 0x2,
+		AmbientOcclusion = 0x4,
+		Metal = 0x8,
+		Roughness = 0x16,
+		MetalRoughness = 0x32,
+		Emissive = 0x64,
 	};
 
 	public class Model : IDisposable {
@@ -102,42 +103,65 @@ namespace VKE {
 		//	}
 		//}
 
+		public struct PbrMaterial {
+			public Vector4 baseColorFactor;
+			public Vector4 emissiveFactor;
+			public ShaderBinding availableAttachments;
+			public Model.AlphaMode alphaMode;
+			public float alphaCutoff;
+			public float metallicFactor;
+			public float roughnessFactor;
+
+			public PbrMaterial (float metallicFactor = 1.0f, float roughnessFactor = 1.0f,
+				Model.AlphaMode alphaMode = AlphaMode.Opaque, float alphaCutoff = 0.5f,
+				ShaderBinding availableAttachments = ShaderBinding.None)
+			{
+				this.baseColorFactor = Vector4.One;
+				this.emissiveFactor = Vector4.One;
+				this.availableAttachments = availableAttachments;
+				this.alphaMode = alphaMode;
+				this.alphaCutoff = alphaCutoff;
+				this.metallicFactor = metallicFactor;
+				this.roughnessFactor = roughnessFactor;
+			}
+			public PbrMaterial (Vector4 baseColorFactor,
+				Vector4 emissiveFactor,
+				float metallicFactor = 1.0f, float roughnessFactor = 1.0f,
+				Model.AlphaMode alphaMode = AlphaMode.Opaque, float alphaCutoff = 0.5f,
+				ShaderBinding availableAttachments = ShaderBinding.None)
+			{
+				this.baseColorFactor = baseColorFactor;
+				this.emissiveFactor = emissiveFactor;
+				this.availableAttachments = availableAttachments;
+				this.alphaMode = alphaMode;
+				this.alphaCutoff = alphaCutoff;
+				this.metallicFactor = metallicFactor;
+				this.roughnessFactor = roughnessFactor;			
+			}
+		}
+
 
 		public class Material {
-            public Vector4 baseColorFactor;
-            public AlphaMode alphaMode;
-            public float alphaCutoff;
-            public float metallicFactor;
-            public float roughnessFactor;
+			public PbrMaterial pbrDatas;
 
-            public UInt32 baseColorTexture;
+			public DescriptorSet descriptorSet;
+
+			public UInt32 baseColorTexture;
             public UInt32 metallicRoughnessTexture;
             public UInt32 normalTexture;
             public UInt32 occlusionTexture;
-
             public UInt32 emissiveTexture;
 
-            public Vector4 emissiveFactor;
 
-            public Material (
-                UInt32 _baseColorTexture = 0, UInt32 _metallicRoughnessTexture = 0, UInt32 _normalTexture = 0, UInt32 _occlusionTexture = 0) {
-                baseColorFactor = new Vector4 (1f);
-                alphaMode = AlphaMode.Opaque;
-                alphaCutoff = 1f;
-                metallicFactor = 1f;
-                roughnessFactor = 1f;
-
+            public Material (UInt32 _baseColorTexture = 0, UInt32 _metallicRoughnessTexture = 0,
+            	UInt32 _normalTexture = 0, UInt32 _occlusionTexture = 0)
+			{
                 baseColorTexture = _baseColorTexture;
                 metallicRoughnessTexture = _metallicRoughnessTexture;
                 normalTexture = _normalTexture;
                 occlusionTexture = _occlusionTexture;
-
                 emissiveTexture = 0;
-                emissiveFactor = new Vector4 (0.0f);
-            }
-
-			public DescriptorSet descriptorSet;
-
+            }            
         }        
 
         public enum AlphaMode : UInt32 {
@@ -492,7 +516,7 @@ namespace VKE {
 			ctx.transferQ.Submit (cmd);
 
 			dev.WaitIdle ();
-			cmd.Destroy ();
+			cmd.Free ();
 
 			stagging.Dispose ();
 		}
@@ -571,43 +595,12 @@ namespace VKE {
 		}
 
 		void loadImages<I> (LoadingContext<I> ctx) {
-			HostBuffer stagging;
 			if (ctx.gltf.Images == null)
 				return;
 			foreach (GL.Image img in ctx.gltf.Images) {
 				Debug.WriteLine ("loading image {0} : {1} : {2}", img.Name, img.MimeType, img.Uri);
 
-				int width, height, channels;
-				IntPtr imgPtr = Stb.Load (Path.Combine (ctx.baseDirectory, img.Uri), out width, out height, out channels, 4);
-				long size = width * height * 4;
-
-				stagging = new HostBuffer (dev, VkBufferUsageFlags.TransferSrc, (UInt64)size);
-
-				stagging.Map ((ulong)size);
-				unsafe {
-					System.Buffer.MemoryCopy (imgPtr.ToPointer (), stagging.MappedData.ToPointer (), size, size);
-				}
-				stagging.Unmap ();
-
-				Stb.FreeImage (imgPtr);
-
-				VKE.Image vkimg = new Image (dev, VkFormat.R8g8b8a8Unorm, VkImageUsageFlags.TransferDst | VkImageUsageFlags.Sampled,
-					VkMemoryPropertyFlags.DeviceLocal, (uint)width, (uint)height);
-
-				CommandBuffer cmd = ctx.cmdPool.AllocateCommandBuffer ();
-				cmd.Start ();
-
-				stagging.CopyTo (cmd, vkimg);
-
-				cmd.End ();
-
-				ctx.transferQ.Submit (cmd);
-
-				dev.WaitIdle ();
-				cmd.Destroy ();
-
-				stagging.Dispose ();
-
+				VKE.Image vkimg = Image.Load (dev, ctx.transferQ, ctx.cmdPool, Path.Combine (ctx.baseDirectory, img.Uri));
 				vkimg.CreateView ();
 				vkimg.CreateSampler ();
 				vkimg.Descriptor.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
@@ -624,28 +617,36 @@ namespace VKE {
 				Debug.WriteLine ("loading material: " + mat.Name);
 				Material pbr = new Material ();
 
-				pbr.alphaCutoff = mat.AlphaCutoff;
-				pbr.alphaMode = (AlphaMode)mat.AlphaMode;
-				FromFloatArray (ref pbr.emissiveFactor, mat.EmissiveFactor);
-				if (mat.EmissiveTexture != null)
+				pbr.pbrDatas.alphaCutoff = mat.AlphaCutoff;
+				pbr.pbrDatas.alphaMode = (AlphaMode)mat.AlphaMode;
+				FromFloatArray (ref pbr.pbrDatas.emissiveFactor, mat.EmissiveFactor);
+				if (mat.EmissiveTexture != null) {
 					pbr.emissiveTexture = (uint)mat.EmissiveTexture.Index;
-				if (mat.NormalTexture != null)
+					pbr.pbrDatas.availableAttachments |= ShaderBinding.Emissive;
+				}
+				if (mat.NormalTexture != null) {
 					pbr.normalTexture = (uint)mat.NormalTexture.Index;
-				if (mat.OcclusionTexture != null)
+					pbr.pbrDatas.availableAttachments |= ShaderBinding.Normal;
+				}
+				if (mat.OcclusionTexture != null) {
 					pbr.occlusionTexture = (uint)mat.OcclusionTexture.Index;
-
-				if (mat.PbrMetallicRoughness != null) {
-					if (mat.PbrMetallicRoughness.BaseColorTexture != null)
-						pbr.baseColorTexture = (uint)mat.PbrMetallicRoughness.BaseColorTexture.Index;
-					FromFloatArray (ref pbr.baseColorFactor, mat.PbrMetallicRoughness.BaseColorFactor);
-					if (mat.PbrMetallicRoughness.MetallicRoughnessTexture != null)
-						pbr.metallicRoughnessTexture = (uint)mat.PbrMetallicRoughness.MetallicRoughnessTexture.Index;
-					pbr.metallicFactor = mat.PbrMetallicRoughness.MetallicFactor;
-					pbr.roughnessFactor = mat.PbrMetallicRoughness.RoughnessFactor;
+					pbr.pbrDatas.availableAttachments |= ShaderBinding.AmbientOcclusion;
 				}
 
+				if (mat.PbrMetallicRoughness != null) {
+					if (mat.PbrMetallicRoughness.BaseColorTexture != null) {
+						pbr.baseColorTexture = (uint)mat.PbrMetallicRoughness.BaseColorTexture.Index;
+						pbr.pbrDatas.availableAttachments |= ShaderBinding.Color;
+					}
+					FromFloatArray (ref pbr.pbrDatas.baseColorFactor, mat.PbrMetallicRoughness.BaseColorFactor);
+					if (mat.PbrMetallicRoughness.MetallicRoughnessTexture != null) {
+						pbr.metallicRoughnessTexture = (uint)mat.PbrMetallicRoughness.MetallicRoughnessTexture.Index;
+						pbr.pbrDatas.availableAttachments |= ShaderBinding.MetalRoughness;
+					}
+					pbr.pbrDatas.metallicFactor = mat.PbrMetallicRoughness.MetallicFactor;
+					pbr.pbrDatas.roughnessFactor = mat.PbrMetallicRoughness.RoughnessFactor;
+				}
 				materials.Add (pbr);
-
 				/*
 				ulong size = (ulong)(materials.Count * Marshal.SizeOf<Material> ());
 
@@ -680,7 +681,9 @@ namespace VKE {
 
 			if (node.Mesh != null) {
 				foreach (Primitive p in node.Mesh.Primitives) {
-					cmd.BindDescriptorSet (pipelineLayout, materials[(int)p.material].descriptorSet, 1);
+					Material mat = materials[(int)p.material];
+					cmd.PushConstant (pipelineLayout, VkShaderStageFlags.Fragment, mat.pbrDatas, (uint)Marshal.SizeOf<Matrix4x4>());
+					cmd.BindDescriptorSet (pipelineLayout, mat.descriptorSet, 1);
 					cmd.DrawIndexed (p.indexCount, 1, p.indexBase, p.vertexBase, 0);
 				}
 			}

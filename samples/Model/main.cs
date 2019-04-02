@@ -21,10 +21,6 @@ namespace ModelSample {
 			public Vector4 lightPos;
 		}
 
-		public struct PushConstants {
-			public Matrix4x4 matrix;
-		}
-
 		Matrices matrices;
 
 		HostBuffer uboMats;
@@ -71,13 +67,18 @@ namespace ModelSample {
 
 			descriptorSet = descriptorPool.Allocate (descLayoutMatrix);
 
-			VkPushConstantRange pushConstantRange = new VkPushConstantRange { 
+			VkPushConstantRange[] pushConstantRanges =
+			{ new VkPushConstantRange {
 				stageFlags = VkShaderStageFlags.Vertex,
-				size = (uint)Marshal.SizeOf<PushConstants>(),
+				size = (uint)Marshal.SizeOf<Matrix4x4>(),
 				offset = 0
-			};
+			}, new VkPushConstantRange {
+				stageFlags = VkShaderStageFlags.Fragment,
+				size = (uint)Marshal.SizeOf<Model.PbrMaterial>(),
+				offset = 64
+			}};
 
-			pipelineLayout = new PipelineLayout (dev, pushConstantRange, descLayoutMatrix, descLayoutTextures).Activate ();
+			pipelineLayout = new PipelineLayout (dev, pushConstantRanges, descLayoutMatrix, descLayoutTextures).Activate ();
 
 			loadAssets ();
 
@@ -99,8 +100,8 @@ namespace ModelSample {
 			pipeline.vertexAttributes.Add (new VkVertexInputAttributeDescription (1, VkFormat.R32g32b32Sfloat, 3 * sizeof (float)));
 			pipeline.vertexAttributes.Add (new VkVertexInputAttributeDescription (2, VkFormat.R32g32Sfloat, 6 * sizeof (float)));
 
-			pipeline.shaders.Add (new ShaderInfo (VkShaderStageFlags.Vertex, "shaders/model.vert.spv"));
-			pipeline.shaders.Add (new ShaderInfo (VkShaderStageFlags.Fragment, "shaders/model.frag.spv"));
+			pipeline.shaders.Add (new ShaderInfo (VkShaderStageFlags.Vertex, "shaders/pbrtest.vert.spv"));
+			pipeline.shaders.Add (new ShaderInfo (VkShaderStageFlags.Fragment, "shaders/pbrtest.frag.spv"));
 
 			pipeline.Activate ();
 
