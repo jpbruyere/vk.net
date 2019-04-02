@@ -31,7 +31,17 @@ using System.Runtime.InteropServices;
 
 namespace VKE {
     public static class ExtensionMethods {
-        public static Dictionary<object, GCHandle> handles = new Dictionary<object, GCHandle>();
+		public static bool AreEquals (this byte[] b, byte[] other) {
+			if (b.Length != other.Length)
+				return false;
+			for (int i = 0; i < b.Length; i++) {
+				if (b[i] != other[i])
+					return false;
+			}
+			return true;
+		}
+
+		public static Dictionary<object, GCHandle> handles = new Dictionary<object, GCHandle>();
         public static Vector3 Transform (this Vector3 v, ref Matrix4x4 mat, bool translate = false) {
             Vector4 v4 = Vector4.Transform (new Vector4 (v, translate ? 1f : 0f), mat);
             return new Vector3 (v4.X, v4.Y, v4.Z);

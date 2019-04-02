@@ -8,12 +8,13 @@ using static Vulkan.VulkanNative;
 namespace VKE {
     public abstract class Resource : IDisposable {
         protected Device dev;
-        protected VkDeviceMemory devMem;
-        protected UInt64 memSize;
+        protected VkDeviceMemory vkMemory;
+        protected UInt64 deviceMemSize;
         protected IntPtr mappedData;
 
         public readonly VkMemoryPropertyFlags MemoryFlags;
         public IntPtr MappedData => mappedData;
+		public UInt64 AllocatedDeviceMemorySize => deviceMemSize;
 
         protected Resource (Device device, VkMemoryPropertyFlags memoryFlags) {
             dev = device;
@@ -36,16 +37,16 @@ namespace VKE {
             memInfo.allocationSize = memReqs.size;
             memInfo.memoryTypeIndex = dev.GetMemoryTypeIndex (memReqs.memoryTypeBits, MemoryFlags);
 
-            Utils.CheckResult (vkAllocateMemory (dev.VkDev, ref memInfo, IntPtr.Zero, out devMem));
+            Utils.CheckResult (vkAllocateMemory (dev.VkDev, ref memInfo, IntPtr.Zero, out vkMemory));
 
-            memSize = memInfo.allocationSize;
+            deviceMemSize = memInfo.allocationSize;
         }
 
         public void Map (ulong size = WholeSize, ulong offset = 0) {
-            Utils.CheckResult (vkMapMemory (dev.VkDev, devMem, offset, size, 0, ref mappedData));
+            Utils.CheckResult (vkMapMemory (dev.VkDev, vkMemory, offset, size, 0, ref mappedData));
         }
         public void Unmap () {
-            vkUnmapMemory (dev.VkDev, devMem);
+            vkUnmapMemory (dev.VkDev, vkMemory);
             mappedData = IntPtr.Zero;
         }
         public void Update (object data, ulong size) {
@@ -59,7 +60,7 @@ namespace VKE {
         public void Flush (ulong size = WholeSize, ulong offset = 0) {
             VkMappedMemoryRange range = new VkMappedMemoryRange {
                 sType = VkStructureType.MappedMemoryRange,
-                memory = devMem,
+                memory = vkMemory,
                 offset = offset,
                 size = size,
             };
@@ -77,7 +78,7 @@ namespace VKE {
 
                 if (mappedData != IntPtr.Zero)
                     Unmap ();
-                vkFreeMemory (dev.VkDev, devMem, IntPtr.Zero);
+                vkFreeMemory (dev.VkDev, vkMemory, IntPtr.Zero);
 
                 isDisposed = true;
             }

@@ -271,23 +271,28 @@ namespace VKE {
 						case ShaderBinding.None:
 							break;
 						case ShaderBinding.Color:
-							uboUpdate.AddWriteInfo (mat.descriptorSet, dslb, textures[(int)mat.baseColorTexture].Descriptor);
+							if (mat.pbrDatas.availableAttachments.HasFlag (ShaderBinding.Color))
+								uboUpdate.AddWriteInfo (mat.descriptorSet, dslb, textures[(int)mat.baseColorTexture].Descriptor);
 							break;
 						case ShaderBinding.Normal:
-							uboUpdate.AddWriteInfo (mat.descriptorSet, dslb, textures[(int)mat.normalTexture].Descriptor);
+							if (mat.pbrDatas.availableAttachments.HasFlag (ShaderBinding.Normal))
+								uboUpdate.AddWriteInfo (mat.descriptorSet, dslb, textures[(int)mat.normalTexture].Descriptor);
 							break;
 						case ShaderBinding.AmbientOcclusion:
-							uboUpdate.AddWriteInfo (mat.descriptorSet, dslb, textures[(int)mat.occlusionTexture].Descriptor);
+							if (mat.pbrDatas.availableAttachments.HasFlag (ShaderBinding.AmbientOcclusion))
+								uboUpdate.AddWriteInfo (mat.descriptorSet, dslb, textures[(int)mat.occlusionTexture].Descriptor);
 							break;
 						case ShaderBinding.MetalRoughness:
-							uboUpdate.AddWriteInfo (mat.descriptorSet, dslb, textures[(int)mat.metallicRoughnessTexture].Descriptor);
+							if (mat.pbrDatas.availableAttachments.HasFlag (ShaderBinding.MetalRoughness))
+								uboUpdate.AddWriteInfo (mat.descriptorSet, dslb, textures[(int)mat.metallicRoughnessTexture].Descriptor);
 							break;
 						case ShaderBinding.Metal:
 							break;
 						case ShaderBinding.Roughness:
 							break;
 						case ShaderBinding.Emissive:
-							uboUpdate.AddWriteInfo (mat.descriptorSet, dslb, textures[(int)mat.emissiveTexture].Descriptor);
+							if (mat.pbrDatas.availableAttachments.HasFlag (ShaderBinding.Emissive))
+								uboUpdate.AddWriteInfo (mat.descriptorSet, dslb, textures[(int)mat.emissiveTexture].Descriptor);
 							break;
 					}
 				}
@@ -373,7 +378,8 @@ namespace VKE {
 			}
 			#endregion
 		}
-
+		//TODO: some buffer data are reused between primitives, and I duplicate the datas
+		//buffers must be constructed without duplications
 		void loadMeshes<I> (LoadingContext<I> ctx) {
 			//compute size of stagging buf
 			foreach (GL.Mesh mesh in ctx.gltf.Meshes) {
@@ -674,6 +680,7 @@ namespace VKE {
 			cmd.BindIndexBuffer (ibo, VkIndexType.Uint16);
 		}
 		//TODO:destset for binding must be variable
+		//TODO: ADD REFAULT MAT IF NO MAT DEFINED
 		public void RenderNode (CommandBuffer cmd, PipelineLayout pipelineLayout, Node node, Matrix4x4 currentTransform) {
 			Matrix4x4 localMat = currentTransform * node.matrix;
 
@@ -697,7 +704,7 @@ namespace VKE {
 
 			foreach (Scene sc in Scenes) {
 				foreach (Node node in sc.Root.Children) {
-					RenderNode (cmd, pipelineLayout, node, Matrix4x4.Identity);
+					RenderNode (cmd, pipelineLayout, node, sc.Root.matrix);
 				}
 			}
 		}

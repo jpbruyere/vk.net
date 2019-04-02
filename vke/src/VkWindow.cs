@@ -150,6 +150,11 @@ namespace VKE {
         protected virtual void onMouseMove (double xPos, double yPos) { }
         protected virtual void onMouseButtonDown (Glfw.MouseButton button) { }
         protected virtual void onMouseButtonUp (Glfw.MouseButton button) { }
+		protected virtual void onKeyDown (Key key, int scanCode, Modifier modifiers) { 
+            if (key == Key.F4 && modifiers == Modifier.Alt || key == Key.Escape)
+                Glfw3.SetWindowShouldClose (currentWindow.hWin, 1);
+		}
+		protected virtual void onKeyUp (Key key, int scanCode, Modifier modifiers) { }
 
         static void HandleWindowSizeDelegate (IntPtr window, int width, int height) {}
         static void HandleCursorPosDelegate (IntPtr window, double xPosition, double yPosition) {
@@ -165,8 +170,11 @@ namespace VKE {
             }
         }
         static void HandleKeyDelegate (IntPtr window, Key key, int scanCode, InputAction action, Modifier modifiers) {
-            if (key == Key.F4 && modifiers == Modifier.Alt || key == Key.Escape)
-                Glfw3.SetWindowShouldClose (window, 1);
+			if (action == InputAction.Press) {
+				currentWindow.onKeyDown (key, scanCode, modifiers);
+			} else { 
+				currentWindow.onKeyUp (key, scanCode, modifiers);
+			}
         }
 
         Stopwatch frameChrono;
