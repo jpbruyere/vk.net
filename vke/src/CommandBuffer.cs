@@ -58,8 +58,8 @@ namespace VKE {
             submit_info.pCommandBuffers = &cmd;
             Utils.CheckResult (vkQueueSubmit (queue, 1, ref submit_info, fence));
         }
-        public void Start () {
-            VkCommandBufferBeginInfo cmdBufInfo = VkCommandBufferBeginInfo.New ();
+        public void Start (VkCommandBufferUsageFlags usage = VkCommandBufferUsageFlags.None) {
+            VkCommandBufferBeginInfo cmdBufInfo = new VkCommandBufferBeginInfo (usage);
             Utils.CheckResult (vkBeginCommandBuffer (handle, ref cmdBufInfo));
         }
         public void End () {
@@ -103,7 +103,7 @@ namespace VKE {
 			vkCmdPushConstants (handle, pipelineLayout.handle, stageFlags, offset, (uint)Marshal.SizeOf (data), data.Pin ());
 			data.Unpin ();
 		}
-		public void Destroy () {
+		public void Free () {
             pool.FreeCommandBuffers (this);
         }
     }

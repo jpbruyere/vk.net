@@ -45,6 +45,11 @@ namespace VKE {
 		: this (device, descriptorSetLayouts) {
 			PushConstantRanges.Add (pushConstantRange);
 		}
+		public PipelineLayout (Device device, VkPushConstantRange[] pushConstantRanges, params DescriptorSetLayout[] descriptorSetLayouts)
+		: this (device, descriptorSetLayouts) {
+			foreach (VkPushConstantRange pcr in pushConstantRanges)
+				PushConstantRanges.Add (pcr);
+		}
 		public PipelineLayout (Device device, params DescriptorSetLayout[] descriptorSetLayouts)
 			:this (device) {
             

@@ -47,7 +47,6 @@
     <Compile Include="vk\VkClearDepthStencilValue.cs" />
     <Compile Include="vk\VkExtent2D.cs" />
     <Compile Include="vk\VkImageMemoryBarrier.cs" />
-    <Compile Include="vk\VkImageSubresourceRange.cs" />
     <Compile Include="vk\VkOffset2D.cs" />
     <Compile Include="vk\VkRect2D.cs" />
     <Compile Include="vk\Generated\Commands.gen.cs" />

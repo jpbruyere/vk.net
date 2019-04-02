@@ -132,7 +132,7 @@ namespace VKE {
             int idx = swapChain.GetNextImage();
             if (idx < 0) {
                 for (int i = 0; i < swapChain.ImageCount; i++) 
-                    cmds[i].Destroy ();
+                    cmds[i].Free ();
                 Prepare ();
                 return;
             }
@@ -211,7 +211,7 @@ namespace VKE {
 
 				for (int i = 0; i < swapChain.ImageCount; i++) {
 					dev.DestroySemaphore (drawComplete[i]);
-					cmds[i].Destroy ();
+					cmds[i].Free ();
 				}
 
 				swapChain.Destroy ();

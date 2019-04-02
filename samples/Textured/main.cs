@@ -62,13 +62,16 @@ namespace TextureSample {
 
         ushort[] indices = new ushort[] { 0, 1, 2, 2, 0, 3 };
 
-        float rotX, rotY, rotZ;
+		float rotSpeed = 0.01f, zoomSpeed = 0.01f;
+		double lastX, lastY;
+		float rotX, rotY, rotZ = 0f, zoom = 1f;
 
         Image texture;
 
         Program () : base () {
-            texture = Image.Load (dev, "data/texture.jpg");
-            texture.CreateView ();
+			texture = Image.Load (dev, presentQueue, cmdPool, "data/texture.jpg");
+			//texture = Image.Load (dev, "data/texture.jpg");
+			texture.CreateView ();
             texture.CreateSampler ();
 
             descriptorPool = new DescriptorPool (dev, 1,
@@ -125,7 +128,7 @@ namespace TextureSample {
 
         void updateMatrices () {
             matrices.projection = Matrix4x4.CreatePerspectiveFieldOfView (Utils.DegreesToRadians (60f), (float)swapChain.Width / (float)swapChain.Height, 0.1f, 256.0f);
-            matrices.view = Matrix4x4.CreateTranslation (0, 0, -2.5f);
+            matrices.view = Matrix4x4.CreateTranslation (0, 0, -2.5f * zoom);
             matrices.model =
                 Matrix4x4.CreateFromAxisAngle (Vector3.UnitZ, rotZ) *
                 Matrix4x4.CreateFromAxisAngle (Vector3.UnitY, rotY) *
@@ -133,18 +136,17 @@ namespace TextureSample {
 
             uboMats.Update (matrices, (uint)Marshal.SizeOf<Matrices> ());
         }
-
-        float rotSpeed = 0.01f;
-        double lastX, lastY;
-
+        
         protected override void onMouseMove (double xPos, double yPos) {
             double diffX = lastX - xPos;
             double diffY = lastY - yPos;
             if (MouseButton[0]) {
                 rotY -= rotSpeed * (float)diffX;
                 rotX += rotSpeed * (float)diffY;
-            }
-            lastX = xPos;
+			} else if (MouseButton[1]) {
+				zoom += zoomSpeed * (float)diffY;
+			}
+			lastX = xPos;
             lastY = yPos;
 
             updateRequested = true;

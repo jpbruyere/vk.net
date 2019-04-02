@@ -36,33 +36,35 @@ namespace Vulkan {
         public static float DegreesToRadians (float degrees) {
             return degrees * (float)Math.PI / 180f;
         }
-        public static bool FromFloatArray (ref Vector3 v, float[] float3) {
-            if (float3?.Length != 3)
-                return false;
-            v.X = float3[0];
-            v.Y = float3[1];
-            v.Z = float3[2];
-            return true;
+        public static void FromFloatArray (ref Vector3 v, float[] floats) {
+			if (floats.Length > 0)
+				v.X = floats[0];
+			if (floats.Length > 1)
+				v.Y = floats[1];
+			if (floats.Length > 2)
+				v.Z = floats[2];
+		}
+		public static void FromFloatArray (ref Vector4 v, float[] floats) {
+			if (floats.Length > 0)
+				v.X = floats[0];
+			if (floats.Length > 1)
+				v.Y = floats[1];
+			if (floats.Length > 2)
+				v.Z = floats[2];
+			if (floats.Length > 3)
+				v.W = floats[3];            
         }
-        public static bool FromFloatArray (ref Vector4 v, float[] float4) {
-            if (float4?.Length != 4)
-                return false;
-            v.X = float4[0];
-            v.Y = float4[1];
-            v.Z = float4[2];
-            v.W = float4[3];
-            return true;
-        }
-        public static bool FromFloatArray (ref Quaternion v, float[] float4) {
-            if (float4?.Length != 4)
-                return false;
-            v.X = float4[0];
-            v.Y = float4[1];
-            v.Z = float4[2];
-            v.W = float4[3];
-            return true;
-        }
-        public static void FromByteArray (ref Vector2 v, byte[] byteArray, int offset) {
+        public static void FromFloatArray (ref Quaternion v, float[] floats) {
+			if (floats.Length > 0)
+				v.X = floats[0];
+			if (floats.Length > 1)
+				v.Y = floats[1];
+			if (floats.Length > 2)
+				v.Z = floats[2];
+			if (floats.Length > 3)
+				v.W = floats[3];
+		}
+		public static void FromByteArray (ref Vector2 v, byte[] byteArray, int offset) {
             v.X = BitConverter.ToSingle (byteArray, offset);
             v.Y = BitConverter.ToSingle (byteArray, offset + 4);
         }
