@@ -130,7 +130,7 @@ vec3 perturbNormal(vec3 inNormal, vec3 tangentNormal)
 }
 void main() 
 {
-    vec3 emit;
+    vec3 emit = vec3(0);
     vec4 base_color = pc.baseColorFactor;
     float rough = pc.roughnessFactor;
     float metallic = pc.metallicFactor;

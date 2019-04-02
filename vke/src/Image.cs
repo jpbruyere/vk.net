@@ -65,14 +65,14 @@ namespace VKE {
         public Image (Device device, VkFormat format, VkImageUsageFlags usage, VkMemoryPropertyFlags _memoryPropertyFlags,
             uint width, uint height,
             VkImageType type = VkImageType.Image2D, VkSampleCountFlags samples = VkSampleCountFlags.Count1,
-            VkImageTiling tiling = VkImageTiling.Optimal, uint mipsLevels = 1, uint layers = 1)
+            VkImageTiling tiling = VkImageTiling.Optimal, uint mipsLevels = 1, uint layers = 1, uint depth = 1)
             : base (device, _memoryPropertyFlags) {
 
             info.imageType = type;
             info.format = format;
             info.extent.width = width;
             info.extent.height = height;
-            info.extent.depth = 1;
+            info.extent.depth = depth;
             info.mipLevels = mipsLevels;
             info.arrayLayers = layers;
             info.samples = samples;
@@ -98,6 +98,11 @@ namespace VKE {
 			int width, height, channels;
 			IntPtr imgPtr = Stb.Load (path, out width, out height, out channels, 4);
 			long size = width * height * 4;
+
+			if (tiling == VkImageTiling.Optimal)
+				usage |= VkImageUsageFlags.TransferDst;
+			if (generateMipmaps)
+				usage |= (VkImageUsageFlags.TransferSrc | VkImageUsageFlags.TransferDst);
 
 			uint mipLevels = generateMipmaps ? (uint)Math.Floor (Math.Log (Math.Max (width, height))) + 1 : 1;
 
@@ -174,7 +179,7 @@ namespace VKE {
             return memReqs;
         }
         protected override void bindMemory (ulong offset = 0) {
-            Utils.CheckResult (vkBindImageMemory (dev.VkDev, handle, devMem, offset));
+            Utils.CheckResult (vkBindImageMemory (dev.VkDev, handle, vkMemory, offset));
         }
         public override void Activate () {
             Utils.CheckResult (vkCreateImage (dev.VkDev, ref info, IntPtr.Zero, out handle));

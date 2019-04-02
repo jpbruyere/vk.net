@@ -35,6 +35,7 @@ namespace VKE {
         internal bool isAllocated;
 
         public VkCommandBuffer Handle => handle;
+		public Device Device => pool?.dev;//this help
 
         internal CommandBuffer (VkDevice _dev, CommandPool _pool, VkCommandBuffer _buff)
         {
@@ -97,7 +98,7 @@ namespace VKE {
             vkCmdBindIndexBuffer (handle, indices.handle, offset, indexType);
         }
         public void DrawIndexed (uint indexCount, uint instanceCount = 1, uint firstIndex = 0, int vertexOffset = 0, uint firstInstance = 1) {
-            vkCmdDrawIndexed (Handle, indexCount, 1, 0, 0, 1);
+            vkCmdDrawIndexed (Handle, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
         }
 		public void PushConstant (PipelineLayout pipelineLayout, VkShaderStageFlags stageFlags, Object data, uint offset = 0) {
 			vkCmdPushConstants (handle, pipelineLayout.handle, stageFlags, offset, (uint)Marshal.SizeOf (data), data.Pin ());

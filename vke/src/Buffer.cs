@@ -125,7 +125,7 @@ namespace VKE {
         }
         public void CopyTo (CommandBuffer cmd, Buffer buff, ulong size = 0, ulong srcOffset = 0, ulong dstOffset = 0) {
             VkBufferCopy bufferCopy = new VkBufferCopy {
-                size = (size == 0) ? memSize : size,
+                size = (size == 0) ? deviceMemSize : size,
                 srcOffset = srcOffset,
                 dstOffset = dstOffset
             };
@@ -139,7 +139,7 @@ namespace VKE {
         }
 
         protected override void bindMemory (ulong offset) {
-            Utils.CheckResult (vkBindBufferMemory (dev.VkDev, handle, devMem, offset));
+            Utils.CheckResult (vkBindBufferMemory (dev.VkDev, handle, vkMemory, offset));
         }
         protected override void Dispose (bool disposing) {
             if (!isDisposed) {
