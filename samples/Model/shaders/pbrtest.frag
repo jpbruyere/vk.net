@@ -3,6 +3,16 @@
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
 
+layout (binding = 0) uniform UBO 
+{
+    mat4 projectionMatrix;
+    mat4 viewMatrix;
+    mat4 modelMatrix;
+    vec4 lightPos;
+    float gamma;
+    float exposure;    
+} ubo;
+
 layout (set = 1, binding = 0) uniform sampler2D samplerColor;
 layout (set = 1, binding = 1) uniform sampler2D samplerNormal;
 layout (set = 1, binding = 2) uniform sampler2D samplerOcclusion;
@@ -36,9 +46,6 @@ const uint MAP_METALROUGHNESS = 0x32;
 const uint MAP_EMISSIVE = 0x64;
 
 const float PI = 3.141592653589793;
-const float EXPOSURE = 2.0;
-const float GAMMA = 1.0;
-
 
 vec3 light = vec3(1.0,.0,1.0);
 
@@ -177,10 +184,10 @@ void main()
     vec3 color = ambient + Lo;
 
     // Tone mapping
-    color = Uncharted2Tonemap(color * EXPOSURE);
+    color = Uncharted2Tonemap(color * ubo.exposure);
     color = color * (1.0f / Uncharted2Tonemap(vec3(11.2f)));
     // Gamma correction
-    color = pow(color, vec3(1.0f / GAMMA)) + emit;
+    color = pow(color, vec3(1.0f / ubo.gamma)) + emit;
 
     outFragColor = vec4(color , base_color.a);
 }

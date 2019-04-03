@@ -133,7 +133,7 @@ namespace VKE {
             if (idx < 0) {
                 for (int i = 0; i < swapChain.ImageCount; i++) 
                     cmds[i].Free ();
-                Prepare ();
+                OnResize ();
                 return;
             }
 
@@ -182,7 +182,7 @@ namespace VKE {
         uint frameCount;
 
         public virtual void Run () {
-            Prepare ();
+            OnResize ();
             frameChrono = Stopwatch.StartNew ();
             while (!Glfw3.WindowShouldClose (hWin)) {
                 render ();
@@ -207,7 +207,7 @@ namespace VKE {
         }
         public virtual void Update () {}
 
-        protected abstract void Prepare ();
+        protected abstract void OnResize ();
 
 
 		#region IDisposable Support

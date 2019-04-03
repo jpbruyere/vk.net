@@ -12,6 +12,9 @@ layout (binding = 0) uniform UBO
 	mat4 projectionMatrix;
     mat4 viewMatrix;
 	mat4 modelMatrix;
+    vec4 lightPos;
+    float gamma;
+    float exposure;    
 } ubo;
 
 layout (location = 0) out vec2 outUV;

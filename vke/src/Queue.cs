@@ -85,6 +85,7 @@ namespace VKE {
 
         internal VkQueue handle;
         internal Device dev;
+		public Device Dev => dev;
 
         VkQueueFlags flags => dev.phy.QueueFamilies[qFamIndex].queueFlags;
         public uint qFamIndex;

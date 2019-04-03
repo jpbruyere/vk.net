@@ -145,7 +145,7 @@ namespace ModelSample {
 
 
 
-        protected override void Prepare () {
+        protected override void OnResize () {
 
             depthTexture?.Dispose ();
 

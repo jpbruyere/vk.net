@@ -62,6 +62,7 @@ namespace VKE {
             handle = vkHandle;
             imported = true;
         }
+
         public Image (Device device, VkFormat format, VkImageUsageFlags usage, VkMemoryPropertyFlags _memoryPropertyFlags,
             uint width, uint height,
             VkImageType type = VkImageType.Image2D, VkSampleCountFlags samples = VkSampleCountFlags.Count1,
@@ -84,6 +85,72 @@ namespace VKE {
             Activate ();//DONT OVERRIDE Activate in derived classes!!!!
         }
 
+		public static Image Load (Device dev, Queue staggingQ, CommandPool staggingCmdPool,
+			byte[] bitmap, VkFormat format = VkFormat.R8g8b8a8Unorm,
+			VkMemoryPropertyFlags memoryProps = VkMemoryPropertyFlags.DeviceLocal,
+			VkImageTiling tiling = VkImageTiling.Optimal, bool generateMipmaps = true,
+			VkImageType imageType = VkImageType.Image2D,
+			VkImageUsageFlags usage = VkImageUsageFlags.Sampled | VkImageUsageFlags.TransferSrc | VkImageUsageFlags.TransferDst) { 
+
+			int width, height, channels;
+			IntPtr imgPtr = Stb.Load (bitmap.Pin(), bitmap.Length, out width, out height, out channels, 4);
+			bitmap.Unpin ();
+			if (imgPtr == IntPtr.Zero)
+				throw new Exception ($"STBI image loading error.");
+
+			uint mipLevels = generateMipmaps ? (uint)Math.Floor (Math.Log (Math.Max (width, height))) + 1 : 1;
+
+			if (tiling == VkImageTiling.Optimal)
+				usage |= VkImageUsageFlags.TransferDst;
+			if (generateMipmaps)
+				usage |= (VkImageUsageFlags.TransferSrc | VkImageUsageFlags.TransferDst);
+
+			Image img = new Image (dev, format, usage, memoryProps, (uint)width, (uint)height, imageType, VkSampleCountFlags.Count1, tiling, mipLevels);
+
+			img.load (staggingQ, staggingCmdPool, imgPtr, generateMipmaps);
+
+			Stb.FreeImage (imgPtr);
+
+			return img;
+		}
+
+		/// <summary>
+		/// load bitmap from pointer
+		/// </summary>
+		void load (Queue staggingQ, CommandPool staggingCmdPool, IntPtr bitmap, bool generateMipmaps = true) 
+		{
+			long size = info.extent.width * info.extent.height * 4 * info.extent.depth;
+
+			if (MemoryFlags.HasFlag (VkMemoryPropertyFlags.HostVisible)) {
+				Map ();
+				unsafe {
+					System.Buffer.MemoryCopy (bitmap.ToPointer (), MappedData.ToPointer (), size, size);
+				}
+				Unmap ();
+
+				if (generateMipmaps)
+					BuildMipmaps (staggingQ, staggingCmdPool);
+			} else {
+				using (HostBuffer stagging = new HostBuffer (dev, VkBufferUsageFlags.TransferSrc, (UInt64)size, bitmap)) {				
+
+					CommandBuffer cmd = staggingCmdPool.AllocateCommandBuffer ();
+
+					cmd.Start (VkCommandBufferUsageFlags.OneTimeSubmit);
+
+					stagging.CopyTo (cmd, this);
+					if (generateMipmaps)
+						BuildMipmaps (cmd);
+
+					cmd.End ();
+
+					staggingQ.Submit (cmd);
+					staggingQ.WaitIdle ();
+
+					cmd.Free ();
+				}
+			}
+		}
+
 		/// <summary>
 		/// Load bitmap into Image with stagging and mipmap generation if necessary
 		/// and usage.
@@ -97,49 +164,21 @@ namespace VKE {
 
 			int width, height, channels;
 			IntPtr imgPtr = Stb.Load (path, out width, out height, out channels, 4);
-			long size = width * height * 4;
+			if (imgPtr == IntPtr.Zero)
+				throw new Exception ($"File not found: {path}.");
+
+			uint mipLevels = generateMipmaps ? (uint)Math.Floor (Math.Log (Math.Max (width, height))) + 1 : 1;
 
 			if (tiling == VkImageTiling.Optimal)
 				usage |= VkImageUsageFlags.TransferDst;
 			if (generateMipmaps)
 				usage |= (VkImageUsageFlags.TransferSrc | VkImageUsageFlags.TransferDst);
 
-			uint mipLevels = generateMipmaps ? (uint)Math.Floor (Math.Log (Math.Max (width, height))) + 1 : 1;
-
 			Image img = new Image (dev, format, usage, memoryProps, (uint)width, (uint)height, imageType, VkSampleCountFlags.Count1, tiling, mipLevels);
 
-			if (img.MemoryFlags.HasFlag (VkMemoryPropertyFlags.HostVisible)) {
-				img.Map ();
-				unsafe {
-					System.Buffer.MemoryCopy (imgPtr.ToPointer (), img.MappedData.ToPointer (), size, size);
-				}
-				img.Unmap ();
+			img.load (staggingQ, staggingCmdPool, imgPtr, generateMipmaps);
 
-				Stb.FreeImage (imgPtr);
-
-				if (generateMipmaps)
-					img.BuildMipmaps (staggingQ, staggingCmdPool);
-			} else {
-				using (HostBuffer stagging = new HostBuffer (dev, VkBufferUsageFlags.TransferSrc, (UInt64)size, imgPtr)) {
-
-					Stb.FreeImage (imgPtr);
-
-					CommandBuffer cmd = staggingCmdPool.AllocateCommandBuffer ();
-
-					cmd.Start (VkCommandBufferUsageFlags.OneTimeSubmit);
-
-					stagging.CopyTo (cmd, img);
-					if (generateMipmaps)
-						img.BuildMipmaps (cmd);
-
-					cmd.End ();
-
-					staggingQ.Submit (cmd);
-					staggingQ.WaitIdle ();
-
-					cmd.Free ();
-				}
-			}
+			Stb.FreeImage (imgPtr);
 
 			return img;
 		}

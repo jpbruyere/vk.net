@@ -66,42 +66,7 @@ namespace VKE {
 
         public GPUBuffer vbo;
         public GPUBuffer ibo;
-
-		//public GPUBuffer uboMaterials;
-		//[StructLayout (LayoutKind.Explicit, Size = 80)]
-		//public struct Material {
-		//	[FieldOffset (0)] public Vector4 baseColorFactor;
-		//	[FieldOffset (16)] public AlphaMode alphaMode;
-		//	[FieldOffset (20)] public float alphaCutoff;
-		//	[FieldOffset (24)] public float metallicFactor;
-		//	[FieldOffset (28)] public float roughnessFactor;
-
-		//	[FieldOffset (32)] public UInt32 baseColorTexture;
-		//	[FieldOffset (36)] public UInt32 metallicRoughnessTexture;
-		//	[FieldOffset (40)] public UInt32 normalTexture;
-		//	[FieldOffset (44)] public UInt32 occlusionTexture;
-
-		//	[FieldOffset (48)] public UInt32 emissiveTexture;
-
-		//	[FieldOffset (64)] public Vector4 emissiveFactor;
-
-		//	public Material (
-		//		UInt32 _baseColorTexture = 0, UInt32 _metallicRoughnessTexture = 0, UInt32 _normalTexture = 0, UInt32 _occlusionTexture = 0) {
-		//		baseColorFactor = new Vector4 (1f);
-		//		alphaMode = AlphaMode.Opaque;
-		//		alphaCutoff = 1f;
-		//		metallicFactor = 1f;
-		//		roughnessFactor = 1f;
-
-		//		baseColorTexture = _baseColorTexture;
-		//		metallicRoughnessTexture = _metallicRoughnessTexture;
-		//		normalTexture = _normalTexture;
-		//		occlusionTexture = _occlusionTexture;
-
-		//		emissiveTexture = 0;
-		//		emissiveFactor = new Vector4 (0.0f);
-		//	}
-		//}
+		public VkIndexType IndexBufferType { get; private set; } = VkIndexType.Uint16;
 
 		public struct PbrMaterial {
 			public Vector4 baseColorFactor;
@@ -226,6 +191,7 @@ namespace VKE {
             dev = device;
 
 			using (LoadingContext<UInt16> ctx = new LoadingContext<UInt16> (path, transferQ, cmdPool)) {
+				IndexBufferType = ctx.IndexType;
 
 				loadImages (ctx);
 				loadMaterial (ctx);
@@ -333,19 +299,22 @@ namespace VKE {
                 else throw new Exception ("unsupported vertex index type : " + typeof (I).ToString ());
             }
 
+			public static byte[] loadDataUri (GL.Image img) {
+				int idxComa = img.Uri.IndexOf (",", 5, StringComparison.Ordinal);
+				return Convert.FromBase64String (img.Uri.Substring (idxComa + 1));
+			}
+			public static byte[] loadDataUri (GL.Buffer buff) {
+				int idxComa = buff.Uri.IndexOf (",", 5, StringComparison.Ordinal);
+				return Convert.FromBase64String (buff.Uri.Substring (idxComa + 1));
+			}
+
 			public void EnsureBufferIsLoaded (int bufferIdx) {
 				if (loadedBuffers[bufferIdx] == null) {
 					//load full buffer
 					string uri = gltf.Buffers[bufferIdx].Uri;
-					if (uri.StartsWith ("data", StringComparison.Ordinal)) {
-						//embedded
-						//System.Buffers.Text.Base64.EncodeToUtf8InPlace (tmp,tmp.Length, out int bytewriten);
-						//string txt = System.Text.Encoding.UTF8.GetString (tmp);
-						//string txt = File.ReadAllText (Path.Combine (baseDirectory, gltf.Buffers[bv.Buffer].Uri));
-						//byte[] b64 = System.Convert.FromBase64String (tmp);
-						//                                 = Convert.FromBase64 (tmp);
-						throw new NotImplementedException ();
-					} else
+					if (uri.StartsWith ("data", StringComparison.Ordinal)) 
+						loadedBuffers[bufferIdx] = loadDataUri (gltf.Buffers[bufferIdx]);//TODO:check this func=>System.Buffers.Text.Base64.EncodeToUtf8InPlace
+					else
 						loadedBuffers[bufferIdx] = File.ReadAllBytes (Path.Combine (baseDirectory, gltf.Buffers[bufferIdx].Uri));
 					bufferHandles[bufferIdx] = GCHandle.Alloc (loadedBuffers[bufferIdx], GCHandleType.Pinned);
 				}
@@ -604,9 +573,16 @@ namespace VKE {
 			if (ctx.gltf.Images == null)
 				return;
 			foreach (GL.Image img in ctx.gltf.Images) {
-				Debug.WriteLine ("loading image {0} : {1} : {2}", img.Name, img.MimeType, img.Uri);
+				VKE.Image vkimg = null;
 
-				VKE.Image vkimg = Image.Load (dev, ctx.transferQ, ctx.cmdPool, Path.Combine (ctx.baseDirectory, img.Uri));
+				if (img.Uri.StartsWith ("data:", StringComparison.Ordinal)) {
+					Debug.WriteLine ("loading embedded image {0} : {1}", img.Name, img.MimeType);
+					vkimg = Image.Load (dev, ctx.transferQ, ctx.cmdPool, LoadingContext<I>.loadDataUri(img));
+				} else {
+					Debug.WriteLine ("loading image {0} : {1} : {2}", img.Name, img.MimeType, img.Uri);
+					vkimg = Image.Load (dev, ctx.transferQ, ctx.cmdPool, Path.Combine (ctx.baseDirectory, img.Uri));
+				}
+
 				vkimg.CreateView ();
 				vkimg.CreateSampler ();
 				vkimg.Descriptor.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
@@ -677,7 +653,7 @@ namespace VKE {
 
 		public void Bind (CommandBuffer cmd) {
 			cmd.BindVertexBuffer (vbo);
-			cmd.BindIndexBuffer (ibo, VkIndexType.Uint16);
+			cmd.BindIndexBuffer (ibo, IndexBufferType);
 		}
 		//TODO:destset for binding must be variable
 		//TODO: ADD REFAULT MAT IF NO MAT DEFINED

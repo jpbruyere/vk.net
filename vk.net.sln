@@ -17,6 +17,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "vk.gen", "vk.gen\vk.gen.csp
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Textured", "samples\Textured\Textured.csproj", "{96A2E0B8-91AE-4EB9-A435-185D01E24067}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "pbr", "samples\Pbr\pbr.csproj", "{1F18E74F-AEE8-481C-8FDF-89D81CBB30BE}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -50,11 +52,16 @@ Global
 		{96A2E0B8-91AE-4EB9-A435-185D01E24067}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{96A2E0B8-91AE-4EB9-A435-185D01E24067}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{96A2E0B8-91AE-4EB9-A435-185D01E24067}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1F18E74F-AEE8-481C-8FDF-89D81CBB30BE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1F18E74F-AEE8-481C-8FDF-89D81CBB30BE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1F18E74F-AEE8-481C-8FDF-89D81CBB30BE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1F18E74F-AEE8-481C-8FDF-89D81CBB30BE}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{1F05E74F-AEE8-481C-8FDF-89D81CBB30BE} = {A2A2849A-0032-4AA8-BC0E-82C69D7DE354}
 		{96A2E0B9-91AE-4EB9-A435-185D01E24067} = {A2A2849A-0032-4AA8-BC0E-82C69D7DE354}
 		{96A2E0B8-91AE-4EB9-A435-185D01E24067} = {A2A2849A-0032-4AA8-BC0E-82C69D7DE354}
+		{1F18E74F-AEE8-481C-8FDF-89D81CBB30BE} = {A2A2849A-0032-4AA8-BC0E-82C69D7DE354}
 	EndGlobalSection
 	GlobalSection(MonoDevelopProperties) = preSolution
 		Policies = $0
