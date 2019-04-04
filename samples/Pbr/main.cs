@@ -32,18 +32,31 @@ namespace PbrSample {
 		HostBuffer uboMats;
 
 		DescriptorPool descriptorPool;
-		DescriptorSetLayout descLayoutMatrix;
+		DescriptorSetLayout descLayoutMain;
 		DescriptorSetLayout descLayoutTextures;
-		DescriptorSet dsMats;
+		DescriptorSet dsMain;
 
 		Pipeline pipeline;
 		Framebuffer[] frameBuffers;
 
 		Model model;
+		Image cubemap;
+		string[] cubemapPathes = {
+			"../data/textures/papermill.ktx",
+			"../data/textures/cubemap_yokohama_bc3_unorm.ktx",
+			"../data/textures/gcanyon_cube.ktx",
+			"../data/textures/pisa_cube.ktx",
+			"../data/textures/uffizi_cube.ktx",
+		};
 
 		Camera Camera = new Camera (Utils.DegreesToRadians (60f), 1f);
 
-		Program () : base () {		
+		Program () : base () {
+			cubemap = KTX.KTX.Load (presentQueue, cmdPool, cubemapPathes[0],
+				VkImageUsageFlags.Sampled, VkMemoryPropertyFlags.DeviceLocal, true);
+			cubemap.CreateView (VkImageViewType.ImageCube,VkImageAspectFlags.Color,6);
+			cubemap.CreateSampler ();
+							
 			init ();
 
 			model = new Model (dev, presentQueue, cmdPool, "../data/models/DamagedHelmet/glTF/DamagedHelmet.gltf");
@@ -57,11 +70,13 @@ namespace PbrSample {
 
 		void init (VkSampleCountFlags samples = VkSampleCountFlags.Count4) { 
 			descriptorPool = new DescriptorPool (dev, 2,
-				new VkDescriptorPoolSize (VkDescriptorType.UniformBuffer)
+				new VkDescriptorPoolSize (VkDescriptorType.UniformBuffer),
+				new VkDescriptorPoolSize (VkDescriptorType.CombinedImageSampler)
 			);
 
-			descLayoutMatrix = new DescriptorSetLayout (dev,
-				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Vertex|VkShaderStageFlags.Fragment, VkDescriptorType.UniformBuffer));
+			descLayoutMain = new DescriptorSetLayout (dev,
+				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Vertex|VkShaderStageFlags.Fragment, VkDescriptorType.UniformBuffer),
+				new VkDescriptorSetLayoutBinding (1, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler));
 
 			descLayoutTextures = new DescriptorSetLayout (dev, 
 				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
@@ -71,14 +86,14 @@ namespace PbrSample {
 				new VkDescriptorSetLayoutBinding (4, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler)
 			);
 
-			dsMats = descriptorPool.Allocate (descLayoutMatrix);
+			dsMain = descriptorPool.Allocate (descLayoutMain);
 
 			pipeline = new Pipeline (dev,
 				swapChain.ColorFormat,
 				dev.GetSuitableDepthFormat (),
 				VkPrimitiveTopology.TriangleList, samples);
 
-			pipeline.Layout = new PipelineLayout (dev, descLayoutMatrix, descLayoutTextures);
+			pipeline.Layout = new PipelineLayout (dev, descLayoutMain, descLayoutTextures);
 			pipeline.Layout.AddPushConstants (
 				new VkPushConstantRange (VkShaderStageFlags.Vertex, (uint)Marshal.SizeOf<Matrix4x4> ()),
 				new VkPushConstantRange (VkShaderStageFlags.Fragment, (uint)Marshal.SizeOf<Model.PbrMaterial> (), 64)
@@ -96,7 +111,8 @@ namespace PbrSample {
 			uboMats.Map ();//permanent map
 
 			using (DescriptorSetWrites uboUpdate = new DescriptorSetWrites (dev)) {
-				uboUpdate.AddWriteInfo (dsMats, descLayoutMatrix.Bindings[0], uboMats.Descriptor);
+				uboUpdate.AddWriteInfo (dsMain, descLayoutMain.Bindings[0], uboMats.Descriptor);
+				uboUpdate.AddWriteInfo (dsMain, descLayoutMain.Bindings[1], cubemap.Descriptor);
 				uboUpdate.Update ();
 			}
 		}
@@ -118,7 +134,7 @@ namespace PbrSample {
 			cmd.SetViewport (fb.Width, fb.Height);
 			cmd.SetScissor (fb.Width, fb.Height);
 
-			cmd.BindDescriptorSet (pipeline.Layout, dsMats);
+			cmd.BindDescriptorSet (pipeline.Layout, dsMain);
 			pipeline.Bind (cmd);
 			model.Bind (cmd);
 			model.DrawAll (cmd, pipeline.Layout);
@@ -225,9 +241,10 @@ namespace PbrSample {
 						frameBuffers[i]?.Dispose ();
 					model.Dispose ();
 					pipeline.Dispose ();
-					descLayoutMatrix.Dispose ();
+					descLayoutMain.Dispose ();
 					descLayoutTextures.Dispose ();
 					descriptorPool.Dispose ();
+					cubemap.Dispose ();
 
 					uboMats.Dispose ();
 				}
