@@ -31,13 +31,14 @@ using static Vulkan.VulkanNative;
 
 namespace VKE {
     public class RenderPass : IDisposable {
+		internal uint references;
         internal VkRenderPass handle;
         internal Device dev;
 
-        NativeList<VkAttachmentDescription> attachments = new NativeList<VkAttachmentDescription> ();
+        internal NativeList<VkAttachmentDescription> attachments = new NativeList<VkAttachmentDescription> ();
         public NativeList<VkClearValue> ClearValues = new NativeList<VkClearValue> ();
 
-        List<SubPass> subpasses = new List<SubPass> ();
+        internal List<SubPass> subpasses = new List<SubPass> ();
         NativeList<VkSubpassDependency> dependencies = new NativeList<VkSubpassDependency> ();
 
         public void AddAttachment (VkFormat format,
@@ -150,6 +151,14 @@ namespace VKE {
                 handle = dev.CreateRenderPass (renderPassInfo);            
             }
         }
+
+		//public Framebuffer CreateFramebuffer (SwapChain swapChain) { 
+		//	Framebuffer fb;
+
+		//	return fb;
+		//}
+
+
         /// <summary>
         /// Begin Render pass with framebuffer extent dimensions
         /// </summary>
@@ -195,6 +204,10 @@ namespace VKE {
 			Dispose (false);
 		}
 		public void Dispose () {
+			if (references>0)
+				references--;
+			if (references>0)
+				return;
 			Dispose (true);
 			GC.SuppressFinalize (this);
 		}

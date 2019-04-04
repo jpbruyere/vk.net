@@ -31,14 +31,19 @@ namespace VKE {
     public class DescriptorSetLayout : IDisposable {
         internal VkDescriptorSetLayout handle;
         internal Device dev;
+		public VkDescriptorSetLayoutCreateFlags Flags { get; private set; } = VkDescriptorSetLayoutCreateFlags.None;
 
         public NativeList<VkDescriptorSetLayoutBinding> Bindings = new NativeList<VkDescriptorSetLayoutBinding> ();
 
-        public DescriptorSetLayout (Device device) {
+        public DescriptorSetLayout (Device device, VkDescriptorSetLayoutCreateFlags flags) {
             dev = device;
+			Flags = flags;
         }
-        public DescriptorSetLayout (Device device, params VkDescriptorSetLayoutBinding[] bindings)
-        : this (device) {
+		public DescriptorSetLayout (Device device, params VkDescriptorSetLayoutBinding[] bindings)
+        : this (device, VkDescriptorSetLayoutCreateFlags.None, bindings) {
+        }
+        public DescriptorSetLayout (Device device, VkDescriptorSetLayoutCreateFlags flags, params VkDescriptorSetLayoutBinding[] bindings)
+        : this (device, flags) {
             foreach (VkDescriptorSetLayoutBinding b in bindings) 
                 Bindings.Add (b);
             Activate ();
@@ -48,10 +53,7 @@ namespace VKE {
 				GC.ReRegisterForFinalize (this);
 				isDisposed = false;
 			}
-            VkDescriptorSetLayoutCreateInfo info = VkDescriptorSetLayoutCreateInfo.New ();            
-            info.bindingCount = Bindings.Count;
-            info.pBindings = Bindings.Data;
-
+			VkDescriptorSetLayoutCreateInfo info = new VkDescriptorSetLayoutCreateInfo (Flags, Bindings.Count, Bindings.Data);
             Utils.CheckResult (vkCreateDescriptorSetLayout (dev.VkDev, ref info, IntPtr.Zero, out handle));            
         }
 

@@ -30,12 +30,8 @@ using Vulkan;
 using static Vulkan.VulkanNative;
 
 namespace VKE {
-    public class QueueFamily {
-        public VkQueueFlags Flags;
-        public NativeList<float> Priorities;
-    }
-    public class PresentQueue : Queue {
 
+    public class PresentQueue : Queue {
         public readonly VkSurfaceKHR Surface;
 
         public PresentQueue (Device _dev, VkQueueFlags requestedFlags, VkSurfaceKHR _surface, float _priority = 0.0f) {        
@@ -46,6 +42,7 @@ namespace VKE {
             qFamIndex = searchQFamily (requestedFlags);
             dev.queues.Add (this);
         }
+        
         uint searchQFamily (VkQueueFlags requestedFlags) {
             //search for dedicated Q
             for (uint i = 0; i < dev.phy.QueueFamilies.Length; i++) {
@@ -85,6 +82,7 @@ namespace VKE {
 
         internal VkQueue handle;
         internal Device dev;
+		public Device Dev => dev;
 
         VkQueueFlags flags => dev.phy.QueueFamilies[qFamIndex].queueFlags;
         public uint qFamIndex;

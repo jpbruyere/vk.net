@@ -3,6 +3,7 @@ using System.IO;
 
 using Vulkan;
 using VKE;
+using System.Runtime.InteropServices;
 
 namespace KTX {
 
@@ -13,7 +14,7 @@ namespace KTX {
 	public class KTX {
 		static byte[] ktxSignature = { 0xAB, 0x4B, 0x54, 0x58, 0x20, 0x31, 0x31, 0xBB, 0x0D, 0x0A, 0x1A, 0x0A };
 
-		public static Image Load (CommandBuffer cmd, string ktxPath, VkImageUsageFlags usage = VkImageUsageFlags.Sampled,
+		public unsafe static Image Load (Queue staggingQ, CommandPool staggingCmdPool, string ktxPath, VkImageUsageFlags usage = VkImageUsageFlags.Sampled,
 			VkMemoryPropertyFlags memoryProperty = VkMemoryPropertyFlags.DeviceLocal, bool generateMipmaps = true,
 			VkImageTiling tiling = VkImageTiling.Optimal) {
 			Image img = null;
@@ -32,16 +33,11 @@ namespace KTX {
 					UInt32 pixelWidth = br.ReadUInt32 ();
 					UInt32 pixelHeight = br.ReadUInt32 ();
 					UInt32 pixelDepth = Math.Min (1, br.ReadUInt32 ());
-					UInt32 numberOfArrayElements = Math.Min (1, br.ReadUInt32 ());
-					UInt32 numberOfFaces = br.ReadUInt32 ();
+					UInt32 numberOfArrayElements = br.ReadUInt32 ();//only for array text, else 0
+					UInt32 numberOfFaces = br.ReadUInt32 ();//only for cube map, else
 					UInt32 numberOfMipmapLevels = Math.Min (1, br.ReadUInt32 ());
 					UInt32 bytesOfKeyValueData = br.ReadUInt32 ();
-
-					uint requestedMipsLevels = numberOfMipmapLevels;
-					if (numberOfMipmapLevels == 1)
-						requestedMipsLevels = generateMipmaps ? (uint)Math.Floor (Math.Log (Math.Max (pixelWidth, pixelHeight))) + 1 : 1;
-
-
+											
 					VkFormat vkFormat = GLHelper.vkGetFormatFromOpenGLInternalFormat (glInternalFormat);
 					if (vkFormat == VkFormat.Undefined) {
 						vkFormat = GLHelper.vkGetFormatFromOpenGLFormat (glFormat, glType);
@@ -49,52 +45,148 @@ namespace KTX {
 							throw new KtxException ("Undefined format: " + ktxPath);
 					}
 
-					VkImageType imgType = VkImageType.Image2D;
+					VkFormatFeatureFlags phyFormatSupport = (tiling == VkImageTiling.Linear) ?
+						staggingQ.Dev.phy.GetFormatProperties (vkFormat).linearTilingFeatures :
+						staggingQ.Dev.phy.GetFormatProperties (vkFormat).optimalTilingFeatures;
 
-					img = new Image (cmd.Device, vkFormat, usage, memoryProperty, pixelWidth, pixelHeight, imgType, VkSampleCountFlags.Count1,
-						tiling, requestedMipsLevels, numberOfArrayElements, pixelDepth);
+					uint requestedMipsLevels = numberOfMipmapLevels;
+					if (numberOfMipmapLevels == 1)
+						requestedMipsLevels = (generateMipmaps && phyFormatSupport.HasFlag (VkFormatFeatureFlags.BlitSrc | VkFormatFeatureFlags.BlitDst)) ?
+							(uint)Math.Floor (Math.Log (Math.Max (pixelWidth, pixelHeight))) + 1 : 1 ;
+							
+					if (tiling == VkImageTiling.Optimal)
+						usage |= VkImageUsageFlags.TransferDst;
+					if (generateMipmaps)
+						usage |= (VkImageUsageFlags.TransferSrc | VkImageUsageFlags.TransferDst);
+
+					VkImageCreateFlags createFlags = VkImageCreateFlags.None;
+
+					VkImageType imgType =
+						(pixelWidth == 0) ? throw new KtxException ("pixelWidth must be > 0") :
+						(pixelHeight == 0) ? imgType = VkImageType.Image1D :
+						(pixelDepth == 0) ? imgType = VkImageType.Image2D : imgType = VkImageType.Image3D;
+						
+
+					VkSampleCountFlags samples = VkSampleCountFlags.Count1;
+
+					if (numberOfFaces > 1) {
+						if (imgType != VkImageType.Image2D)
+							throw new KtxException ("cubemap faces must be 2D textures");
+						createFlags = VkImageCreateFlags.CubeCompatible;
+						samples = VkSampleCountFlags.Count1;
+						numberOfArrayElements = numberOfFaces;
+					} else {
+						numberOfFaces = 1;
+						if (numberOfArrayElements == 0)
+							numberOfArrayElements = 1;
+					}
+
+					if (imgType != VkImageType.Image3D)
+						pixelDepth = 1;
 
 
+					
+
+					img = new Image (staggingQ.Dev, vkFormat, usage, memoryProperty, pixelWidth, pixelHeight, imgType, samples,
+						tiling, requestedMipsLevels, numberOfArrayElements, pixelDepth, createFlags);
+						
 					byte[] keyValueDatas = br.ReadBytes ((int)bytesOfKeyValueData);
 
 
 					if (memoryProperty.HasFlag (VkMemoryPropertyFlags.DeviceLocal)) {
+						ulong staggingSize = img.AllocatedDeviceMemorySize;
 
 
+						using (HostBuffer stagging = new HostBuffer (staggingQ.Dev, VkBufferUsageFlags.TransferSrc, staggingSize)) {
+							stagging.Map ();
 
-						using (HostBuffer<byte> stagging = new HostBuffer<byte> (cmd.Device, VkBufferUsageFlags.TransferSrc, br.ReadBytes ((int)img.AllocatedDeviceMemorySize))) { 
+							CommandBuffer cmd = staggingCmdPool.AllocateCommandBuffer ();
+							cmd.Start (VkCommandBufferUsageFlags.OneTimeSubmit);
+							img.SetLayout (cmd, VkImageAspectFlags.Color,
+								VkImageLayout.Undefined, VkImageLayout.TransferDstOptimal,
+								VkPipelineStageFlags.AllCommands, VkPipelineStageFlags.Transfer);
+
+							using (NativeList<VkBufferImageCopy> buffCopies = new NativeList<VkBufferImageCopy> ()) {
+								VkBufferImageCopy bufferCopyRegion = new VkBufferImageCopy {
+									imageExtent = img.CreateInfo.extent,
+									imageSubresource = new VkImageSubresourceLayers (VkImageAspectFlags.Color, img.CreateInfo.arrayLayers, 0)
+								};
+
+								ulong bufferOffset = 0;
+								uint imgWidth = img.CreateInfo.extent.height;
+								uint imgHeight = img.CreateInfo.extent.width;
+
+								for (int mips = 0; mips < numberOfMipmapLevels; mips++) {
+									UInt32 imgSize = br.ReadUInt32 ();
+
+									bufferCopyRegion.bufferImageHeight = imgWidth;
+									bufferCopyRegion.bufferRowLength = imgHeight;
+									bufferCopyRegion.bufferOffset = bufferOffset;
+
+									if (createFlags.HasFlag (VkImageCreateFlags.CubeCompatible)) {
+										IntPtr ptrFace = img.MappedData;
+										bufferCopyRegion.imageSubresource.layerCount = 1;
+										for (uint face = 0; face < numberOfFaces; face++) {
+											bufferCopyRegion.imageSubresource.baseArrayLayer = face;
+											Marshal.Copy (br.ReadBytes ((int)imgSize), 0, stagging.MappedData + (int)bufferOffset, (int)imgSize);
+											buffCopies.Add (bufferCopyRegion);
+											uint faceOffset = imgSize + (imgSize % 4);
+											ptrFace += (int)faceOffset;//cube padding
+											bufferOffset += faceOffset;
+											bufferCopyRegion.bufferOffset = bufferOffset;
+										}
+									} else {
+										Marshal.Copy (br.ReadBytes ((int)imgSize), 0, stagging.MappedData, (int)imgSize);
+										buffCopies.Add (bufferCopyRegion);
+									}
+									bufferOffset += imgSize;
+									imgWidth /= 2;
+									imgHeight /= 2;
+								}
+								stagging.Unmap ();
+								VulkanNative.vkCmdCopyBufferToImage (cmd.Handle, stagging.handle, img.handle, VkImageLayout.TransferDstOptimal,
+									buffCopies.Count, buffCopies.Data);
+
+
+								if (requestedMipsLevels > numberOfMipmapLevels)
+									img.BuildMipmaps (cmd);
+								else
+									img.SetLayout (cmd, VkImageAspectFlags.Color,
+										VkImageLayout.TransferDstOptimal, VkImageLayout.ShaderReadOnlyOptimal,
+										VkPipelineStageFlags.Transfer, VkPipelineStageFlags.AllGraphics);
+
+								cmd.End ();
+
+								staggingQ.Submit (cmd);
+								staggingQ.WaitIdle ();
+
+								cmd.Free ();
+							}
 						}
 
-
-							VkImageSubresourceRange mipSubRange = new VkImageSubresourceRange (VkImageAspectFlags.Color, 0, 1, 0, numberOfArrayElements);
-
-						for (int mips = 0; mips < numberOfMipmapLevels; mips++) {
-							UInt32 imgSize = br.ReadUInt32 ();
+						//for (int mips = 0; mips < numberOfMipmapLevels; mips++) {
+							//UInt32 imgSize = br.ReadUInt32 ();
 							/*VkImageBlit imageBlit = new VkImageBlit {
 								srcSubresource = new VkImageSubresourceLayers(VkImageAspectFlags.Color, numberOfArrayElements, (uint)mips - 1),
 								srcOffsets_1 = new VkOffset3D((int)pixelWidth >> (mips - 1), (int)pixelHeight >> (mips - 1),1),
 								dstSubresource = new VkImageSubresourceLayers (VkImageAspectFlags.Color, numberOfArrayElements, (uint)mips),
 								dstOffsets_1 = new VkOffset3D ((int)pixelWidth >> mips, (int)pixelHeight >> mips, 1),
 							};*/
-
-							for (int layer = 0; layer < numberOfArrayElements; layer++) {
-								for (int face = 0; face < numberOfFaces; face++) {
-									for (int slice = 0; slice < pixelDepth; slice++) {
+							//for (int layer = 0; layer < numberOfArrayElements; layer++) {
+								//for (int face = 0; face < numberOfFaces; face++) {
+									//for (int slice = 0; slice < pixelDepth; slice++) {
 										/*for (int y = 0; y < pixelHeight; y++) {
 											for (int x = 0; x < pixelWidth; x++) {
 												//Uncompressed texture data matches a GL_UNPACK_ALIGNMENT of 4.
-
 											}
-
 										}*/
-									}
+									//}
 									//Byte cubePadding[0-3]
-								}
-							}
+								//}
+							//}
 							//Byte mipPadding[0-3]
-						}
-						if (requestedMipsLevels > numberOfMipmapLevels)
-							img.BuildMipmaps (cmd);
+						//}
+
 					}
 				}
 			}

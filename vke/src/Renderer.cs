@@ -42,78 +42,136 @@ namespace VKE {
 
 	public class Renderer : IDisposable {
         Device dev;
+        
+        public struct Matrices {
+			public Matrix4x4 projection;
+			public Matrix4x4 view;
+			public Matrix4x4 model;
+			public Vector4 lightPos;
+			public float gamma;
+			public float exposure;
+		}
 
-        Image environmentCube;
-        Image empty;
-        Image lutBrdf;
-        Image irradianceCube;
-        Image prefilteredCube;
-        Model scene;
-        Model skybox;
+		public Matrices matrices;
 
-        HostBuffer uboScene;
-        HostBuffer uboSkybox;
-        HostBuffer uboParams;
+		HostBuffer uboMats;
 
-        enum PBRWorkflows { PBR_WORKFLOW_METALLIC_ROUGHNESS = 0, PBR_WORKFLOW_SPECULAR_GLOSINESS = 1 };
+		DescriptorSetLayout descLayoutMatrix;
+		DescriptorSetLayout descLayoutTextures;
 
-        struct Matrices {
-            public Matrix4x4 projection;
-            public Matrix4x4 model;
-            public Matrix4x4 view;
-            public Vector3 camPos;
+		DescriptorPool descriptorPool;
+		DescriptorSet dsMats;
+
+		Pipeline pipeline;
+		Model model;
+
+		public Camera Camera { get; private set; }
+
+
+		VkFormat depthFormat, colorFormat;
+		VkSampleCountFlags samples;
+		       
+        public Renderer (Device device, VkFormat depthFormat, VkFormat colorFormat, VkSampleCountFlags samples = VkSampleCountFlags.Count4) {
+            dev = device;
+			this.depthFormat = depthFormat;
+			this.colorFormat = colorFormat;
+			this.samples = samples;
+
+			Camera = new Camera (Utils.DegreesToRadians (60f), 1f);
+
+			init ();
         }
 
-        struct LightParams {
-            public Vector4 lightDir;
-            public float exposure;
-            public float gamma;
-            public float prefilteredCubeMipLevels;
-            public float scaleIBLAmbient;
-            public float debugViewInputs;
-            public float debugViewEquation;
-        }
-        struct LightSource {
-            public Vector3 color;
-            public Vector3 rotation;
-        }
-        [StructLayout (LayoutKind.Sequential)]
-        struct Material {
-            Vector4 baseColorFactor;
-            Vector4 emissiveFactor;
-            Vector4 diffuseFactor;
-            Vector4 specularFactor;
-            float workflow;
-            int colorTextureSet;
-            int PhysicalDescriptorTextureSet;
-            int normalTextureSet;
-            int occlusionTextureSet;
-            int emissiveTextureSet;
-            float metallicFactor;
-            float roughnessFactor;
-            float alphaMask;
-            float alphaMaskCutoff;
-        }
+		void init () { 
+			descriptorPool = new DescriptorPool (dev, 2,
+				new VkDescriptorPoolSize (VkDescriptorType.UniformBuffer)
+			);
 
-        LightSource lightSource = new LightSource {
-            color = new Vector3 (1.0f),
-            rotation = new Vector3 (75.0f, 40.0f, 0.0f),
-        };
-        LightParams shaderParams = new LightParams {
-            exposure = 4.5f,
-            gamma = 2.2f,
-            scaleIBLAmbient = 1.0f,
-        };
-        Matrices sceneMats, skyboxMats;
+			descLayoutMatrix = new DescriptorSetLayout (dev,
+				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Vertex|VkShaderStageFlags.Fragment, VkDescriptorType.UniformBuffer));
 
-        PipelineLayout pipelineLayout;
-        Pipeline plPBR, plSkybox, plAlphaBlend;
+			descLayoutTextures = new DescriptorSetLayout (dev, 
+				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
+				new VkDescriptorSetLayoutBinding (1, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
+				new VkDescriptorSetLayoutBinding (2, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
+				new VkDescriptorSetLayoutBinding (3, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
+				new VkDescriptorSetLayoutBinding (4, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler)
+			);
 
+			dsMats = descriptorPool.Allocate (descLayoutMatrix);
 
-        public Renderer (Device device) {
-            dev = device; 
-        }
+			VkPushConstantRange[] pushConstantRanges =
+			{ new VkPushConstantRange {
+				stageFlags = VkShaderStageFlags.Vertex,
+				size = (uint)Marshal.SizeOf<Matrix4x4>(),
+				offset = 0
+			}, new VkPushConstantRange {
+				stageFlags = VkShaderStageFlags.Fragment,
+				size = (uint)Marshal.SizeOf<Model.PbrMaterial>(),
+				offset = 64
+			}};
+				
+			pipeline = new Pipeline (dev, colorFormat, depthFormat);
+			pipeline.Layout = new PipelineLayout (dev, pushConstantRanges, descLayoutMatrix, descLayoutTextures).Activate ();
+			pipeline.multisampleState.rasterizationSamples = samples;
+			pipeline.vertexBindings.Add (new VkVertexInputBindingDescription (0, (uint)Marshal.SizeOf<Model.Vertex> ()));
+			pipeline.vertexAttributes.Add (new VkVertexInputAttributeDescription (0, VkFormat.R32g32b32Sfloat));
+			pipeline.vertexAttributes.Add (new VkVertexInputAttributeDescription (1, VkFormat.R32g32b32Sfloat, 3 * sizeof (float)));
+			pipeline.vertexAttributes.Add (new VkVertexInputAttributeDescription (2, VkFormat.R32g32Sfloat, 6 * sizeof (float)));
+			pipeline.shaders.Add (new ShaderInfo (VkShaderStageFlags.Vertex, "shaders/pbrtest.vert.spv"));
+			pipeline.shaders.Add (new ShaderInfo (VkShaderStageFlags.Fragment, "shaders/pbrtest.frag.spv"));
+			pipeline.Activate ();
 
+			uboMats = new HostBuffer (dev, VkBufferUsageFlags.UniformBuffer, (ulong)Marshal.SizeOf<Matrices>());
+
+			using (DescriptorSetWrites uboUpdate = new DescriptorSetWrites (dev)) {
+				uboUpdate.AddWriteInfo (dsMats, descLayoutMatrix.Bindings[0], uboMats.Descriptor);
+				uboUpdate.Update ();
+			}
+
+			matrices.lightPos = new Vector4 (0.0f, 0.0f, -2.0f, 1.0f);
+			matrices.gamma = 1.0f;
+			matrices.exposure = 2.0f;
+
+			uboMats.Map ();//permanent map
+
+			Update ();
+		}
+
+		public void LoadModel (Queue transferQ, CommandPool cmdPool, string path) { 
+			model = new Model (dev, transferQ, cmdPool, path);
+			model.WriteMaterialsDescriptorSets (descLayoutTextures,
+				ShaderBinding.Color,
+				ShaderBinding.Normal,
+				ShaderBinding.AmbientOcclusion,
+				ShaderBinding.MetalRoughness,
+				ShaderBinding.Emissive);
+		}
+
+		public void RecordCmd (CommandBuffer cmd, Framebuffer framebuffer) {
+			pipeline.RenderPass.Begin (cmd, framebuffer);
+
+			cmd.SetViewport (framebuffer.Width, framebuffer.Height);
+			cmd.SetScissor (framebuffer.Width, framebuffer.Height);
+
+			cmd.BindDescriptorSet (pipeline.Layout, dsMats);
+
+			pipeline.Bind (cmd);
+
+			model.Bind (cmd);
+			model.DrawAll (cmd, pipeline.Layout);
+
+			pipeline.RenderPass.End (cmd);		 
+		}
+
+		public void Update () {
+			Camera.Update ();
+			matrices.projection = Camera.Projection;
+			matrices.view = Camera.View;
+			matrices.model = Camera.Model;
+
+			uboMats.Update (matrices, (uint)Marshal.SizeOf<Matrices> ());
+		}
 
 		#region IDisposable Support
 		private bool isDisposed = false; // Pour détecter les appels redondants
@@ -121,6 +179,13 @@ namespace VKE {
 		protected virtual void Dispose (bool disposing) {
 			if (!isDisposed) {
 				if (disposing) {
+					model.Dispose ();
+					pipeline.Dispose ();
+					descLayoutMatrix.Dispose ();
+					descLayoutTextures.Dispose ();
+					descriptorPool.Dispose ();
+
+					uboMats.Dispose ();
 				} else
 					Debug.WriteLine ("renderer was not disposed");
 				isDisposed = true;

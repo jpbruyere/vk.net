@@ -24,11 +24,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 using System;
+using System.IO;
 using System.Numerics;
 
 namespace Vulkan {
-
-    public static class Utils {
+    public static partial class Utils {
         public static void CheckResult (VkResult result, string errorString = "Call failed") {
             if (result != VkResult.Success)
                 throw new InvalidOperationException (errorString + ": " + result.ToString ());
@@ -36,7 +36,9 @@ namespace Vulkan {
         public static float DegreesToRadians (float degrees) {
             return degrees * (float)Math.PI / 180f;
         }
-        public static void FromFloatArray (ref Vector3 v, float[] floats) {
+
+		#region Extensions methods
+		public static void FromFloatArray (ref Vector3 v, float[] floats) {
 			if (floats.Length > 0)
 				v.X = floats[0];
 			if (floats.Length > 1)
@@ -85,7 +87,9 @@ namespace Vulkan {
             v.Z = BitConverter.ToSingle (byteArray, offset + 8);
             v.W = BitConverter.ToSingle (byteArray, offset + 12);
         }
-        // Fixed sub resource on first mip level and layer
+		#endregion        
+
+		// Fixed sub resource on first mip level and layer
         public static void setImageLayout (
             VkCommandBuffer cmdbuffer,
             VkImage image,

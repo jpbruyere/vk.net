@@ -6,7 +6,9 @@
       <Targets>DXC</Targets>
     </AvailableItemName>
   </ItemGroup>
-
+  <Target Name="AfterBuild">
+    <Copy SourceFiles="@(Datas)" DestinationFiles="@(Datas->'$(SolutionDir)build\$(Configuration)\samples\data\%(RelativeDir)%(Filename)%(Extension)')"/>
+  </Target>
   <Target Name="CompileShaders" BeforeTargets="Build">        
     <Message Importance="High" Text="Compiling shaders to spirv with glslc" />
     <MakeDir Directories="$(OutputPath)%(GLSLShader.RelativeDir)"/>

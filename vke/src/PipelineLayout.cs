@@ -32,6 +32,7 @@ using static Vulkan.VulkanNative;
 namespace VKE {
 
 	public class PipelineLayout : IDisposable {
+		internal uint references;
         internal VkPipelineLayout handle;
         internal Device dev;
 
@@ -56,7 +57,10 @@ namespace VKE {
 			if (descriptorSetLayouts.Length > 0)
 				DescriptorSetLayouts.AddRange (descriptorSetLayouts);
         }
-
+		public void AddPushConstants (params VkPushConstantRange[] pushConstantRanges) { 
+			foreach (VkPushConstantRange pcr in pushConstantRanges)
+				PushConstantRanges.Add (pcr);
+		}
 		public PipelineLayout Activate () {
 			if (isDisposed) {
 				isDisposed = false;
@@ -97,6 +101,10 @@ namespace VKE {
 			Dispose(false);
 		}
 		public void Dispose () {
+			if (references>0)
+				references--;
+			if (references>0)
+				return;
 			Dispose (true);
 			GC.SuppressFinalize(this);
 		}

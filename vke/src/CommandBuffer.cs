@@ -91,14 +91,17 @@ namespace VKE {
         public void BindDescriptorSet (PipelineLayout pipelineLayout, DescriptorSet descriptorSet, uint firstSet = 0) {
             vkCmdBindDescriptorSets (handle, VkPipelineBindPoint.Graphics, pipelineLayout.handle, firstSet, 1, ref descriptorSet.handle, 0, IntPtr.Zero);
         }
-        public void BindVertexBuffer (Buffer vertices, ulong offset = 0) {
-            vkCmdBindVertexBuffers (handle, 0, 1, ref vertices.handle, ref offset);
+        public void BindVertexBuffer (Buffer vertices, uint binding = 0, ulong offset = 0) {
+            vkCmdBindVertexBuffers (handle, binding, 1, ref vertices.handle, ref offset);
         }
         public void BindIndexBuffer (Buffer indices, VkIndexType indexType = VkIndexType.Uint32, ulong offset = 0) {
             vkCmdBindIndexBuffer (handle, indices.handle, offset, indexType);
         }
         public void DrawIndexed (uint indexCount, uint instanceCount = 1, uint firstIndex = 0, int vertexOffset = 0, uint firstInstance = 1) {
             vkCmdDrawIndexed (Handle, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
+        }
+        public void Draw (uint vertexCount, uint instanceCount = 1, uint firstVertex = 0, uint firstInstance = 0) {
+            vkCmdDraw (Handle, vertexCount, instanceCount, firstVertex, firstInstance);
         }
 		public void PushConstant (PipelineLayout pipelineLayout, VkShaderStageFlags stageFlags, Object data, uint offset = 0) {
 			vkCmdPushConstants (handle, pipelineLayout.handle, stageFlags, offset, (uint)Marshal.SizeOf (data), data.Pin ());

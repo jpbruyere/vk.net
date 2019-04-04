@@ -58,7 +58,7 @@ namespace VKE {
 		DescriptorPool descriptorPool;
 
 
-        public List<VKE.Image> textures = new List<Image> ();
+        public List<Image> textures = new List<Image> ();
 		public List<Material> materials = new List<Material> ();
 		public List<Mesh> Meshes = new List<Mesh> ();
 		public List<Scene> Scenes;
@@ -66,6 +66,7 @@ namespace VKE {
 
         public GPUBuffer vbo;
         public GPUBuffer ibo;
+		public VkIndexType IndexBufferType { get; private set; } = VkIndexType.Uint16;
 
 		//public GPUBuffer uboMaterials;
 		//[StructLayout (LayoutKind.Explicit, Size = 80)]
@@ -226,6 +227,7 @@ namespace VKE {
             dev = device;
 
 			using (LoadingContext<UInt16> ctx = new LoadingContext<UInt16> (path, transferQ, cmdPool)) {
+				IndexBufferType = ctx.IndexType;
 
 				loadImages (ctx);
 				loadMaterial (ctx);
@@ -333,19 +335,22 @@ namespace VKE {
                 else throw new Exception ("unsupported vertex index type : " + typeof (I).ToString ());
             }
 
+			public static byte[] loadDataUri (GL.Image img) {
+				int idxComa = img.Uri.IndexOf (",", 5, StringComparison.Ordinal);
+				return Convert.FromBase64String (img.Uri.Substring (idxComa + 1));
+			}
+			public static byte[] loadDataUri (GL.Buffer buff) {
+				int idxComa = buff.Uri.IndexOf (",", 5, StringComparison.Ordinal);
+				return Convert.FromBase64String (buff.Uri.Substring (idxComa + 1));
+			}
+
 			public void EnsureBufferIsLoaded (int bufferIdx) {
 				if (loadedBuffers[bufferIdx] == null) {
 					//load full buffer
 					string uri = gltf.Buffers[bufferIdx].Uri;
-					if (uri.StartsWith ("data", StringComparison.Ordinal)) {
-						//embedded
-						//System.Buffers.Text.Base64.EncodeToUtf8InPlace (tmp,tmp.Length, out int bytewriten);
-						//string txt = System.Text.Encoding.UTF8.GetString (tmp);
-						//string txt = File.ReadAllText (Path.Combine (baseDirectory, gltf.Buffers[bv.Buffer].Uri));
-						//byte[] b64 = System.Convert.FromBase64String (tmp);
-						//                                 = Convert.FromBase64 (tmp);
-						throw new NotImplementedException ();
-					} else
+					if (uri.StartsWith ("data", StringComparison.Ordinal)) 
+						loadedBuffers[bufferIdx] = loadDataUri (gltf.Buffers[bufferIdx]);//TODO:check this func=>System.Buffers.Text.Base64.EncodeToUtf8InPlace
+					else
 						loadedBuffers[bufferIdx] = File.ReadAllBytes (Path.Combine (baseDirectory, gltf.Buffers[bufferIdx].Uri));
 					bufferHandles[bufferIdx] = GCHandle.Alloc (loadedBuffers[bufferIdx], GCHandleType.Pinned);
 				}
@@ -604,9 +609,16 @@ namespace VKE {
 			if (ctx.gltf.Images == null)
 				return;
 			foreach (GL.Image img in ctx.gltf.Images) {
-				Debug.WriteLine ("loading image {0} : {1} : {2}", img.Name, img.MimeType, img.Uri);
+				VKE.Image vkimg = null;
 
-				VKE.Image vkimg = Image.Load (dev, ctx.transferQ, ctx.cmdPool, Path.Combine (ctx.baseDirectory, img.Uri));
+				if (img.Uri.StartsWith ("data:", StringComparison.Ordinal)) {
+					Debug.WriteLine ("loading embedded image {0} : {1}", img.Name, img.MimeType);
+					vkimg = Image.Load (dev, ctx.transferQ, ctx.cmdPool, LoadingContext<I>.loadDataUri(img));
+				} else {
+					Debug.WriteLine ("loading image {0} : {1} : {2}", img.Name, img.MimeType, img.Uri);
+					vkimg = Image.Load (dev, ctx.transferQ, ctx.cmdPool, Path.Combine (ctx.baseDirectory, img.Uri));
+				}
+
 				vkimg.CreateView ();
 				vkimg.CreateSampler ();
 				vkimg.Descriptor.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
@@ -677,7 +689,7 @@ namespace VKE {
 
 		public void Bind (CommandBuffer cmd) {
 			cmd.BindVertexBuffer (vbo);
-			cmd.BindIndexBuffer (ibo, VkIndexType.Uint16);
+			cmd.BindIndexBuffer (ibo, IndexBufferType);
 		}
 		//TODO:destset for binding must be variable
 		//TODO: ADD REFAULT MAT IF NO MAT DEFINED
@@ -690,7 +702,8 @@ namespace VKE {
 				foreach (Primitive p in node.Mesh.Primitives) {
 					Material mat = materials[(int)p.material];
 					cmd.PushConstant (pipelineLayout, VkShaderStageFlags.Fragment, mat.pbrDatas, (uint)Marshal.SizeOf<Matrix4x4>());
-					cmd.BindDescriptorSet (pipelineLayout, mat.descriptorSet, 1);
+					if (mat.descriptorSet != null)
+						cmd.BindDescriptorSet (pipelineLayout, mat.descriptorSet, 1);
 					cmd.DrawIndexed (p.indexCount, 1, p.indexBase, p.vertexBase, 0);
 				}
 			}

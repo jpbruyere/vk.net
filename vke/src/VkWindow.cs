@@ -50,8 +50,15 @@ namespace VKE {
         protected VkSemaphore[] drawComplete;
 
         protected bool updateRequested = true;
+		protected double lastMouseX, lastMouseY;
 
         uint width, height;
+
+		public virtual string[] EnabledExtensions {
+			get {
+				return new string[] {"VK_KHR_swapchain"};
+			} 
+		}
 
         public uint Width => width;
         public uint Height => height;
@@ -106,7 +113,7 @@ namespace VKE {
             createQueues ();
 
             //activate the device to have effective queues created accordingly to what's available
-            dev.Activate (enabledFeatures, "VK_KHR_swapchain");
+            dev.Activate (enabledFeatures, EnabledExtensions);
 
             swapChain = new SwapChain (presentQueue as PresentQueue, width, height, VkFormat.B8g8r8a8Unorm,
                 vSync ? VkPresentModeKHR.FifoKHR : VkPresentModeKHR.MailboxKHR );
@@ -131,9 +138,7 @@ namespace VKE {
         protected virtual void render () {
             int idx = swapChain.GetNextImage();
             if (idx < 0) {
-                for (int i = 0; i < swapChain.ImageCount; i++) 
-                    cmds[i].Free ();
-                Prepare ();
+                OnResize ();
                 return;
             }
 
@@ -159,6 +164,8 @@ namespace VKE {
         static void HandleWindowSizeDelegate (IntPtr window, int width, int height) {}
         static void HandleCursorPosDelegate (IntPtr window, double xPosition, double yPosition) {
             currentWindow.onMouseMove (xPosition, yPosition);
+			currentWindow.lastMouseX = xPosition;
+			currentWindow.lastMouseY = yPosition;
         }
         static void HandleMouseButtonDelegate (IntPtr window, Glfw.MouseButton button, InputAction action, Modifier mods) {
             if (action == InputAction.Press) {
@@ -182,10 +189,14 @@ namespace VKE {
         uint frameCount;
 
         public virtual void Run () {
-            Prepare ();
+            OnResize ();
+            Update ();
+
             frameChrono = Stopwatch.StartNew ();
+
             while (!Glfw3.WindowShouldClose (hWin)) {
                 render ();
+
                 if(updateRequested)
                     Update ();
 
@@ -207,7 +218,7 @@ namespace VKE {
         }
         public virtual void Update () {}
 
-        protected abstract void Prepare ();
+		protected virtual void OnResize () {}
 
 
 		#region IDisposable Support

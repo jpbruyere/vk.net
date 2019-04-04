@@ -474,6 +474,12 @@ namespace Vulkan
 
         private static IntPtr vkCmdDraw_ptr;
 
+		[Generator.CalliRewrite]
+        public static unsafe void vkCmdDraw(VkCommandBuffer commandBuffer, uint vertexCount, uint instanceCount, uint firstVertex, uint firstInstance)
+        {
+            throw new NotImplementedException();
+        }
+
         private static IntPtr vkCmdDrawIndexed_ptr;
         [Generator.CalliRewrite]
         public static unsafe void vkCmdDrawIndexed(VkCommandBuffer commandBuffer, uint indexCount, uint instanceCount, uint firstIndex, int vertexOffset, uint firstInstance)
