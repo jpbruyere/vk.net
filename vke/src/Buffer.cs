@@ -41,6 +41,22 @@ namespace VKE {
         public GPUBuffer (Device device, VkBufferUsageFlags usage, int elementCount)
             : base (device, usage, (ulong)(Marshal.SizeOf<T> () * elementCount)) {
         }
+        public GPUBuffer (Queue staggingQ, CommandPool staggingCmdPool, VkBufferUsageFlags usage, T[] elements)
+            : base (staggingQ.Dev, usage | VkBufferUsageFlags.TransferDst, (ulong)(Marshal.SizeOf<T> () * elements.Length)) {
+			using (HostBuffer<T> stagging = new HostBuffer<T> (dev, VkBufferUsageFlags.TransferSrc, elements)) { 
+				CommandBuffer cmd = staggingCmdPool.AllocateCommandBuffer ();
+				cmd.Start (VkCommandBufferUsageFlags.OneTimeSubmit);
+
+				stagging.CopyTo (cmd, this);
+
+				cmd.End ();
+
+				staggingQ.Submit (cmd);
+				staggingQ.WaitIdle ();
+
+				cmd.Free ();
+			}
+        }
     }
     public class HostBuffer<T> : HostBuffer {
         public HostBuffer (Device device, VkBufferUsageFlags usage, IList<T> data)
@@ -142,6 +158,8 @@ namespace VKE {
             Utils.CheckResult (vkBindBufferMemory (dev.VkDev, handle, vkMemory, offset));
         }
         protected override void Dispose (bool disposing) {
+			if (references>0)
+				return;
             if (!isDisposed) {
                 base.Dispose (disposing);
                 if (!disposing)

@@ -7,6 +7,7 @@ using static Vulkan.VulkanNative;
 
 namespace VKE {
     public abstract class Resource : IDisposable {
+		internal uint references;
         protected Device dev;
         protected VkDeviceMemory vkMemory;
         protected UInt64 deviceMemSize;
@@ -89,6 +90,10 @@ namespace VKE {
         }
 
         public void Dispose () {
+			if (references>0)
+				references--;
+			if (references>0)
+				return;
             Dispose (true);
             GC.SuppressFinalize (this);
         }

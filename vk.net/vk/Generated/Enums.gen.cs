@@ -3028,6 +3028,7 @@ namespace Vulkan
     {
         None = 0,
         PushDescriptorKHR = 1,
+		UpdateAfterBindEXT = 2,
     }
     public static partial class RawConstants
     {

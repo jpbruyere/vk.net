@@ -27,9 +27,9 @@
   <ItemGroup>
     <Compile Include="*.cs" />
     <GLSLShader Include="shaders\**\*.frag;shaders\**\*.vert" />                
-    <None Include="data\**\*.*">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
+    <Datas Include="..\data\**\*.*">      
+      <Link>data\%(RecursiveDir)%(Filename)%(Extension)</Link>
+    </Datas>
   </ItemGroup>
   <ItemGroup>
     <Reference Include="System.Numerics" />

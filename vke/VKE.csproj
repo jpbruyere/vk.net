@@ -16,7 +16,7 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <Optimize>false</Optimize>    
     <CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
-    <DefineConstants>DEBUG;_RENDERDOC</DefineConstants>
+    <DefineConstants>DEBUG;RENDERDOC</DefineConstants>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <Optimize>true</Optimize>
@@ -39,7 +39,7 @@
   </ItemGroup>
   <ItemGroup>        
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="src\**\*.cs" />
+    <Compile Include="src\**\*.cs" Exclude="src\Renderer.cs;src\QueueFamily.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\vk.net\vk.net.csproj">

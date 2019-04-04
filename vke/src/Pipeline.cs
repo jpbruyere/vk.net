@@ -25,41 +25,43 @@
 // THE SOFTWARE.
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using Vulkan;
 using static Vulkan.VulkanNative;
 
 namespace VKE {
-    public class ShaderInfo : IDisposable {
-        public VkShaderStageFlags StageFlags;
-        public string SpirvPath;
-        public FixedUtf8String EntryPoint;
+	public class ShaderInfo : IDisposable {
+		public VkShaderStageFlags StageFlags;
+		public string SpirvPath;
+		public FixedUtf8String EntryPoint;
 
-        public ShaderInfo (VkShaderStageFlags _stageFlags, string _spirvPath, string _entryPoint = "main") {
-            StageFlags = _stageFlags;
-            SpirvPath = _spirvPath;
-            EntryPoint = new FixedUtf8String (_entryPoint);
-        }
+		public ShaderInfo (VkShaderStageFlags _stageFlags, string _spirvPath, string _entryPoint = "main") {
+			StageFlags = _stageFlags;
+			SpirvPath = _spirvPath;
+			EntryPoint = new FixedUtf8String (_entryPoint);
+		}
 
-        #region IDisposable Support
-        private bool disposedValue = false; // Pour détecter les appels redondants
+		#region IDisposable Support
+		private bool disposedValue = false; // Pour détecter les appels redondants
 
-        protected virtual void Dispose (bool disposing) {
-            if (!disposedValue) {
-                if (disposing) 
-                    EntryPoint.Dispose ();
+		protected virtual void Dispose (bool disposing) {
+			if (!disposedValue) {
+				if (disposing)
+					EntryPoint.Dispose ();
 
-                disposedValue = true;
-            }
-        }
-        public void Dispose () {
-            Dispose (true);
-        }
-        #endregion
-    }
+				disposedValue = true;
+			}
+		}
+		public void Dispose () {
+			Dispose (true);
+		}
+		#endregion
+	}
 
     public class Pipeline : IDisposable {
         internal VkPipeline handle;
         Device dev;
+		VkPipelineBindPoint bindPoint = VkPipelineBindPoint.Graphics;
 
         VkPipelineInputAssemblyStateCreateInfo inputAssemblyState = VkPipelineInputAssemblyStateCreateInfo.New ();
         VkPipelineRasterizationStateCreateInfo rasterizationState = VkPipelineRasterizationStateCreateInfo.New ();
@@ -74,15 +76,44 @@ namespace VKE {
         public List<ShaderInfo> shaders = new List<ShaderInfo>();
 
         public PipelineLayout Layout;
-        public RenderPass RenderPass;
+        
+		public VkSampleCountFlags Samples {
+			get { return multisampleState.rasterizationSamples; }
+		}
 
+		public RenderPass RenderPass { get; private set; }
 
-        public Pipeline (PipelineLayout layout, RenderPass renderPass, VkPrimitiveTopology topology = VkPrimitiveTopology.TriangleList) {
-            dev = layout.dev;
-            Layout = layout;
-            RenderPass = renderPass;
+		public void SetVertexAttributes (uint binding, params VkFormat[] attribsDesc) {
+			uint offset = 0;
 
-            inputAssemblyState.topology = topology;
+			for (uint i = 0; i < attribsDesc.Length; i++) {
+				vertexAttributes.Add (new VkVertexInputAttributeDescription (binding, i, attribsDesc[i], offset));
+				VkFormatSize fs;
+				Utils.vkGetFormatSize (attribsDesc[i], out fs);
+				offset += fs.blockSizeInBits/8;
+			}
+		}
+		public void AddVertexBinding (uint binding, uint stride, VkVertexInputRate inputRate = VkVertexInputRate.Vertex) { 
+			vertexBindings.Add (new VkVertexInputBindingDescription (binding, stride, inputRate));
+		}
+		public void AddVertexBinding<T> (uint binding, VkVertexInputRate inputRate = VkVertexInputRate.Vertex) { 
+			vertexBindings.Add (new VkVertexInputBindingDescription (binding, (uint)Marshal.SizeOf<T> (), inputRate));
+		}
+		public void AddShader (VkShaderStageFlags _stageFlags, string _spirvPath, string _entryPoint = "main") {
+			shaders.Add (new ShaderInfo (_stageFlags, _spirvPath, _entryPoint));
+		}
+		/// <summary>
+		/// Create a new Pipeline with supplied RenderPass
+		/// </summary>
+		public Pipeline (Device dev, RenderPass renderPass, VkPrimitiveTopology topology = VkPrimitiveTopology.TriangleList,
+			VkSampleCountFlags samples = VkSampleCountFlags.Count1)
+		{ 
+            this.dev = dev;            
+
+			RenderPass = renderPass;
+			RenderPass.references++;
+
+			inputAssemblyState.topology = topology;
 
             rasterizationState.polygonMode = VkPolygonMode.Fill;
             rasterizationState.cullMode = (uint)VkCullModeFlags.None;
@@ -113,7 +144,17 @@ namespace VKE {
             depthStencilState.stencilTestEnable = False;
             depthStencilState.front = depthStencilState.back;
 
-            multisampleState.rasterizationSamples = VkSampleCountFlags.Count1;
+            multisampleState.rasterizationSamples = samples;
+		}
+
+		/// <summary>
+		/// Create a new pipeline and the default renderpass for it
+		/// </summary>
+		public Pipeline (Device dev, VkFormat colorFormat, VkFormat depthFormat, 
+			VkPrimitiveTopology topology = VkPrimitiveTopology.TriangleList,
+			VkSampleCountFlags samples = VkSampleCountFlags.Count1)
+			: this (dev, new RenderPass (dev, colorFormat, depthFormat, samples), topology,samples)
+		{
         }
 
         public unsafe void Activate () {
@@ -121,6 +162,9 @@ namespace VKE {
 				GC.ReRegisterForFinalize (this);
 				isDisposed = false;
 			}
+
+			Layout.Activate ();
+
 			VkGraphicsPipelineCreateInfo info = VkGraphicsPipelineCreateInfo.New ();
             info.renderPass = RenderPass.handle;
             info.layout = Layout.handle;
@@ -175,6 +219,9 @@ namespace VKE {
             shaderStages.Dispose ();
         }
         
+		public void Bind (CommandBuffer cmd) {
+            vkCmdBindPipeline (cmd.Handle, bindPoint, handle);
+        }
 		#region IDisposable Support
 		private bool isDisposed = false; // Pour détecter les appels redondants
 
@@ -185,6 +232,8 @@ namespace VKE {
 					dynamicStates.Dispose ();
 					vertexBindings.Dispose ();
 					vertexAttributes.Dispose ();
+					RenderPass.Dispose ();
+					Layout.Dispose ();
 				} else
 					System.Diagnostics.Debug.WriteLine ("A Pipeline has not been disposed.");
 				VulkanNative.vkDestroyPipeline (dev.VkDev, handle, IntPtr.Zero);

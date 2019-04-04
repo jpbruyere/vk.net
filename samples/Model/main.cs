@@ -13,49 +13,55 @@ namespace ModelSample {
 				vke.Run ();
 			}
 		}
-
-		struct Matrices {
+			
+        public struct Matrices {
 			public Matrix4x4 projection;
 			public Matrix4x4 view;
 			public Matrix4x4 model;
 			public Vector4 lightPos;
+			public float gamma;
+			public float exposure;
 		}
 
-		Matrices matrices;
+		public Matrices matrices = new Matrices { 
+			lightPos = new Vector4 (0.0f, 0.0f, -2.0f, 1.0f),
+			gamma = 1.0f,
+			exposure = 2.0f,
+		};
 
 		HostBuffer uboMats;
 
+		DescriptorPool descriptorPool;
 		DescriptorSetLayout descLayoutMatrix;
 		DescriptorSetLayout descLayoutTextures;
+		DescriptorSet dsMats;
 
-		DescriptorPool descriptorPool;
-		DescriptorSet descriptorSet;
-
-		RenderPass renderPass;
+		Pipeline pipeline;
 		Framebuffer[] frameBuffers;
 
-		PipelineLayout pipelineLayout;
-		Pipeline pipeline;
+		Model model;
 
-		VkSampleCountFlags samples = VkSampleCountFlags.Count8;
-		VkFormat depthFormat;
-		Image depthTexture, colorTexture;
+		Camera Camera = new Camera (Utils.DegreesToRadians (60f), 1f);
 
-		float rotSpeed = 0.01f, zoomSpeed = 0.01f;
-		double lastMouseX, lastMouseY;
-		float rotX = -1.5f, rotY = 2.7f, rotZ = 0f;
-		float zoom = 1.0f;
+		Program () : base () {		
+			init ();
 
-		Model helmet;
+			model = new Model (dev, presentQueue, cmdPool, "../data/models/DamagedHelmet/glTF/DamagedHelmet.gltf");
+			model.WriteMaterialsDescriptorSets (descLayoutTextures,
+				ShaderBinding.Color,
+				ShaderBinding.Normal,
+				ShaderBinding.AmbientOcclusion,
+				ShaderBinding.MetalRoughness,
+				ShaderBinding.Emissive);
+		}
 
-		Program () : base () {
-		
-			descriptorPool = new DescriptorPool (dev, 1,
+		void init (VkSampleCountFlags samples = VkSampleCountFlags.Count4) { 
+			descriptorPool = new DescriptorPool (dev, 2,
 				new VkDescriptorPoolSize (VkDescriptorType.UniformBuffer)
-			);				
+			);
 
 			descLayoutMatrix = new DescriptorSetLayout (dev,
-				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Vertex, VkDescriptorType.UniformBuffer));
+				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Vertex|VkShaderStageFlags.Fragment, VkDescriptorType.UniformBuffer));
 
 			descLayoutTextures = new DescriptorSetLayout (dev, 
 				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
@@ -65,163 +71,164 @@ namespace ModelSample {
 				new VkDescriptorSetLayoutBinding (4, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler)
 			);
 
-			descriptorSet = descriptorPool.Allocate (descLayoutMatrix);
+			dsMats = descriptorPool.Allocate (descLayoutMatrix);
 
-			VkPushConstantRange[] pushConstantRanges =
-			{ new VkPushConstantRange {
-				stageFlags = VkShaderStageFlags.Vertex,
-				size = (uint)Marshal.SizeOf<Matrix4x4>(),
-				offset = 0
-			}, new VkPushConstantRange {
-				stageFlags = VkShaderStageFlags.Fragment,
-				size = (uint)Marshal.SizeOf<Model.PbrMaterial>(),
-				offset = 64
-			}};
+			pipeline = new Pipeline (dev,
+				swapChain.ColorFormat,
+				dev.GetSuitableDepthFormat (),
+				VkPrimitiveTopology.TriangleList, samples);
 
-			pipelineLayout = new PipelineLayout (dev, pushConstantRanges, descLayoutMatrix, descLayoutTextures).Activate ();
+			pipeline.Layout = new PipelineLayout (dev, descLayoutMatrix, descLayoutTextures);
+			pipeline.Layout.AddPushConstants (
+				new VkPushConstantRange (VkShaderStageFlags.Vertex, (uint)Marshal.SizeOf<Matrix4x4> ()),
+				new VkPushConstantRange (VkShaderStageFlags.Fragment, (uint)Marshal.SizeOf<Model.PbrMaterial> (), 64)
+			);
 
-			loadAssets ();
+			pipeline.AddVertexBinding<Model.Vertex> (0);
+			pipeline.SetVertexAttributes (0, VkFormat.R32g32b32Sfloat, VkFormat.R32g32b32Sfloat, VkFormat.R32g32Sfloat);
 
-			uboMats = new HostBuffer (dev, VkBufferUsageFlags.UniformBuffer, matrices);
-
-			depthFormat = dev.GetSuitableDepthFormat ();
-
-			renderPass = new RenderPass (dev, swapChain.ColorFormat, depthFormat, samples);
-
-			frameBuffers = new Framebuffer[swapChain.ImageCount];
-
-			pipeline = new Pipeline (pipelineLayout, renderPass);
-
-			pipeline.multisampleState.rasterizationSamples = samples;
-
-			pipeline.vertexBindings.Add (new VkVertexInputBindingDescription (0, (uint)Marshal.SizeOf<Model.Vertex> ()));
-
-			pipeline.vertexAttributes.Add (new VkVertexInputAttributeDescription (0, VkFormat.R32g32b32Sfloat));
-			pipeline.vertexAttributes.Add (new VkVertexInputAttributeDescription (1, VkFormat.R32g32b32Sfloat, 3 * sizeof (float)));
-			pipeline.vertexAttributes.Add (new VkVertexInputAttributeDescription (2, VkFormat.R32g32Sfloat, 6 * sizeof (float)));
-
-			pipeline.shaders.Add (new ShaderInfo (VkShaderStageFlags.Vertex, "shaders/pbrtest.vert.spv"));
-			pipeline.shaders.Add (new ShaderInfo (VkShaderStageFlags.Fragment, "shaders/pbrtest.frag.spv"));
+			pipeline.AddShader (VkShaderStageFlags.Vertex, "shaders/pbrtest.vert.spv");
+			pipeline.AddShader (VkShaderStageFlags.Fragment, "shaders/pbrtest.frag.spv");
 
 			pipeline.Activate ();
 
+			uboMats = new HostBuffer (dev, VkBufferUsageFlags.UniformBuffer, (ulong)Marshal.SizeOf<Matrices>());
+			uboMats.Map ();//permanent map
+
 			using (DescriptorSetWrites uboUpdate = new DescriptorSetWrites (dev)) {
-				uboUpdate.AddWriteInfo (descriptorSet, descLayoutMatrix.Bindings[0], uboMats.Descriptor);
+				uboUpdate.AddWriteInfo (dsMats, descLayoutMatrix.Bindings[0], uboMats.Descriptor);
 				uboUpdate.Update ();
 			}
-
-			matrices.lightPos = new Vector4 (0.0f, 0.0f, -2.0f, 1.0f);
-
-			uboMats.Map ();//permanent map
-			updateMatrices ();
 		}
 
-		protected override void Prepare () {
-		
-			depthTexture?.Dispose ();
-			colorTexture?.Dispose ();
-
-			depthTexture = new Image (dev, depthFormat, VkImageUsageFlags.DepthStencilAttachment,
-					VkMemoryPropertyFlags.DeviceLocal, swapChain.Width, swapChain.Height, VkImageType.Image2D, samples);
-			depthTexture.CreateView (VkImageViewType.Image2D, VkImageAspectFlags.Depth);
-			if (samples != VkSampleCountFlags.Count1) {
-				colorTexture = new Image (dev, swapChain.ColorFormat, VkImageUsageFlags.ColorAttachment,
-						VkMemoryPropertyFlags.DeviceLocal, swapChain.Width, swapChain.Height, VkImageType.Image2D, samples);
-				colorTexture.CreateView ();
-			}
-
-			for (int i = 0; i < swapChain.ImageCount; ++i)
-				frameBuffers[i]?.Dispose ();
-
-			for (int i = 0; i < swapChain.ImageCount; ++i) {
-
-				frameBuffers[i] = new Framebuffer (renderPass, swapChain.Width, swapChain.Height,
-					(samples == VkSampleCountFlags.Count1) ? new VkImageView[] {
-						swapChain.images[i].Descriptor.imageView,
-						depthTexture.Descriptor.imageView
-					} : new VkImageView[] {
-						colorTexture.Descriptor.imageView,
-						depthTexture.Descriptor.imageView,
-						swapChain.images[i].Descriptor.imageView
-					});					
-
+		void buildCommandBuffers () {
+			for (int i = 0; i < swapChain.ImageCount; ++i) { 								
+                  	cmds[i]?.Free ();
 				cmds[i] = cmdPool.AllocateCommandBuffer ();
 				cmds[i].Start ();
 
-				renderPass.Begin (cmds[i], frameBuffers[i]);
+				recordDraw (cmds[i], frameBuffers[i]);
 
-				cmds[i].SetViewport (swapChain.Width, swapChain.Height);
-				cmds[i].SetScissor (swapChain.Width, swapChain.Height);
-
-				cmds[i].BindDescriptorSet (pipelineLayout, descriptorSet);
-
-				cmds[i].BindPipeline (pipeline);
-
-				helmet.Bind (cmds[i]);
-				helmet.DrawAll (cmds[i], pipelineLayout);
-
-				renderPass.End (cmds[i]);
-
-				cmds[i].End ();
+				cmds[i].End ();				 
 			}
+		} 
+		void recordDraw (CommandBuffer cmd, Framebuffer fb) { 
+			pipeline.RenderPass.Begin (cmd, fb);
+
+			cmd.SetViewport (fb.Width, fb.Height);
+			cmd.SetScissor (fb.Width, fb.Height);
+
+			cmd.BindDescriptorSet (pipeline.Layout, dsMats);
+			pipeline.Bind (cmd);
+			model.Bind (cmd);
+			model.DrawAll (cmd, pipeline.Layout);
+
+			pipeline.RenderPass.End (cmd);
 		}
 
-		void loadAssets () {
-			//helmet = new Model (dev, presentQueue, cmdPool, "/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/Sponza/glTF/Sponza.gltf");
-			helmet = new Model (dev, presentQueue, cmdPool, "data/DamagedHelmet.gltf");
-			helmet.WriteMaterialsDescriptorSets (descLayoutTextures,
-				ShaderBinding.Color,
-				ShaderBinding.Normal,
-				ShaderBinding.AmbientOcclusion,
-				ShaderBinding.MetalRoughness,
-				ShaderBinding.Emissive);
-		}
 		void updateMatrices () {
-			matrices.projection = Matrix4x4.CreatePerspectiveFieldOfView (Utils.DegreesToRadians (60f), (float)swapChain.Width / (float)swapChain.Height, 0.01f, 1024.0f);
-			//matrices.view = Matrix4x4.CreateLookAt (new Vector3 (0, 0, -1), new Vector3 (0, 0, 0), Vector3.UnitY);//Matrix4x4.CreateTranslation (0, 0, -2.5f);
-			matrices.view = Matrix4x4.CreateTranslation (0, 0, -2.5f * zoom);
-			matrices.model =
-					Matrix4x4.CreateFromAxisAngle (Vector3.UnitX, rotX) *
-					Matrix4x4.CreateFromAxisAngle (Vector3.UnitY, rotY) *
-					Matrix4x4.CreateFromAxisAngle (Vector3.UnitZ, rotZ);
 
+			Camera.AspectRatio = (float)swapChain.Width / swapChain.Height;
+
+			matrices.projection = Camera.Projection;
+			matrices.view = Camera.View;
+			matrices.model = Camera.Model;
 			uboMats.Update (matrices, (uint)Marshal.SizeOf<Matrices> ());
 		}
-
+			
 		public override void Update () {
 			updateMatrices ();
 			updateRequested = false;
 		}
+
 		protected override void onMouseMove (double xPos, double yPos) {
 			double diffX = lastMouseX - xPos;
 			double diffY = lastMouseY - yPos;
 			if (MouseButton[0]) {
-				rotY -= rotSpeed * (float)diffX;
-				rotX -= rotSpeed * (float)diffY;
+				Camera.Rotate ((float)-diffX,(float)-diffY);
 			} else if (MouseButton[1]) {
-				zoom += zoomSpeed * (float)diffY;
+				Camera.Zoom ((float)diffY);
 			}
-			lastMouseX = xPos;
-			lastMouseY = yPos;
 
 			updateRequested = true;
 		}
 
+		protected override void onKeyDown (Key key, int scanCode, Modifier modifiers) {
+			switch (key) {
+				case Key.Up:
+					Camera.Rotate (0, 0, 1);
+					break;
+				case Key.Down:
+					Camera.Move (0, 0, -1);
+					break;
+				case Key.Left:
+					Camera.Move (1, 0, 0);
+					break;
+				case Key.Right:
+					Camera.Move (-1, 0, 0);
+					break;
+				case Key.PageUp:
+					Camera.Move (0, 1, 0);
+					break;
+				case Key.PageDown:
+					Camera.Move (0, -1, 0);
+					break;
+				case Key.F1:
+					if (modifiers.HasFlag (Modifier.Shift))
+						matrices.exposure -= 0.3f;
+					else
+						matrices.exposure += 0.3f;
+					break;
+				case Key.F2:
+					if (modifiers.HasFlag (Modifier.Shift))
+						matrices.gamma -= 0.1f;
+					else
+						matrices.gamma += 0.1f;
+					break;
+				default:
+					base.onKeyDown (key, scanCode, modifiers);
+					return;
+			}
+			updateRequested = true;
+		}
+
+		protected override void OnResize () {
+
+			updateMatrices ();
+
+			if (frameBuffers!=null)
+				for (int i = 0; i < swapChain.ImageCount; ++i)
+					frameBuffers[i]?.Dispose ();
+
+			frameBuffers = new Framebuffer[swapChain.ImageCount];
+
+			for (int i = 0; i < swapChain.ImageCount; ++i) {
+				frameBuffers[i] = new Framebuffer (pipeline.RenderPass, swapChain.Width, swapChain.Height,
+					(pipeline.Samples == VkSampleCountFlags.Count1) ? new Image[] {
+						swapChain.images[i],
+						null
+					} : new Image[] {
+						null,
+						null,
+						swapChain.images[i]
+					});	
+			}
+
+			buildCommandBuffers ();
+		}	
 
 		protected override void Dispose (bool disposing) {
 			if (disposing) {
 				if (!isDisposed) {
-					helmet.Dispose ();
+					dev.WaitIdle ();
+					for (int i = 0; i < swapChain.ImageCount; ++i)
+						frameBuffers[i]?.Dispose ();
+					model.Dispose ();
 					pipeline.Dispose ();
-					pipelineLayout.Dispose ();
 					descLayoutMatrix.Dispose ();
 					descLayoutTextures.Dispose ();
-					for (int i = 0; i < swapChain.ImageCount; i++)
-						frameBuffers[i]?.Dispose ();
 					descriptorPool.Dispose ();
-					renderPass.Dispose ();
-					colorTexture?.Dispose ();
-					depthTexture.Dispose ();
+
 					uboMats.Dispose ();
 				}
 			}

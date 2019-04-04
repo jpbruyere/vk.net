@@ -633,6 +633,13 @@ namespace Vulkan
         public VkDescriptorSetLayoutCreateFlags flags;
         public uint bindingCount;
         public IntPtr pBindings;
+		public VkDescriptorSetLayoutCreateInfo (VkDescriptorSetLayoutCreateFlags flags,uint bindingCount,IntPtr pBindings) { 
+			sType = VkStructureType.DescriptorSetLayoutCreateInfo;
+			pNext = IntPtr.Zero;
+			this.flags = flags;
+			this.bindingCount = bindingCount;
+			this.pBindings = pBindings;
+		}
         public static VkDescriptorSetLayoutCreateInfo New()
         {
             VkDescriptorSetLayoutCreateInfo ret = new VkDescriptorSetLayoutCreateInfo();
@@ -996,14 +1003,19 @@ namespace Vulkan
         }
     }
 
-    public unsafe partial struct VkPushConstantRange
+    public partial struct VkPushConstantRange
     {
         public VkShaderStageFlags stageFlags;
         public uint offset;
         public uint size;
+		public VkPushConstantRange (VkShaderStageFlags stageFlags, uint size, uint offset = 0) {
+			this.stageFlags = stageFlags;
+			this.size = size;
+			this.offset = offset;
+		}
     }
 
-    public unsafe partial struct VkPipelineLayoutCreateInfo
+    public partial struct VkPipelineLayoutCreateInfo
     {
         public VkStructureType sType;
         public IntPtr pNext;
