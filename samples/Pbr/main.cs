@@ -32,7 +32,6 @@ namespace PbrSample {
 		Framebuffer[] frameBuffers;
 
 		HostBuffer uboMats;
-		HostBuffer uboMatsSkybox;
 
 		DescriptorPool descriptorPool;
 		DescriptorSetLayout descLayoutMain;
@@ -141,43 +140,42 @@ namespace PbrSample {
 			dsMain = descriptorPool.Allocate (descLayoutMain);
 			dsSkybox = descriptorPool.Allocate (descLayoutMain);
 
-			#region main pipeline creation
-			pipeline = new Pipeline (dev,
-				swapChain.ColorFormat,
-				dev.GetSuitableDepthFormat (),
-				VkPrimitiveTopology.TriangleList, samples);
-			pipeline.Layout = new PipelineLayout (dev, descLayoutMain, descLayoutTextures);
-			pipeline.Layout.AddPushConstants (
+			PipelineConfig cfg = PipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, samples);
+
+			cfg.Layout = new PipelineLayout (dev, descLayoutMain, descLayoutTextures);
+			cfg.Layout.AddPushConstants (
 				new VkPushConstantRange (VkShaderStageFlags.Vertex, (uint)Marshal.SizeOf<Matrix4x4> ()),
 				new VkPushConstantRange (VkShaderStageFlags.Fragment, (uint)Marshal.SizeOf<Model.PbrMaterial> (), 64)
 			);
-			pipeline.AddVertexBinding<Model.Vertex> (0);
-			pipeline.SetVertexAttributes (0, VkFormat.R32g32b32Sfloat, VkFormat.R32g32b32Sfloat, VkFormat.R32g32Sfloat);
-			pipeline.AddShader (VkShaderStageFlags.Vertex, "shaders/pbrtest.vert.spv");
-			pipeline.AddShader (VkShaderStageFlags.Fragment, "shaders/pbrtest.frag.spv");
-			pipeline.Activate ();
-			#endregion
+			cfg.RenderPass = new RenderPass (dev, swapChain.ColorFormat, dev.GetSuitableDepthFormat (), samples);
+			cfg.AddVertexBinding<Model.Vertex> (0);
+			cfg.SetVertexAttributes (0, VkFormat.R32g32b32Sfloat, VkFormat.R32g32b32Sfloat, VkFormat.R32g32Sfloat);
+
+			cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/pbrtest.vert.spv");
+			cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/pbrtest.frag.spv");
+
+			pipeline = new Pipeline (cfg);
 
 			#region skybox pipeline
-			skyboxPL = new Pipeline (dev, pipeline.RenderPass, VkPrimitiveTopology.TriangleList, samples);
-			skyboxPL.Layout = pipeline.Layout;
-			skyboxPL.AddVertexBinding (0, 5 * sizeof(float));
-			skyboxPL.SetVertexAttributes (0, VkFormat.R32g32b32Sfloat, VkFormat.R32g32Sfloat);
-			skyboxPL.AddShader (VkShaderStageFlags.Vertex, "shaders/skybox.vert.spv");
-			skyboxPL.AddShader (VkShaderStageFlags.Fragment, "shaders/skybox.frag.spv");
-			skyboxPL.depthStencilState.depthTestEnable = false;
-			skyboxPL.depthStencilState.depthWriteEnable = false;
-			skyboxPL.Activate ();
+			cfg.ResetShadersAndVerticesInfos ();
+
+			cfg.AddVertexBinding (0, 5 * sizeof(float));
+			cfg.SetVertexAttributes (0, VkFormat.R32g32b32Sfloat, VkFormat.R32g32Sfloat);
+			cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/skybox.vert.spv");
+			cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/skybox.frag.spv");
+			cfg.depthStencilState.depthTestEnable = false;
+			cfg.depthStencilState.depthWriteEnable = false;
+
+			skyboxPL = new Pipeline (cfg);
 			#endregion
 
-			uboMats = new HostBuffer (dev, VkBufferUsageFlags.UniformBuffer, (ulong)Marshal.SizeOf<Matrices>());
+			uboMats = new HostBuffer (dev, VkBufferUsageFlags.UniformBuffer, (ulong)Marshal.SizeOf<Matrices>()*2);
 			uboMats.Map ();//permanent map
-			uboMatsSkybox = new HostBuffer (dev, VkBufferUsageFlags.UniformBuffer, (ulong)Marshal.SizeOf<Matrices>());
-			uboMatsSkybox.Map ();//permanent map
 
 			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (descLayoutMain);
 			uboUpdate.Write (dev, dsMain, uboMats.Descriptor, cubemap.Descriptor);
-			uboUpdate.Write (dev, dsSkybox, uboMatsSkybox.Descriptor, cubemap.Descriptor);
+			uboMats.Descriptor.offset = (ulong)Marshal.SizeOf<Matrices> ();
+			uboUpdate.Write (dev, dsSkybox, uboMats.Descriptor, cubemap.Descriptor);
 		}
 
 		void buildCommandBuffers () {
@@ -220,7 +218,7 @@ namespace PbrSample {
 			uboMats.Update (matrices, (uint)Marshal.SizeOf<Matrices> ());
 			matrices.view *= Matrix4x4.CreateTranslation(-matrices.view.Translation);
 			matrices.model = Matrix4x4.Identity;
-			uboMatsSkybox.Update (matrices, (uint)Marshal.SizeOf<Matrices> ());
+			uboMats.Update (matrices, (uint)Marshal.SizeOf<Matrices> (), (uint)Marshal.SizeOf<Matrices> ());
 		}
 			
 		public override void Update () {
@@ -345,7 +343,6 @@ namespace PbrSample {
 					cubemap.Dispose ();
 
 					uboMats.Dispose ();
-					uboMatsSkybox.Dispose ();
 				}
 			}
 

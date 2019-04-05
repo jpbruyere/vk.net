@@ -40,10 +40,10 @@ namespace VKE {
             vkUnmapMemory (dev.VkDev, vkMemory);
             mappedData = IntPtr.Zero;
         }
-        public void Update (object data, ulong size) {
+        public void Update (object data, ulong size, ulong offset = 0) {
             GCHandle ptr = GCHandle.Alloc (data, GCHandleType.Pinned);
             unsafe {
-                System.Buffer.MemoryCopy (ptr.AddrOfPinnedObject ().ToPointer (), mappedData.ToPointer (), size, size);
+                System.Buffer.MemoryCopy (ptr.AddrOfPinnedObject ().ToPointer (), (mappedData + (int)offset).ToPointer (), size, size);
                 Flush ();
             }
             ptr.Free ();
