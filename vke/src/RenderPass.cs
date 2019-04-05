@@ -30,16 +30,75 @@ using Vulkan;
 using static Vulkan.VulkanNative;
 
 namespace VKE {
-    public class RenderPass : IDisposable {
-		internal uint references;
-        internal VkRenderPass handle;
-        internal Device dev;
+    public class RenderPass : Activable {
+        internal VkRenderPass handle;        
 
-        internal NativeList<VkAttachmentDescription> attachments = new NativeList<VkAttachmentDescription> ();
-        public NativeList<VkClearValue> ClearValues = new NativeList<VkClearValue> ();
-
+        internal List<VkAttachmentDescription> attachments = new List<VkAttachmentDescription> ();
+        public List<VkClearValue> ClearValues = new List<VkClearValue> ();
         internal List<SubPass> subpasses = new List<SubPass> ();
-        NativeList<VkSubpassDependency> dependencies = new NativeList<VkSubpassDependency> ();
+        List<VkSubpassDependency> dependencies = new List<VkSubpassDependency> ();
+
+		#region CTORS
+		public RenderPass (Device device) : base(device) { }
+
+        /// <summary>
+        /// Create default renderpass with one color and one depth attachments
+        /// </summary>
+        public RenderPass (Device device, VkFormat colorFormat, VkFormat depthFormat, VkSampleCountFlags samples = VkSampleCountFlags.Count1)
+            : this (device){
+
+			AddAttachment (colorFormat, (samples == VkSampleCountFlags.Count1) ? VkImageLayout.PresentSrcKHR : VkImageLayout.ColorAttachmentOptimal, samples);
+			AddAttachment (depthFormat, VkImageLayout.DepthStencilAttachmentOptimal, samples);
+
+            ClearValues.Add (new VkClearValue { color = new VkClearColorValue (0.0f, 0.0f, 0.2f) });
+            ClearValues.Add (new VkClearValue { depthStencil = new VkClearDepthStencilValue (1.0f, 0) });
+
+			SubPass subpass0 = new SubPass ();
+
+			subpass0.AddColorReference (0, VkImageLayout.ColorAttachmentOptimal);
+			subpass0.SetDepthReference (1, VkImageLayout.DepthStencilAttachmentOptimal);
+
+			if (samples != VkSampleCountFlags.Count1) {
+				AddAttachment (colorFormat, VkImageLayout.PresentSrcKHR, VkSampleCountFlags.Count1);
+				ClearValues.Add (new VkClearValue { color = new VkClearColorValue (0.0f, 0.0f, 0.2f) });
+				subpass0.AddResolveReference (2, VkImageLayout.ColorAttachmentOptimal);
+			}
+
+
+            AddSubpass (subpass0);
+
+            AddDependency (VulkanNative.SubpassExternal, 0,
+                VkPipelineStageFlags.BottomOfPipe, VkPipelineStageFlags.ColorAttachmentOutput,
+                VkAccessFlags.MemoryRead, VkAccessFlags.ColorAttachmentRead | VkAccessFlags.ColorAttachmentWrite);
+            AddDependency (0, 1,
+                VkPipelineStageFlags.ColorAttachmentOutput, VkPipelineStageFlags.BottomOfPipe,
+                VkAccessFlags.ColorAttachmentRead | VkAccessFlags.ColorAttachmentWrite, VkAccessFlags.MemoryRead);
+        }
+		#endregion
+
+		public override void Activate () {
+			if (state != ActivableState.Activated) {
+				List<VkSubpassDescription> spDescs = new List<VkSubpassDescription> ();
+				foreach (SubPass sp in subpasses)
+					spDescs.Add (sp.SubpassDescription);
+
+				VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.New ();
+				renderPassInfo.attachmentCount = (uint)attachments.Count;
+				renderPassInfo.pAttachments = attachments.Pin ();
+				renderPassInfo.subpassCount = (uint)spDescs.Count;
+				renderPassInfo.pSubpasses = spDescs.Pin ();
+				renderPassInfo.dependencyCount = (uint)dependencies.Count;
+				renderPassInfo.pDependencies = dependencies.Pin ();
+
+				handle = dev.CreateRenderPass (renderPassInfo);
+
+				attachments.Unpin ();
+				spDescs.Unpin ();
+				dependencies.Unpin ();
+			}
+			base.Activate ();
+        }
+
 
         public void AddAttachment (VkFormat format,
             VkImageLayout finalLayout, VkSampleCountFlags samples = VkSampleCountFlags.Count1,
@@ -93,72 +152,6 @@ namespace VKE {
         public void AddSubpass (SubPass subPass) {
             subpasses.Add (subPass);
         }
-        public RenderPass (Device device) {
-            dev = device;
-        }
-        /// <summary>
-        /// Create default renderpass with one color and one depth attachments
-        /// </summary>
-        public RenderPass (Device device, VkFormat colorFormat, VkFormat depthFormat, VkSampleCountFlags samples = VkSampleCountFlags.Count1)
-            : this (device){
-
-			AddAttachment (colorFormat, (samples == VkSampleCountFlags.Count1) ? VkImageLayout.PresentSrcKHR : VkImageLayout.ColorAttachmentOptimal, samples);
-			AddAttachment (depthFormat, VkImageLayout.DepthStencilAttachmentOptimal, samples);
-
-            ClearValues.Add (new VkClearValue { color = new VkClearColorValue (0.0f, 0.0f, 0.2f) });
-            ClearValues.Add (new VkClearValue { depthStencil = new VkClearDepthStencilValue (1.0f, 0) });
-
-			SubPass subpass0 = new SubPass ();
-
-			subpass0.AddColorReference (0, VkImageLayout.ColorAttachmentOptimal);
-			subpass0.SetDepthReference (1, VkImageLayout.DepthStencilAttachmentOptimal);
-
-			if (samples != VkSampleCountFlags.Count1) {
-				AddAttachment (colorFormat, VkImageLayout.PresentSrcKHR, VkSampleCountFlags.Count1);
-				ClearValues.Add (new VkClearValue { color = new VkClearColorValue (0.0f, 0.0f, 0.2f) });
-				subpass0.AddResolveReference (2, VkImageLayout.ColorAttachmentOptimal);
-			}
-
-
-            AddSubpass (subpass0);
-
-            AddDependency (VulkanNative.SubpassExternal, 0,
-                VkPipelineStageFlags.BottomOfPipe, VkPipelineStageFlags.ColorAttachmentOutput,
-                VkAccessFlags.MemoryRead, VkAccessFlags.ColorAttachmentRead | VkAccessFlags.ColorAttachmentWrite);
-            AddDependency (0, 1,
-                VkPipelineStageFlags.ColorAttachmentOutput, VkPipelineStageFlags.BottomOfPipe,
-                VkAccessFlags.ColorAttachmentRead | VkAccessFlags.ColorAttachmentWrite, VkAccessFlags.MemoryRead);
-
-            Activate ();
-        }
-        public void Activate () {
-			if (isDisposed) {
-				GC.ReRegisterForFinalize (this);
-				isDisposed = false;
-			}
-			using (NativeList<VkSubpassDescription> spDescs = new NativeList<VkSubpassDescription> ((uint)subpasses.Count)) {
-                foreach (SubPass sp in subpasses)
-                    spDescs.Add (sp.SubpassDescription);
-                    
-                VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.New ();
-                renderPassInfo.attachmentCount = attachments.Count;
-                renderPassInfo.pAttachments = attachments.Data;
-                renderPassInfo.subpassCount = spDescs.Count;
-                renderPassInfo.pSubpasses = spDescs.Data;
-                renderPassInfo.dependencyCount = dependencies.Count;
-                renderPassInfo.pDependencies = dependencies.Data;
-
-                handle = dev.CreateRenderPass (renderPassInfo);            
-            }
-        }
-
-		//public Framebuffer CreateFramebuffer (SwapChain swapChain) { 
-		//	Framebuffer fb;
-
-		//	return fb;
-		//}
-
-
         /// <summary>
         /// Begin Render pass with framebuffer extent dimensions
         /// </summary>
@@ -174,42 +167,25 @@ namespace VKE {
             info.renderPass = handle;
             info.renderArea.extent.width = width;
             info.renderArea.extent.height = height;
-            info.clearValueCount = ClearValues.Count;
-            info.pClearValues = (VkClearValue*) ClearValues.Data.ToPointer();
+            info.clearValueCount = (uint)ClearValues.Count;
+            info.pClearValues = ClearValues.Pin ();
             info.framebuffer = frameBuffer.handle;
 
             vkCmdBeginRenderPass (cmd.Handle, ref info, VkSubpassContents.Inline);
+
+			ClearValues.Unpin ();
         }
         public void End (CommandBuffer cmd) {
             vkCmdEndRenderPass (cmd.Handle);
         }
         
 		#region IDisposable Support
-		private bool isDisposed = false; // Pour détecter les appels redondants
-
-		protected virtual void Dispose (bool disposing) {
-			if (!isDisposed) {
-				if (disposing) {
-					attachments.Dispose ();
-					ClearValues.Dispose ();
-					dependencies.Dispose ();
-				} else
-					System.Diagnostics.Debug.WriteLine ("A Renderpass has not been disposed.");
+		protected override void Dispose (bool disposing) {
+			if (!disposing)
+				System.Diagnostics.Debug.WriteLine ("VKE Activable RenderPass disposed by finalizer");
+			if (state == ActivableState.Activated)
 				dev.DestroyRenderPass (handle);
-				isDisposed = true;
-			}
-		}
-
-		~RenderPass () {
-			Dispose (false);
-		}
-		public void Dispose () {
-			if (references>0)
-				references--;
-			if (references>0)
-				return;
-			Dispose (true);
-			GC.SuppressFinalize (this);
+			base.Dispose (disposing);
 		}
 		#endregion
 	}

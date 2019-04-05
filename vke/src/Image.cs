@@ -46,8 +46,6 @@ namespace VKE {
         /// </summary>
         public Image (Device device, VkImage vkHandle, VkFormat format, VkImageUsageFlags usage, uint width, uint height)
         : base (device, VkMemoryPropertyFlags.DeviceLocal) {
-            dev = device;
-
             info.imageType = VkImageType.Image2D;
             info.format = format;
             info.extent.width = width;
@@ -61,6 +59,8 @@ namespace VKE {
 
             handle = vkHandle;
             imported = true;
+
+			state = ActivableState.Activated;
 			references++;//increment ref because it is bound to swapchain
         }
 
@@ -224,9 +224,11 @@ namespace VKE {
             Utils.CheckResult (vkBindImageMemory (dev.VkDev, handle, vkMemory, offset));
         }
         public override void Activate () {
-            Utils.CheckResult (vkCreateImage (dev.VkDev, ref info, IntPtr.Zero, out handle));
-            allocateMemory ();
-            bindMemory ();
+			if (state != ActivableState.Activated) {
+				Utils.CheckResult (vkCreateImage (dev.VkDev, ref info, IntPtr.Zero, out handle));
+				allocateMemory ();
+				bindMemory ();
+			}
             base.Activate ();
         }
 
@@ -457,26 +459,17 @@ namespace VKE {
 		}
 
         protected override void Dispose (bool disposing) {
-			if (references>0)
-				return;
-            if (!isDisposed) {
-                if (!disposing) 
-                    System.Diagnostics.Debug.WriteLine ($"An Image Ressource was not properly disposed.");
-
-                if (Descriptor.sampler.Handle != 0)
+			if (state == ActivableState.Activated) {
+				if (Descriptor.sampler.Handle != 0)
                     dev.DestroySampler (Descriptor.sampler);
                 if (Descriptor.imageView.Handle != 0)
                     dev.DestroyImageView (Descriptor.imageView);
-                if (imported)
-                    return;
-
-                if (!imported)
-                    base.Dispose (disposing);
-
-                dev.DestroyImage (handle);
-
-                isDisposed = true;
-            }
+				if (!imported) {
+					base.Dispose (disposing);
+					dev.DestroyImage (handle);
+				}
+			}
+			state = ActivableState.Disposed;
         }
     }
 }

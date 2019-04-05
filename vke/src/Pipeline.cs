@@ -30,37 +30,8 @@ using Vulkan;
 using static Vulkan.VulkanNative;
 
 namespace VKE {
-	public class ShaderInfo : IDisposable {
-		public VkShaderStageFlags StageFlags;
-		public string SpirvPath;
-		public FixedUtf8String EntryPoint;
-
-		public ShaderInfo (VkShaderStageFlags _stageFlags, string _spirvPath, string _entryPoint = "main") {
-			StageFlags = _stageFlags;
-			SpirvPath = _spirvPath;
-			EntryPoint = new FixedUtf8String (_entryPoint);
-		}
-
-		#region IDisposable Support
-		private bool disposedValue = false; // Pour détecter les appels redondants
-
-		protected virtual void Dispose (bool disposing) {
-			if (!disposedValue) {
-				if (disposing)
-					EntryPoint.Dispose ();
-
-				disposedValue = true;
-			}
-		}
-		public void Dispose () {
-			Dispose (true);
-		}
-		#endregion
-	}
-
-    public class Pipeline : IDisposable {
-        internal VkPipeline handle;
-        Device dev;
+    public class Pipeline : Activable {
+        internal VkPipeline handle;        
 		VkPipelineBindPoint bindPoint = VkPipelineBindPoint.Graphics;
 
         VkPipelineInputAssemblyStateCreateInfo inputAssemblyState = VkPipelineInputAssemblyStateCreateInfo.New ();
@@ -69,10 +40,10 @@ namespace VKE {
         public VkPipelineDepthStencilStateCreateInfo depthStencilState = VkPipelineDepthStencilStateCreateInfo.New ();
         public VkPipelineMultisampleStateCreateInfo multisampleState = VkPipelineMultisampleStateCreateInfo.New ();
 
-        NativeList<VkPipelineColorBlendAttachmentState> blendAttachments = new NativeList<VkPipelineColorBlendAttachmentState>();
-        NativeList<VkDynamicState> dynamicStates = new NativeList<VkDynamicState> ();
-        public NativeList<VkVertexInputBindingDescription> vertexBindings = new NativeList<VkVertexInputBindingDescription> ();
-        public NativeList<VkVertexInputAttributeDescription> vertexAttributes = new NativeList<VkVertexInputAttributeDescription> ();
+        List<VkPipelineColorBlendAttachmentState> blendAttachments = new List<VkPipelineColorBlendAttachmentState>();
+        List<VkDynamicState> dynamicStates = new List<VkDynamicState> ();
+        public List<VkVertexInputBindingDescription> vertexBindings = new List<VkVertexInputBindingDescription> ();
+        public List<VkVertexInputAttributeDescription> vertexAttributes = new List<VkVertexInputAttributeDescription> ();
         public List<ShaderInfo> shaders = new List<ShaderInfo>();
 
         public PipelineLayout Layout;
@@ -102,16 +73,16 @@ namespace VKE {
 		public void AddShader (VkShaderStageFlags _stageFlags, string _spirvPath, string _entryPoint = "main") {
 			shaders.Add (new ShaderInfo (_stageFlags, _spirvPath, _entryPoint));
 		}
+
+		#region CTORS
 		/// <summary>
 		/// Create a new Pipeline with supplied RenderPass
 		/// </summary>
 		public Pipeline (Device dev, RenderPass renderPass, VkPrimitiveTopology topology = VkPrimitiveTopology.TriangleList,
-			VkSampleCountFlags samples = VkSampleCountFlags.Count1)
-		{ 
-            this.dev = dev;            
+			VkSampleCountFlags samples = VkSampleCountFlags.Count1) : base (dev)
+		{
 
 			RenderPass = renderPass;
-			RenderPass.references++;
 
 			inputAssemblyState.topology = topology;
 
@@ -126,10 +97,7 @@ namespace VKE {
             viewportState.viewportCount = 1;
             viewportState.scissorCount = 1;
 
-            blendAttachments.Add (new VkPipelineColorBlendAttachmentState {
-                colorWriteMask = VkColorComponentFlags.R | VkColorComponentFlags.G | VkColorComponentFlags.B | VkColorComponentFlags.A,
-                blendEnable = False
-            });
+            blendAttachments.Add (new VkPipelineColorBlendAttachmentState (false));
 
             dynamicStates.Add (VkDynamicState.Viewport);
             dynamicStates.Add (VkDynamicState.Scissor);
@@ -156,97 +124,82 @@ namespace VKE {
 			: this (dev, new RenderPass (dev, colorFormat, depthFormat, samples), topology,samples)
 		{
         }
+		#endregion
 
-        public unsafe void Activate () {
-			if (isDisposed) {
-				GC.ReRegisterForFinalize (this);
-				isDisposed = false;
+        public override void Activate () {
+			if (state != ActivableState.Activated) {
+				Layout.Activate ();
+				RenderPass.Activate ();
+
+				List<VkPipelineShaderStageCreateInfo> shaderStages = new List<VkPipelineShaderStageCreateInfo> ();
+				foreach (ShaderInfo shader in shaders)
+					shaderStages.Add (shader.GetStageCreateInfo(dev));
+
+				VkPipelineColorBlendStateCreateInfo colorBlendInfo = VkPipelineColorBlendStateCreateInfo.New ();
+				colorBlendInfo.attachmentCount = (uint)blendAttachments.Count;
+				colorBlendInfo.pAttachments = blendAttachments.Pin ();
+
+				VkPipelineDynamicStateCreateInfo dynStatesInfo = VkPipelineDynamicStateCreateInfo.New ();
+				dynStatesInfo.dynamicStateCount = (uint)dynamicStates.Count;
+				dynStatesInfo.pDynamicStates = dynamicStates.Pin ();
+
+				VkPipelineVertexInputStateCreateInfo vertInputInfo = VkPipelineVertexInputStateCreateInfo.New ();
+				vertInputInfo.vertexBindingDescriptionCount = (uint)vertexBindings.Count;
+				vertInputInfo.pVertexBindingDescriptions = vertexBindings.Pin ();
+				vertInputInfo.vertexAttributeDescriptionCount = (uint)vertexAttributes.Count;
+				vertInputInfo.pVertexAttributeDescriptions = vertexAttributes.Pin ();
+
+				VkGraphicsPipelineCreateInfo info = VkGraphicsPipelineCreateInfo.New ();
+				info.renderPass 			= RenderPass.handle;
+				info.layout					= Layout.handle;
+				info.pVertexInputState 		= vertInputInfo.Pin ();
+				info.pInputAssemblyState 	= inputAssemblyState.Pin ();
+				info.pRasterizationState 	= rasterizationState.Pin ();
+				info.pColorBlendState 		= colorBlendInfo.Pin ();
+				info.pMultisampleState 		= multisampleState.Pin ();
+				info.pViewportState 		= viewportState.Pin ();
+				info.pDepthStencilState 	= depthStencilState.Pin ();
+				info.pDynamicState 			= dynStatesInfo.Pin ();
+				info.stageCount 			= (uint)shaders.Count;
+				info.pStages 				= shaderStages.Pin ();
+
+				Utils.CheckResult (vkCreateGraphicsPipelines (dev.VkDev, VkPipelineCache.Null, 1, ref info, IntPtr.Zero, out handle));
+
+				for (int i = 0; i < shaders.Count; i++)
+					dev.DestroyShaderModule (shaderStages[i].module);
+
+				vertInputInfo.Unpin ();
+				inputAssemblyState.Unpin ();
+				rasterizationState.Unpin ();
+				colorBlendInfo.Unpin ();
+				multisampleState.Unpin ();
+				viewportState.Unpin ();
+				depthStencilState.Unpin ();
+				dynStatesInfo.Unpin ();
+				shaderStages.Unpin ();
+
+				vertexAttributes.Unpin ();
+				vertexBindings.Unpin ();
+				dynamicStates.Unpin ();
+				blendAttachments.Unpin ();
 			}
-
-			Layout.Activate ();
-
-			VkGraphicsPipelineCreateInfo info = VkGraphicsPipelineCreateInfo.New ();
-            info.renderPass = RenderPass.handle;
-            info.layout = Layout.handle;
-
-            NativeList<VkPipelineShaderStageCreateInfo> shaderStages = new NativeList<VkPipelineShaderStageCreateInfo> ();
-            foreach (ShaderInfo shader in shaders) {
-                shaderStages.Add (new VkPipelineShaderStageCreateInfo {
-                    sType = VkStructureType.PipelineShaderStageCreateInfo,
-                    stage = shader.StageFlags,
-                    pName = shader.EntryPoint.StringPtr,
-                    module = dev.LoadSPIRVShader (shader.SpirvPath),
-                });
-            }
-
-            VkPipelineColorBlendStateCreateInfo colorBlendInfo = VkPipelineColorBlendStateCreateInfo.New ();
-            colorBlendInfo.attachmentCount = blendAttachments.Count;
-            colorBlendInfo.pAttachments = (VkPipelineColorBlendAttachmentState*) blendAttachments.Data.ToPointer ();
-
-            VkPipelineDynamicStateCreateInfo dynStatesInfo = VkPipelineDynamicStateCreateInfo.New ();
-            dynStatesInfo.dynamicStateCount = dynamicStates.Count;
-            dynStatesInfo.pDynamicStates = (VkDynamicState*)dynamicStates.Data.ToPointer ();
-
-            VkPipelineVertexInputStateCreateInfo vertInputInfo = VkPipelineVertexInputStateCreateInfo.New ();
-            vertInputInfo.vertexBindingDescriptionCount = vertexBindings.Count;
-            vertInputInfo.pVertexBindingDescriptions = (VkVertexInputBindingDescription*)vertexBindings.Data.ToPointer ();
-            vertInputInfo.vertexAttributeDescriptionCount = vertexAttributes.Count;
-            vertInputInfo.pVertexAttributeDescriptions = (VkVertexInputAttributeDescription*)vertexAttributes.Data.ToPointer ();
-
-            //local copy of class fiels whose addresses are requested
-            VkPipelineInputAssemblyStateCreateInfo sInputAssembly = inputAssemblyState;
-            VkPipelineRasterizationStateCreateInfo sRasterization = rasterizationState;
-            VkPipelineMultisampleStateCreateInfo sMultisample = multisampleState;
-            VkPipelineViewportStateCreateInfo sViewport = viewportState;
-            VkPipelineDepthStencilStateCreateInfo sDepthStencil = depthStencilState;
-
-            info.pVertexInputState = &vertInputInfo;
-            info.pInputAssemblyState = &sInputAssembly;
-            info.pRasterizationState = &sRasterization;
-            info.pColorBlendState = &colorBlendInfo;
-            info.pMultisampleState = &sMultisample;
-            info.pViewportState = &sViewport;
-            info.pDepthStencilState = &sDepthStencil;
-            info.pDynamicState = &dynStatesInfo;
-            info.stageCount = (uint)shaders.Count;
-            info.pStages = (VkPipelineShaderStageCreateInfo*)shaderStages.Data.ToPointer();
-
-            Utils.CheckResult (vkCreateGraphicsPipelines (dev.VkDev, VkPipelineCache.Null, 1, ref info, IntPtr.Zero, out handle));
-
-            for (int i = 0; i < shaders.Count; i++) 
-                dev.DestroyShaderModule (shaderStages[i].module);
-
-            shaderStages.Dispose ();
+			base.Activate ();
         }
         
 		public void Bind (CommandBuffer cmd) {
             vkCmdBindPipeline (cmd.Handle, bindPoint, handle);
         }
+
 		#region IDisposable Support
-		private bool isDisposed = false; // Pour détecter les appels redondants
-
-		protected virtual void Dispose (bool disposing) {
-			if (!isDisposed) {
-				if (disposing) {
-					blendAttachments.Dispose ();
-					dynamicStates.Dispose ();
-					vertexBindings.Dispose ();
-					vertexAttributes.Dispose ();
-					RenderPass.Dispose ();
-					Layout.Dispose ();
-				} else
-					System.Diagnostics.Debug.WriteLine ("A Pipeline has not been disposed.");
+		protected override void Dispose (bool disposing) {
+			if (disposing) { 
+				RenderPass.Dispose ();
+				Layout.Dispose ();
+			}else
+				System.Diagnostics.Debug.WriteLine ("VKE Activable object disposed by finalizer");
+			if (state == ActivableState.Activated)
 				VulkanNative.vkDestroyPipeline (dev.VkDev, handle, IntPtr.Zero);
-				isDisposed = true;
-			}
-		}
-
-		~Pipeline () {
-			Dispose (false);
-		}
-		public void Dispose () {
-			Dispose (true);
-			GC.SuppressFinalize (this);
+			base.Dispose (disposing);
 		}
 		#endregion
 	}

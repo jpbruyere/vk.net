@@ -126,7 +126,7 @@ namespace Vulkan
         public uint flags;
         public uint queueFamilyIndex;
         public uint queueCount;
-        public float* pQueuePriorities;
+        public IntPtr pQueuePriorities;
         public static VkDeviceQueueCreateInfo New()
         {
             VkDeviceQueueCreateInfo ret = new VkDeviceQueueCreateInfo();
@@ -141,7 +141,7 @@ namespace Vulkan
         public IntPtr pNext;
         public uint flags;
         public uint queueCreateInfoCount;
-        public VkDeviceQueueCreateInfo* pQueueCreateInfos;
+        public IntPtr pQueueCreateInfos;
         public uint enabledLayerCount;
         public IntPtr ppEnabledLayerNames;
         public uint enabledExtensionCount;
@@ -712,7 +712,7 @@ namespace Vulkan
         public uint flags;
         public VkShaderStageFlags stage;
         public VkShaderModule module;
-        public byte* pName;
+        public IntPtr pName;
         public VkSpecializationInfo* pSpecializationInfo;
         public static VkPipelineShaderStageCreateInfo New()
         {
@@ -779,9 +779,9 @@ namespace Vulkan
         public IntPtr pNext;
         public uint flags;
         public uint vertexBindingDescriptionCount;
-        public VkVertexInputBindingDescription* pVertexBindingDescriptions;
+        public IntPtr pVertexBindingDescriptions;
         public uint vertexAttributeDescriptionCount;
-        public VkVertexInputAttributeDescription* pVertexAttributeDescriptions;
+        public IntPtr pVertexAttributeDescriptions;
         public static VkPipelineVertexInputStateCreateInfo New()
         {
             VkPipelineVertexInputStateCreateInfo ret = new VkPipelineVertexInputStateCreateInfo();
@@ -888,6 +888,25 @@ namespace Vulkan
         public VkBlendFactor dstAlphaBlendFactor;
         public VkBlendOp alphaBlendOp;
         public VkColorComponentFlags colorWriteMask;
+
+		public VkPipelineColorBlendAttachmentState (VkBool32 blendEnable,
+			VkBlendFactor srcColorBlendFactor = VkBlendFactor.SrcAlpha,
+			VkBlendFactor dstColorBlendFactor = VkBlendFactor.OneMinusSrcAlpha,
+			VkBlendOp colorBlendOp = VkBlendOp.Add,
+			VkBlendFactor srcAlphaBlendFactor = VkBlendFactor.OneMinusSrcAlpha,
+			VkBlendFactor dstAlphaBlendFactor = VkBlendFactor.Zero,
+			VkBlendOp alphaBlendOp = VkBlendOp.Add,
+			VkColorComponentFlags colorWriteMask = VkColorComponentFlags.R | VkColorComponentFlags.G | VkColorComponentFlags.B | VkColorComponentFlags.A)
+		{
+			this.blendEnable = blendEnable;
+			this.srcColorBlendFactor = srcColorBlendFactor;
+			this.dstColorBlendFactor = dstColorBlendFactor;
+			this.colorBlendOp = colorBlendOp;
+			this.srcAlphaBlendFactor = srcAlphaBlendFactor;
+			this.dstAlphaBlendFactor = dstAlphaBlendFactor;
+			this.alphaBlendOp = alphaBlendOp;
+			this.colorWriteMask = colorWriteMask; 
+		}
     }
 
     public unsafe partial struct VkPipelineColorBlendStateCreateInfo
@@ -898,7 +917,7 @@ namespace Vulkan
         public VkBool32 logicOpEnable;
         public VkLogicOp logicOp;
         public uint attachmentCount;
-        public VkPipelineColorBlendAttachmentState* pAttachments;
+        public IntPtr pAttachments;
         public float blendConstants_0;
         public float blendConstants_1;
         public float blendConstants_2;
@@ -917,7 +936,7 @@ namespace Vulkan
         public IntPtr pNext;
         public uint flags;
         public uint dynamicStateCount;
-        public VkDynamicState* pDynamicStates;
+        public IntPtr pDynamicStates;
         public static VkPipelineDynamicStateCreateInfo New()
         {
             VkPipelineDynamicStateCreateInfo ret = new VkPipelineDynamicStateCreateInfo();
@@ -965,16 +984,16 @@ namespace Vulkan
         public IntPtr pNext;
         public VkPipelineCreateFlags flags;
         public uint stageCount;
-        public VkPipelineShaderStageCreateInfo* pStages;
-        public VkPipelineVertexInputStateCreateInfo* pVertexInputState;
-        public VkPipelineInputAssemblyStateCreateInfo* pInputAssemblyState;
-        public VkPipelineTessellationStateCreateInfo* pTessellationState;
-        public VkPipelineViewportStateCreateInfo* pViewportState;
-        public VkPipelineRasterizationStateCreateInfo* pRasterizationState;
-        public VkPipelineMultisampleStateCreateInfo* pMultisampleState;
-        public VkPipelineDepthStencilStateCreateInfo* pDepthStencilState;
-        public VkPipelineColorBlendStateCreateInfo* pColorBlendState;
-        public VkPipelineDynamicStateCreateInfo* pDynamicState;
+        public IntPtr pStages;
+        public IntPtr pVertexInputState;
+        public IntPtr pInputAssemblyState;
+        public IntPtr pTessellationState;
+        public IntPtr pViewportState;
+        public IntPtr pRasterizationState;
+        public IntPtr pMultisampleState;
+        public IntPtr pDepthStencilState;
+        public IntPtr pColorBlendState;
+        public IntPtr pDynamicState;
         public VkPipelineLayout layout;
         public VkRenderPass renderPass;
         public uint subpass;
@@ -1128,7 +1147,7 @@ namespace Vulkan
         public VkFramebuffer framebuffer;
         public VkRect2D renderArea;
         public uint clearValueCount;
-        public VkClearValue* pClearValues;
+        public IntPtr pClearValues;
         public static VkRenderPassBeginInfo New()
         {
             VkRenderPassBeginInfo ret = new VkRenderPassBeginInfo();
