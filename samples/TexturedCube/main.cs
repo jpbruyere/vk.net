@@ -102,27 +102,24 @@ namespace TextureCube {
 
 			descriptorSet = descriptorPool.Allocate (dsLayout);
 
-			pipeline = new Pipeline (dev,
-				swapChain.ColorFormat,
-				dev.GetSuitableDepthFormat (),
-				VkPrimitiveTopology.TriangleList, VkSampleCountFlags.Count1);
+			PipelineConfig cfg = PipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, VkSampleCountFlags.Count1);
 
-			pipeline.Layout = new PipelineLayout (dev, dsLayout);
-			pipeline.AddVertexBinding (0, 5 * sizeof(float));
-			pipeline.SetVertexAttributes (0, VkFormat.R32g32b32Sfloat, VkFormat.R32g32Sfloat);
+			cfg.Layout = new PipelineLayout (dev, dsLayout);
+			cfg.RenderPass = new RenderPass (dev, swapChain.ColorFormat, dev.GetSuitableDepthFormat (), cfg.Samples);
 
-			pipeline.AddShader (VkShaderStageFlags.Vertex, "shaders/skybox.vert.spv");
-			pipeline.AddShader (VkShaderStageFlags.Fragment, "shaders/skybox.frag.spv");
+			cfg.AddVertexBinding (0, 5 * sizeof(float));
+			cfg.SetVertexAttributes (0, VkFormat.R32g32b32Sfloat, VkFormat.R32g32Sfloat);
 
-			pipeline.Activate ();
+			cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/skybox.vert.spv");
+			cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/skybox.frag.spv");
+
+			pipeline = new Pipeline (cfg);
 
 			uboMats = new HostBuffer (dev, VkBufferUsageFlags.UniformBuffer, matrices);
 			uboMats.Map ();//permanent map
 
-			using (DescriptorSetWrites2 uboUpdate = new DescriptorSetWrites2 (dev)) {
-				uboUpdate.AddWriteInfo (descriptorSet, dsLayout.Bindings[0], uboMats.Descriptor);
-				uboUpdate.Update ();
-			}
+			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (descriptorSet, dsLayout.Bindings[0]);				
+			uboUpdate.Write (dev, uboMats.Descriptor);
 
 			loadTexture (imgPathes[currentImgIndex]);
 			updateTextureSet ();
@@ -170,10 +167,8 @@ namespace TextureCube {
 			nextTexture.CreateSampler ();
 
 			nextTexture.Descriptor.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
-			using (DescriptorSetWrites2 uboUpdate = new DescriptorSetWrites2 (dev)) {
-				uboUpdate.AddWriteInfo (descriptorSet, dsLayout.Bindings[1], nextTexture.Descriptor);
-				uboUpdate.Update ();
-			}
+			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (descriptorSet, dsLayout.Bindings[1]);				
+			uboUpdate.Write (dev, nextTexture.Descriptor);
 
 			texture?.Dispose ();
 			texture = nextTexture;

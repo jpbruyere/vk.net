@@ -48,6 +48,7 @@ namespace VKE {
 			BindPoint = cfg.bindPoint;
 			RenderPass = cfg.RenderPass;
 			Layout = cfg.Layout;
+			Samples = cfg.Samples;
 
 			dev = RenderPass.dev;
 
