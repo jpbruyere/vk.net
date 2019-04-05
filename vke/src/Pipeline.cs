@@ -66,7 +66,7 @@ namespace VKE {
         VkPipelineInputAssemblyStateCreateInfo inputAssemblyState = VkPipelineInputAssemblyStateCreateInfo.New ();
         VkPipelineRasterizationStateCreateInfo rasterizationState = VkPipelineRasterizationStateCreateInfo.New ();
         VkPipelineViewportStateCreateInfo viewportState = VkPipelineViewportStateCreateInfo.New ();
-        VkPipelineDepthStencilStateCreateInfo depthStencilState = VkPipelineDepthStencilStateCreateInfo.New ();
+        public VkPipelineDepthStencilStateCreateInfo depthStencilState = VkPipelineDepthStencilStateCreateInfo.New ();
         public VkPipelineMultisampleStateCreateInfo multisampleState = VkPipelineMultisampleStateCreateInfo.New ();
 
         NativeList<VkPipelineColorBlendAttachmentState> blendAttachments = new NativeList<VkPipelineColorBlendAttachmentState>();

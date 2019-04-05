@@ -7,12 +7,16 @@ using Vulkan;
 
 namespace VKE {
 	public class Camera {
+		public enum CamType {LookAt, FirstPerson};
+
 		float fov, aspectRatio, zNear = 0.1f, zFar = 256f;
 		float moveSpeed = 1, rotSpeed = 0.01f, zoomSpeed = 0.01f;
 		Vector3 rotation = new Vector3 (-1.5f, 2.7f, 0f);
 		Vector3 position = new Vector3 (0, 0, -2);
 		float zoom = 1.0f;
 
+		public CamType Type;
+		
 		public float AspectRatio {
 			get { return aspectRatio; }
 			set {
@@ -45,7 +49,7 @@ namespace VKE {
 		public void Move (float x, float y, float z = 0) {
 			position.X += moveSpeed * x;
 			position.Y += moveSpeed * y;
-			position.Z += moveSpeed * y;
+			position.Z += moveSpeed * z;
 			Update ();
 		}
 		public void Zoom (float factor) {
@@ -57,15 +61,43 @@ namespace VKE {
 		public Matrix4x4 View { get; private set;}
 		public Matrix4x4 Model { get; private set;}
 
+		public Matrix4x4 SkyboxView {
+			get { 
+				return
+					Matrix4x4.CreateFromAxisAngle (Vector3.UnitZ, rotation.Z) *
+					Matrix4x4.CreateFromAxisAngle (Vector3.UnitY, rotation.Y) *
+					Matrix4x4.CreateFromAxisAngle (Vector3.UnitX, rotation.X);
+			}
+		}
+
 		public void Update () { 
 			Projection = Matrix4x4.CreatePerspectiveFieldOfView (fov, aspectRatio, zNear, zFar);
-			//matrices.view = Matrix4x4.CreateLookAt (new Vector3 (0, 0, -1), new Vector3 (0, 0, 0), Vector3.UnitY);//Matrix4x4.CreateTranslation (0, 0, -2.5f);
-			View = Matrix4x4.CreateTranslation (0, 0, -2.5f * zoom);
-			Model =
+			Matrix4x4 rot =
 					Matrix4x4.CreateFromAxisAngle (Vector3.UnitX, rotation.X) *
 					Matrix4x4.CreateFromAxisAngle (Vector3.UnitY, rotation.Y) *
 					Matrix4x4.CreateFromAxisAngle (Vector3.UnitZ, rotation.Z);
+			if (Type == CamType.LookAt) {
+				View =	Matrix4x4.CreateFromAxisAngle (Vector3.UnitX, rotation.X) *
+						Matrix4x4.CreateFromAxisAngle (Vector3.UnitY, rotation.Y) *
+						Matrix4x4.CreateFromAxisAngle (Vector3.UnitZ, rotation.Z) *
+						Matrix4x4.CreateTranslation (position);
+			} else {
+				View =	Matrix4x4.CreateTranslation (position) *
+						Matrix4x4.CreateFromAxisAngle (Vector3.UnitZ, rotation.Z) *
+						Matrix4x4.CreateFromAxisAngle (Vector3.UnitY, rotation.Y) *
+						Matrix4x4.CreateFromAxisAngle (Vector3.UnitX, rotation.X);
+			}
+			Model = Matrix4x4.Identity;
 		}
+		//public void Update () { 
+		//	Projection = Matrix4x4.CreatePerspectiveFieldOfView (fov, aspectRatio, zNear, zFar);
+		//	//matrices.view = Matrix4x4.CreateLookAt (new Vector3 (0, 0, -1), new Vector3 (0, 0, 0), Vector3.UnitY);//Matrix4x4.CreateTranslation (0, 0, -2.5f);
+		//	View = Matrix4x4.CreateTranslation (0, 0, -2.5f * zoom);
+		//	Model =
+		//			Matrix4x4.CreateFromAxisAngle (Vector3.UnitX, rotation.X) *
+		//			Matrix4x4.CreateFromAxisAngle (Vector3.UnitY, rotation.Y) *
+		//			Matrix4x4.CreateFromAxisAngle (Vector3.UnitZ, rotation.Z);
+		//}
 
 	}
 }

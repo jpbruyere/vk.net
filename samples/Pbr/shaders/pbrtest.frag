@@ -49,8 +49,6 @@ const uint MAP_EMISSIVE = 0x64;
 
 const float PI = 3.141592653589793;
 
-vec3 light = vec3(1.0,.0,1.0);
-
 // From http://filmicgames.com/archives/75
 vec3 Uncharted2Tonemap(vec3 x)
 {
@@ -164,10 +162,10 @@ void main()
     F0 = mix(F0, base_color.rgb, metallic);
     float alpha = pow(rough, 2.0);
 
-    vec3 L = normalize(light);
+    vec3 L = normalize(ubo.lightPos.xyz);
     vec3 Lo = specularContribution(L, V, N, F0, metallic, rough, base_color.rgb);
     
-    vec3 reflection = texture(samplerCubemap, R).rgb * rough;
+    vec3 reflection = texture(samplerCubemap, R).rgb * (1.0-rough);//vec3(rough);
     vec3 irradiance = vec3(0.8);//texture(samplerIrradiance, N).rgb;
 
     // Diffuse based on irradiance
