@@ -458,6 +458,10 @@ namespace VKE {
 					VkPipelineStageFlags.Transfer, VkPipelineStageFlags.FragmentShader);
 		}
 
+		public override string ToString () {
+			return string.Format ($"{base.ToString ()}[0x{handle.Handle.ToString("x")}]");
+		}
+		#region IDisposable Support
         protected override void Dispose (bool disposing) {
 			if (state == ActivableState.Activated) {
 				if (Descriptor.sampler.Handle != 0)
@@ -471,5 +475,6 @@ namespace VKE {
 			}
 			state = ActivableState.Disposed;
         }
-    }
+		#endregion
+	}
 }

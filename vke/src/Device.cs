@@ -43,10 +43,9 @@ namespace VKE {
             phy = _phy;
         }
 
-        unsafe public void Activate (VkPhysicalDeviceFeatures enabledFeatures, params string[] extensions) {
-
+        public void Activate (VkPhysicalDeviceFeatures enabledFeatures, params string[] extensions) {
             List<VkDeviceQueueCreateInfo> qInfos = new List<VkDeviceQueueCreateInfo> ();
-			List<List<float>> prioritiesLists = new List<List<float>> ();
+			List<List<float>> prioritiesLists = new List<List<float>> ();//store pinned lists for later unpin
 
             foreach (IGrouping<uint, Queue> qfams in queues.GroupBy (q => q.qFamIndex)) {
                 int qTot = qfams.Count ();
@@ -74,16 +73,13 @@ namespace VKE {
             }            
 
             List<IntPtr> deviceExtensions = new List<IntPtr> ();
-            for (int i = 0; i < extensions.Length; i++) {
-                deviceExtensions.Add (new FixedUtf8String(extensions[i]));
-            }
-
-            VkPhysicalDeviceFeatures features = enabledFeatures;
+            for (int i = 0; i < extensions.Length; i++) 
+                deviceExtensions.Add (new FixedUtf8String(extensions[i]));            
+				            
             VkDeviceCreateInfo deviceCreateInfo = VkDeviceCreateInfo.New ();
-
             deviceCreateInfo.queueCreateInfoCount = (uint)qInfos.Count;
             deviceCreateInfo.pQueueCreateInfos = qInfos.Pin();
-            deviceCreateInfo.pEnabledFeatures = &features;
+            deviceCreateInfo.pEnabledFeatures = enabledFeatures.Pin ();
 
             if (deviceExtensions.Count > 0) {
                 deviceCreateInfo.enabledExtensionCount = (uint)deviceExtensions.Count;
@@ -93,6 +89,7 @@ namespace VKE {
             Utils.CheckResult (vkCreateDevice (phy.Handle, ref deviceCreateInfo, IntPtr.Zero, out dev));
 
             qInfos.Unpin ();
+			enabledFeatures.Unpin ();
 			foreach (List<float> fa in prioritiesLists) 
 				fa.Unpin ();
 
@@ -136,9 +133,6 @@ namespace VKE {
 
         public void DestroyShaderModule (VkShaderModule module) {
             vkDestroyShaderModule (VkDev, module, IntPtr.Zero);
-        }
-        public void DestroyDescriptorPool (VkDescriptorPool pool) {
-            vkDestroyDescriptorPool (VkDev, pool, IntPtr.Zero);
         }
         public void WaitIdle () {
             Utils.CheckResult(vkDeviceWaitIdle (dev));
@@ -196,13 +190,6 @@ namespace VKE {
             vkDestroyRenderPass (dev, rp, IntPtr.Zero);
         }
 
-        unsafe public CommandPool CreateCommandPool (uint qFamIdx) {
-            VkCommandPool pool;
-            VkCommandPoolCreateInfo infos = VkCommandPoolCreateInfo.New ();
-            infos.queueFamilyIndex = qFamIdx;
-            Utils.CheckResult (vkCreateCommandPool (dev, ref infos, IntPtr.Zero, out pool));
-            return new CommandPool (this, qFamIdx, pool);
-        }
         // This function is used to request a Device memory type that supports all the property flags we request (e.g. Device local, host visibile)
         // Upon success it will return the index of the memory type that fits our requestes memory properties
         // This is necessary as implementations can offer an arbitrary number of memory types with different

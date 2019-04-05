@@ -175,17 +175,9 @@ namespace PbrSample {
 			uboMatsSkybox = new HostBuffer (dev, VkBufferUsageFlags.UniformBuffer, (ulong)Marshal.SizeOf<Matrices>());
 			uboMatsSkybox.Map ();//permanent map
 
-			using (DescriptorSetWrites uboUpdate = new DescriptorSetWrites (dev)) {
-				uboUpdate.AddWriteInfo (dsMain, descLayoutMain.Bindings[0], uboMats.Descriptor);
-				uboUpdate.AddWriteInfo (dsMain, descLayoutMain.Bindings[1], cubemap.Descriptor);
-				uboUpdate.Update ();
-			}
-
-			using (DescriptorSetWrites uboUpdate = new DescriptorSetWrites (dev)) {
-				uboUpdate.AddWriteInfo (dsSkybox, descLayoutMain.Bindings[0], uboMatsSkybox.Descriptor);
-				uboUpdate.AddWriteInfo (dsSkybox, descLayoutMain.Bindings[1], cubemap.Descriptor);
-				uboUpdate.Update ();
-			}
+			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (descLayoutMain);
+			uboUpdate.Write (dev, dsMain, uboMats.Descriptor, cubemap.Descriptor);
+			uboUpdate.Write (dev, dsSkybox, uboMatsSkybox.Descriptor, cubemap.Descriptor);
 		}
 
 		void buildCommandBuffers () {

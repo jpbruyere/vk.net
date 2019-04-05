@@ -119,7 +119,7 @@ namespace TextureCube {
 			uboMats = new HostBuffer (dev, VkBufferUsageFlags.UniformBuffer, matrices);
 			uboMats.Map ();//permanent map
 
-			using (DescriptorSetWrites uboUpdate = new DescriptorSetWrites (dev)) {
+			using (DescriptorSetWrites2 uboUpdate = new DescriptorSetWrites2 (dev)) {
 				uboUpdate.AddWriteInfo (descriptorSet, dsLayout.Bindings[0], uboMats.Descriptor);
 				uboUpdate.Update ();
 			}
@@ -170,7 +170,7 @@ namespace TextureCube {
 			nextTexture.CreateSampler ();
 
 			nextTexture.Descriptor.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
-			using (DescriptorSetWrites uboUpdate = new DescriptorSetWrites (dev)) {
+			using (DescriptorSetWrites2 uboUpdate = new DescriptorSetWrites2 (dev)) {
 				uboUpdate.AddWriteInfo (descriptorSet, dsLayout.Bindings[1], nextTexture.Descriptor);
 				uboUpdate.Update ();
 			}

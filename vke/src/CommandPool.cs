@@ -28,21 +28,28 @@ using Vulkan;
 using static Vulkan.VulkanNative;
 
 namespace VKE {
-    public class CommandPool {
+    public sealed class CommandPool : Activable {
         public readonly uint QFamIndex;
         VkCommandPool handle;
-        internal Device dev;
-
-        internal CommandPool (Device _dev, uint qFamIdx, VkCommandPool _pool)
-        {
-            dev = _dev;
-            handle = _pool;
+		#region CTORS
+		public CommandPool (Device device, uint qFamIdx) : base(device)
+        {            
             QFamIndex = qFamIdx;
+
+			Activate ();
         }
-        public void Destroy () {
-            vkDestroyCommandPool (dev.VkDev, handle, IntPtr.Zero);
-        }
-        unsafe public CommandBuffer AllocateCommandBuffer (VkCommandBufferLevel level = VkCommandBufferLevel.Primary) {
+		#endregion
+
+		public override void Activate () {
+			if (state != ActivableState.Activated) {            
+        	    VkCommandPoolCreateInfo infos = VkCommandPoolCreateInfo.New ();
+    	        infos.queueFamilyIndex = QFamIndex;
+	            Utils.CheckResult (vkCreateCommandPool (dev.VkDev, ref infos, IntPtr.Zero, out handle));
+			}
+			base.Activate ();
+		}
+
+        public CommandBuffer AllocateCommandBuffer (VkCommandBufferLevel level = VkCommandBufferLevel.Primary) {
             VkCommandBuffer buff;
             VkCommandBufferAllocateInfo infos = VkCommandBufferAllocateInfo.New ();
             infos.commandPool = handle;
@@ -65,5 +72,20 @@ namespace VKE {
                 vkFreeCommandBuffers (dev.VkDev, handle, (uint)cmds.Length, nlCmds.Data);
             }
         }
-    }
+
+		public override string ToString () {
+			return string.Format ($"{base.ToString ()}[0x{handle.Handle.ToString("x")}]");
+		}
+
+		#region IDisposable Support
+		protected override void Dispose (bool disposing) {
+			if (!disposing)
+				System.Diagnostics.Debug.WriteLine ("VKE CommandPool disposed by finalizer");
+			if (state == ActivableState.Activated)
+				vkDestroyCommandPool (dev.VkDev, handle, IntPtr.Zero);
+			base.Dispose (disposing);
+		}
+		#endregion
+
+	}
 }

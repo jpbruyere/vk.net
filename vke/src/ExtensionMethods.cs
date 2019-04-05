@@ -47,8 +47,10 @@ namespace VKE {
             return new Vector3 (v4.X, v4.Y, v4.Z);
         }
         public static IntPtr Pin (this object obj) {
-            if (handles.ContainsKey (obj)) 
-                Debug.WriteLine ("Pinning already pinned object: {0}", obj);
+			if (handles.ContainsKey (obj)) {
+				Debug.WriteLine ("Trying to pin already pinned object: {0}", obj);
+				return handles[obj].AddrOfPinnedObject ();
+			}
                 
             GCHandle hnd = GCHandle.Alloc (obj, GCHandleType.Pinned);
             handles.Add (obj, hnd);
@@ -56,7 +58,7 @@ namespace VKE {
         }
         public static void Unpin (this object obj) {
             if (!handles.ContainsKey (obj)) {
-                Debug.WriteLine ("Trying to unpin {0}, but object has not been pinned.", obj);
+                Debug.WriteLine ("Trying to unpin unpinned object: {0}.", obj);
                 return;
             }
             handles[obj].Free ();

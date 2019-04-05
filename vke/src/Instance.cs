@@ -108,6 +108,8 @@ namespace VKE {
             if (result != VkResult.Success) 
                 throw new InvalidOperationException ("Could not create Vulkan instance. Error: " + result);
 
+			VulkanNative.LoadInstanceFunctionPointers (inst);
+
             instanceExtensions.Dispose ();
             enabledLayerNames.Dispose ();            
         }
@@ -115,7 +117,7 @@ namespace VKE {
 
         public void GetDelegate<T> (string name, out T del) {
             using (FixedUtf8String n = new FixedUtf8String (name)) {
-                del = Marshal.GetDelegateForFunctionPointer<T> (vkGetInstanceProcAddr (Handle, n));
+                del = Marshal.GetDelegateForFunctionPointer<T> (vkGetInstanceProcAddr (Handle, (IntPtr)n));
             }
         }
 
