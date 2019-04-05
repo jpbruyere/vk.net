@@ -88,16 +88,19 @@ namespace VKE {
             Activate ();//DONT OVERRIDE Activate in derived classes!!!!
         }
 
+		/// <summary>
+		/// Load image from data pointed by IntPtr pointer containing full image file (jpg, png,...)
+		/// </summary>
 		public static Image Load (Device dev, Queue staggingQ, CommandPool staggingCmdPool,
-			byte[] bitmap, VkFormat format = VkFormat.R8g8b8a8Unorm,
+			IntPtr bitmap, ulong bitmapByteCount, VkFormat format = VkFormat.R8g8b8a8Unorm,
 			VkMemoryPropertyFlags memoryProps = VkMemoryPropertyFlags.DeviceLocal,
 			VkImageTiling tiling = VkImageTiling.Optimal, bool generateMipmaps = true,
 			VkImageType imageType = VkImageType.Image2D,
 			VkImageUsageFlags usage = VkImageUsageFlags.Sampled | VkImageUsageFlags.TransferSrc | VkImageUsageFlags.TransferDst) { 
 
 			int width, height, channels;
-			IntPtr imgPtr = Stb.Load (bitmap.Pin(), bitmap.Length, out width, out height, out channels, 4);
-			bitmap.Unpin ();
+			IntPtr imgPtr = Stb.Load (bitmap, (int)bitmapByteCount, out width, out height, out channels, 4);
+
 			if (imgPtr == IntPtr.Zero)
 				throw new Exception ($"STBI image loading error.");
 
@@ -113,6 +116,42 @@ namespace VKE {
 			img.load (staggingQ, staggingCmdPool, imgPtr, generateMipmaps);
 
 			Stb.FreeImage (imgPtr);
+
+			return img;
+		}
+
+		/// <summary>
+		/// Load image from byte array containing full image file (jpg, png,...)
+		/// </summary>
+		public static Image Load (Device dev, Queue staggingQ, CommandPool staggingCmdPool,
+			byte[] bitmap, VkFormat format = VkFormat.R8g8b8a8Unorm,
+			VkMemoryPropertyFlags memoryProps = VkMemoryPropertyFlags.DeviceLocal,
+			VkImageTiling tiling = VkImageTiling.Optimal, bool generateMipmaps = true,
+			VkImageType imageType = VkImageType.Image2D,
+			VkImageUsageFlags usage = VkImageUsageFlags.Sampled | VkImageUsageFlags.TransferSrc | VkImageUsageFlags.TransferDst) {
+
+			Image img = Load (dev, staggingQ, staggingCmdPool, bitmap.Pin (), (ulong)bitmap.Length, format, memoryProps, tiling, generateMipmaps,
+				imageType, usage);
+			bitmap.Unpin ();
+
+			//int width, height, channels;
+			//IntPtr imgPtr = Stb.Load (, bitmap.Length, out width, out height, out channels, 4);
+
+			//if (imgPtr == IntPtr.Zero)
+			//	throw new Exception ($"STBI image loading error.");
+
+			//uint mipLevels = generateMipmaps ? (uint)Math.Floor (Math.Log (Math.Max (width, height))) + 1 : 1;
+
+			//if (tiling == VkImageTiling.Optimal)
+			//	usage |= VkImageUsageFlags.TransferDst;
+			//if (generateMipmaps)
+			//	usage |= (VkImageUsageFlags.TransferSrc | VkImageUsageFlags.TransferDst);
+
+			//Image img = new Image (dev, format, usage, memoryProps, (uint)width, (uint)height, imageType, VkSampleCountFlags.Count1, tiling, mipLevels);
+
+			//img.load (staggingQ, staggingCmdPool, imgPtr, generateMipmaps);
+
+			//Stb.FreeImage (imgPtr);
 
 			return img;
 		}
