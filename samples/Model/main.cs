@@ -185,6 +185,12 @@ namespace ModelSample {
 					else
 						matrices.gamma += 0.1f;
 					break;
+				case Key.F3:
+					if (Camera.Type == Camera.CamType.FirstPerson)
+						Camera.Type = Camera.CamType.LookAt;
+					else
+						Camera.Type = Camera.CamType.FirstPerson;
+					break;
 				default:
 					base.onKeyDown (key, scanCode, modifiers);
 					return;

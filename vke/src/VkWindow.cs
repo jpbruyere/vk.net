@@ -177,7 +177,7 @@ namespace VKE {
             }
         }
         static void HandleKeyDelegate (IntPtr window, Key key, int scanCode, InputAction action, Modifier modifiers) {
-			if (action == InputAction.Press) {
+			if (action == InputAction.Press || action == InputAction.Repeat) {
 				currentWindow.onKeyDown (key, scanCode, modifiers);
 			} else { 
 				currentWindow.onKeyUp (key, scanCode, modifiers);
