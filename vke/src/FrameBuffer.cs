@@ -32,22 +32,64 @@ using static Vulkan.VulkanNative;
 
 namespace VKE {
 
-    public class Framebuffer : IDisposable {
+    public class Framebuffer : Activable {
         internal VkFramebuffer handle;
         RenderPass renderPass;
-        public List<Image> attachments = new List<Image> ();
+        
+		public List<Image> attachments = new List<Image> ();
         VkFramebufferCreateInfo createInfo = VkFramebufferCreateInfo.New ();
+
         public uint Width => createInfo.width;
         public uint Height => createInfo.height;
         public uint Layers => createInfo.layers;
 
 
-        public Framebuffer (RenderPass _renderPass, uint _width, uint _height, uint _layers = 1) {
+        public Framebuffer (RenderPass _renderPass, uint _width, uint _height, uint _layers = 1) : base(_renderPass.dev) {
             renderPass = _renderPass;
             createInfo.width = _width;
             createInfo.height = _height;
             createInfo.layers = _layers;
             createInfo.renderPass = renderPass.handle;
+        }
+
+		public Framebuffer (RenderPass _renderPass, uint _width, uint _height, params Image[] views)
+        : this (_renderPass, _width, _height) {
+			for (int i = 0; i < views.Length; i++) {
+				Image v = views[i];
+				if (v == null) {
+					//automatically create attachment if not in unused state in the renderpass
+					VkAttachmentDescription ad = renderPass.attachments[i];
+					VkImageUsageFlags usage = VkImageUsageFlags.None;
+					VkImageAspectFlags aspectFlags = VkImageAspectFlags.None;
+
+					checkLayoutRequirements (ad.initialLayout, ref usage, ref aspectFlags);
+					checkLayoutRequirements (ad.finalLayout, ref usage, ref aspectFlags);
+					foreach (SubPass sp in renderPass.subpasses) {
+						//TODO:check subpass usage
+					}
+
+					v = new Image (renderPass.dev, ad.format, usage, VkMemoryPropertyFlags.DeviceLocal,
+						_width, _height, VkImageType.Image2D, ad.samples, VkImageTiling.Optimal, 1, createInfo.layers);
+					v.CreateView (VkImageViewType.Image2D, aspectFlags);
+				} else
+					v.Activate ();//increase ref and create handle if not already activated
+
+                attachments.Add (v);
+			}
+            Activate ();
+		}
+
+		public override void Activate () {
+			if (state != ActivableState.Activated) {
+				VkImageView[] views = attachments.Select (a => a.Descriptor.imageView).ToArray ();
+				createInfo.attachmentCount = (uint)views.Length;
+				createInfo.pAttachments = views.Pin ();
+
+				Utils.CheckResult (vkCreateFramebuffer (renderPass.dev.VkDev, ref createInfo, IntPtr.Zero, out handle));
+
+				views.Unpin ();
+			}
+			base.Activate ();
         }
 
 		void checkLayoutRequirements (VkImageLayout layout, ref VkImageUsageFlags usage, ref VkImageAspectFlags aspectFlags) {
@@ -84,71 +126,17 @@ namespace VKE {
 			}
 		}
 
-
-		public Framebuffer (RenderPass _renderPass, uint _width, uint _height, params Image[] views)
-        : this (_renderPass, _width, _height) {
-			for (int i = 0; i < views.Length; i++) {
-				Image v = views[i];
-				if (v == null){ 
-					//automatically create attachment if not in unused state in the renderpass
-					VkAttachmentDescription ad = renderPass.attachments[i];
-					VkImageUsageFlags usage = VkImageUsageFlags.None;
-					VkImageAspectFlags aspectFlags = VkImageAspectFlags.None;
-
-					checkLayoutRequirements (ad.initialLayout, ref usage, ref aspectFlags);
-					checkLayoutRequirements (ad.finalLayout, ref usage, ref aspectFlags);
-					foreach (SubPass sp in renderPass.subpasses) {
-						//TODO:check subpass usage
-					}
-
-					v = new Image (renderPass.dev, ad.format, usage, VkMemoryPropertyFlags.DeviceLocal,
-						_width, _height, VkImageType.Image2D, ad.samples, VkImageTiling.Optimal, 1, createInfo.layers);
-					v.CreateView (VkImageViewType.Image2D, aspectFlags);
-				}
-				v.references++;
-                attachments.Add (v);
-			}
-            Activate ();
-		}
-
-		public void Activate () {
-			if (isDisposed) {
-				GC.ReRegisterForFinalize (this);
-				isDisposed = false;
-			}
-			VkImageView[] views;
-			views = attachments.Select(a=>a.Descriptor.imageView).ToArray();
-
-			createInfo.attachmentCount = (uint)views.Length;
-            createInfo.pAttachments = views.Pin();
-
-            Utils.CheckResult (vkCreateFramebuffer (renderPass.dev.VkDev, ref createInfo, IntPtr.Zero, out handle));
-
-			views.Unpin();
-        }
-
 		#region IDisposable Support
-		private bool isDisposed = false; // Pour détecter les appels redondants
-
-		protected virtual void Dispose (bool disposing) {
-			if (!isDisposed) {
-				renderPass.dev.DestroyFramebuffer (handle);
-				if (disposing) {
-					foreach (Image img in attachments) 
-						img.Dispose();
-				} else
-					System.Diagnostics.Debug.WriteLine ("A FrameBuffer has not been disposed.");
-
-				isDisposed = true;
-			}
-		}
-
-		~Framebuffer () {
-			Dispose (false);
-		}
-		public void Dispose () {
-			Dispose (true);
-			GC.SuppressFinalize (this);
+		protected override void Dispose (bool disposing) {
+			if (state == ActivableState.Activated)
+				dev.DestroyFramebuffer (handle);
+			if (disposing) {
+				foreach (Image img in attachments) 
+					img.Dispose();
+			}else
+				System.Diagnostics.Debug.WriteLine ("VKE Activable object disposed by finalizer");
+				
+			base.Dispose (disposing);
 		}
 		#endregion
 

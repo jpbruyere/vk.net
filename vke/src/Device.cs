@@ -45,13 +45,13 @@ namespace VKE {
 
         unsafe public void Activate (VkPhysicalDeviceFeatures enabledFeatures, params string[] extensions) {
 
-            NativeList<VkDeviceQueueCreateInfo> qInfos = new NativeList<VkDeviceQueueCreateInfo> ();
-            NativeList<float> priorities = null;
+            List<VkDeviceQueueCreateInfo> qInfos = new List<VkDeviceQueueCreateInfo> ();
+			List<List<float>> prioritiesLists = new List<List<float>> ();
 
             foreach (IGrouping<uint, Queue> qfams in queues.GroupBy (q => q.qFamIndex)) {
                 int qTot = qfams.Count ();
                 uint qIndex = 0;
-                priorities = new NativeList<float> ();
+                List<float>priorities = new List<float> ();
                 bool qCountReached = false;//true when queue count of that family is reached
 
                 foreach (Queue q in qfams) {
@@ -62,18 +62,18 @@ namespace VKE {
                         qIndex = 0;
                         qCountReached = true;
                     }
-                }
+                }					
 
                 qInfos.Add (new VkDeviceQueueCreateInfo {
                     sType = VkStructureType.DeviceQueueCreateInfo,
                     queueCount = qCountReached ? phy.QueueFamilies[qfams.Key].queueCount : qIndex,
                     queueFamilyIndex = qfams.Key,
-                    pQueuePriorities = (float*)priorities.Data.ToPointer ()
+                    pQueuePriorities = priorities.Pin ()
                 });
-            }
-            float tmp = priorities[0];
+				prioritiesLists.Add (priorities);//add for unpined
+            }            
 
-            NativeList<IntPtr> deviceExtensions = new NativeList<IntPtr> ();
+            List<IntPtr> deviceExtensions = new List<IntPtr> ();
             for (int i = 0; i < extensions.Length; i++) {
                 deviceExtensions.Add (new FixedUtf8String(extensions[i]));
             }
@@ -81,20 +81,22 @@ namespace VKE {
             VkPhysicalDeviceFeatures features = enabledFeatures;
             VkDeviceCreateInfo deviceCreateInfo = VkDeviceCreateInfo.New ();
 
-            deviceCreateInfo.queueCreateInfoCount = qInfos.Count;
-            deviceCreateInfo.pQueueCreateInfos = (VkDeviceQueueCreateInfo*)qInfos.Data.ToPointer();
+            deviceCreateInfo.queueCreateInfoCount = (uint)qInfos.Count;
+            deviceCreateInfo.pQueueCreateInfos = qInfos.Pin();
             deviceCreateInfo.pEnabledFeatures = &features;
 
             if (deviceExtensions.Count > 0) {
-                deviceCreateInfo.enabledExtensionCount = deviceExtensions.Count;
-                deviceCreateInfo.ppEnabledExtensionNames = deviceExtensions.Data;
+                deviceCreateInfo.enabledExtensionCount = (uint)deviceExtensions.Count;
+                deviceCreateInfo.ppEnabledExtensionNames = deviceExtensions.Pin();
             }
 
             Utils.CheckResult (vkCreateDevice (phy.Handle, ref deviceCreateInfo, IntPtr.Zero, out dev));
 
-            qInfos.Dispose ();
-            priorities.Dispose ();
-            deviceExtensions.Dispose ();
+            qInfos.Unpin ();
+			foreach (List<float> fa in prioritiesLists) 
+				fa.Unpin ();
+
+            deviceExtensions.Unpin ();
 
             foreach (Queue q in queues)
                 q.updateHandle ();

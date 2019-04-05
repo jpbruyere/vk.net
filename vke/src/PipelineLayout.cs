@@ -30,18 +30,13 @@ using Vulkan;
 using static Vulkan.VulkanNative;
 
 namespace VKE {
-
-	public class PipelineLayout : IDisposable {
-		internal uint references;
+	public sealed class PipelineLayout : Activable {
         internal VkPipelineLayout handle;
-        internal Device dev;
 
 		public List<DescriptorSetLayout> DescriptorSetLayouts = new List<DescriptorSetLayout> ();
-		public NativeList<VkPushConstantRange> PushConstantRanges = new NativeList<VkPushConstantRange> ();
+		public List<VkPushConstantRange> PushConstantRanges = new List<VkPushConstantRange> ();
 
-		public PipelineLayout (Device device) {
-			dev = device;
-		}
+		public PipelineLayout (Device device) : base (device) {	}
 		public PipelineLayout (Device device, VkPushConstantRange pushConstantRange, params DescriptorSetLayout[] descriptorSetLayouts) 
 		: this (device, descriptorSetLayouts) {
 			PushConstantRanges.Add (pushConstantRange);
@@ -61,52 +56,33 @@ namespace VKE {
 			foreach (VkPushConstantRange pcr in pushConstantRanges)
 				PushConstantRanges.Add (pcr);
 		}
-		public PipelineLayout Activate () {
-			if (isDisposed) {
-				isDisposed = false;
-				GC.ReRegisterForFinalize (this);
-				PushConstantRanges = new NativeList<VkPushConstantRange> ();
+		public override void Activate () {
+			if (state != ActivableState.Activated) {
+				VkPipelineLayoutCreateInfo info = VkPipelineLayoutCreateInfo.New ();
+				VkDescriptorSetLayout[] dsls = DescriptorSetLayouts.Select (dsl => dsl.handle).ToArray ();
+
+				if (dsls.Length > 0) {
+					info.setLayoutCount = (uint)dsls.Length;
+					info.pSetLayouts = dsls.Pin ();
+				}
+				if (PushConstantRanges.Count > 0) {
+					info.pushConstantRangeCount = (uint)PushConstantRanges.Count;
+					info.pPushConstantRanges = PushConstantRanges.Pin();
+				}
+				Utils.CheckResult (vkCreatePipelineLayout (dev.VkDev, ref info, IntPtr.Zero, out handle));
+				dsls.Unpin ();
+				PushConstantRanges.Unpin ();
 			}
-			VkPipelineLayoutCreateInfo info = VkPipelineLayoutCreateInfo.New ();
-			VkDescriptorSetLayout[] dsls = DescriptorSetLayouts.Select (dsl => dsl.handle).ToArray ();
-			if (dsls.Length > 0) {
-				info.setLayoutCount = (uint)dsls.Length;
-				info.pSetLayouts = dsls.Pin ();
-			}
-			if (PushConstantRanges.Count > 0) {
-				info.pushConstantRangeCount = (uint)PushConstantRanges.Count;
-				info.pPushConstantRanges = PushConstantRanges.Data;
-			}
-			Utils.CheckResult (vkCreatePipelineLayout (dev.VkDev, ref info, IntPtr.Zero, out handle));
-			dsls.Unpin ();
-			return this;
+			base.Activate ();
 		}
 
 		#region IDisposable Support
-		private bool isDisposed = false; // Pour détecter les appels redondants
-
-		protected virtual void Dispose (bool disposing) {
-			if (!isDisposed) {
-				if (disposing) {
-					PushConstantRanges.Dispose ();
-				} else
-					System.Diagnostics.Debug.WriteLine ("One Pipeline layout was not disposed");
-
+		protected override void Dispose (bool disposing) {
+			if (!disposing)
+				System.Diagnostics.Debug.WriteLine ("VKE Activable PipelineLayout disposed by finalizer");
+			if (state == ActivableState.Activated)
 				vkDestroyPipelineLayout (dev.VkDev, handle, IntPtr.Zero);
-				isDisposed = true;
-			}
-		}
-
-		~PipelineLayout() {
-			Dispose(false);
-		}
-		public void Dispose () {
-			if (references>0)
-				references--;
-			if (references>0)
-				return;
-			Dispose (true);
-			GC.SuppressFinalize(this);
+			base.Dispose (disposing);
 		}
 		#endregion
 	}

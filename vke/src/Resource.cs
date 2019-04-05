@@ -6,9 +6,7 @@ using Vulkan;
 using static Vulkan.VulkanNative;
 
 namespace VKE {
-    public abstract class Resource : IDisposable {
-		internal uint references;
-        protected Device dev;
+    public abstract class Resource : Activable {
         protected VkDeviceMemory vkMemory;
         protected UInt64 deviceMemSize;
         protected IntPtr mappedData;
@@ -17,20 +15,12 @@ namespace VKE {
         public IntPtr MappedData => mappedData;
 		public UInt64 AllocatedDeviceMemorySize => deviceMemSize;
 
-        protected Resource (Device device, VkMemoryPropertyFlags memoryFlags) {
-            dev = device;
+        protected Resource (Device device, VkMemoryPropertyFlags memoryFlags) : base (device) {            
             MemoryFlags = memoryFlags;
         }
 
         protected abstract VkMemoryRequirements getMemoryRequirements ();
         protected abstract void bindMemory (ulong offset);
-
-        //memory is not allocated and bindind in here because Activate may be called in ctor of
-        //derrived classes, and appropriate virtual allocateMemory and bindMemory must be called
-        public virtual void Activate () {
-            if (isDisposed)
-                GC.ReRegisterForFinalize (this);
-        }
 
         protected void allocateMemory () {
             VkMemoryRequirements memReqs = getMemoryRequirements ();
@@ -68,34 +58,16 @@ namespace VKE {
             vkFlushMappedMemoryRanges (dev.VkDev, 1, ref range);
         }
 
-        #region IDisposable Support
-        protected bool isDisposed;
-
-        protected virtual void Dispose (bool disposing) {
-            if (!isDisposed) {
-                if (disposing) {
-                    // TODO: supprimer l'état managé (objets managés).
-                }
-
-                if (mappedData != IntPtr.Zero)
-                    Unmap ();
-                vkFreeMemory (dev.VkDev, vkMemory, IntPtr.Zero);
-
-                isDisposed = true;
-            }
-        }
-
-        ~Resource () {
-            Dispose (false);
-        }
-
-        public void Dispose () {
-			if (references>0)
-				references--;
-			if (references>0)
-				return;
-            Dispose (true);
-            GC.SuppressFinalize (this);
+        #region IDisposable Support        
+        protected override void Dispose (bool disposing) {
+			if (!disposing)
+				System.Diagnostics.Debug.WriteLine ("VKE Activable object disposed by finalizer");
+			if (state == ActivableState.Activated) {
+				if (mappedData != IntPtr.Zero)
+					Unmap ();
+				vkFreeMemory (dev.VkDev, vkMemory, IntPtr.Zero);
+			}
+			base.Dispose (disposing);
         }
         #endregion
     }

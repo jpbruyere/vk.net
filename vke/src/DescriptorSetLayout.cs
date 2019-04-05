@@ -24,19 +24,19 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 using System;
+using System.Collections.Generic;
 using Vulkan;
 using static Vulkan.VulkanNative;
 
 namespace VKE {
-    public class DescriptorSetLayout : IDisposable {
+    public sealed class DescriptorSetLayout : Activable {
         internal VkDescriptorSetLayout handle;
-        internal Device dev;
+        
 		public VkDescriptorSetLayoutCreateFlags Flags { get; private set; } = VkDescriptorSetLayoutCreateFlags.None;
+        public List<VkDescriptorSetLayoutBinding> Bindings { get; private set; } = new List<VkDescriptorSetLayoutBinding> ();
 
-        public NativeList<VkDescriptorSetLayoutBinding> Bindings = new NativeList<VkDescriptorSetLayoutBinding> ();
-
-        public DescriptorSetLayout (Device device, VkDescriptorSetLayoutCreateFlags flags) {
-            dev = device;
+		#region CTORS
+		public DescriptorSetLayout (Device device, VkDescriptorSetLayoutCreateFlags flags) : base (device) {            
 			Flags = flags;
         }
 		public DescriptorSetLayout (Device device, params VkDescriptorSetLayoutBinding[] bindings)
@@ -48,35 +48,24 @@ namespace VKE {
                 Bindings.Add (b);
             Activate ();
         }
-        public void Activate () {
-			if (isDisposed) {
-				GC.ReRegisterForFinalize (this);
-				isDisposed = false;
+		#endregion
+
+		public override void Activate () {
+			if (state != ActivableState.Activated) {
+				VkDescriptorSetLayoutCreateInfo info = new VkDescriptorSetLayoutCreateInfo (Flags, (uint)Bindings.Count, Bindings.Pin());
+	            Utils.CheckResult (vkCreateDescriptorSetLayout (dev.VkDev, ref info, IntPtr.Zero, out handle));
+				Bindings.Unpin ();
 			}
-			VkDescriptorSetLayoutCreateInfo info = new VkDescriptorSetLayoutCreateInfo (Flags, Bindings.Count, Bindings.Data);
-            Utils.CheckResult (vkCreateDescriptorSetLayout (dev.VkDev, ref info, IntPtr.Zero, out handle));            
-        }
+			base.Activate ();
+		}
 
 		#region IDisposable Support
-		private bool isDisposed = false; // Pour détecter les appels redondants
-
-		protected virtual void Dispose (bool disposing) {
-			if (!isDisposed) {
-				if (disposing) {
-					Bindings.Dispose ();
-				} else
-					System.Diagnostics.Debug.WriteLine ("A descriptorSetLayout has not been disposed.");
+		protected override void Dispose (bool disposing) {
+			if (!disposing)
+				System.Diagnostics.Debug.WriteLine ("VKE DescriptorSetLayout disposed by finalizer");
+			if (state == ActivableState.Activated)
 				vkDestroyDescriptorSetLayout (dev.VkDev, handle, IntPtr.Zero);
-				isDisposed = true;
-			}
-		}
-
-		~DescriptorSetLayout() {
-			Dispose(false);
-		}
-		public void Dispose () {
-			Dispose (true);
-			GC.SuppressFinalize(this);
+			base.Dispose (disposing);
 		}
 		#endregion
 	}

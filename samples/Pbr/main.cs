@@ -160,7 +160,7 @@ namespace PbrSample {
 
 			#region skybox pipeline
 			skyboxPL = new Pipeline (dev, pipeline.RenderPass, VkPrimitiveTopology.TriangleList, samples);
-			skyboxPL.Layout = new PipelineLayout (dev, descLayoutMain);//should be share with the main pl
+			skyboxPL.Layout = pipeline.Layout;
 			skyboxPL.AddVertexBinding (0, 5 * sizeof(float));
 			skyboxPL.SetVertexAttributes (0, VkFormat.R32g32b32Sfloat, VkFormat.R32g32Sfloat);
 			skyboxPL.AddShader (VkShaderStageFlags.Vertex, "shaders/skybox.vert.spv");

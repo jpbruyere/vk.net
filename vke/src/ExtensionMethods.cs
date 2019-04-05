@@ -62,6 +62,21 @@ namespace VKE {
             handles[obj].Free ();
             handles.Remove (obj);
         }
-
+        public static IntPtr Pin<T> (this List<T> obj) {
+            if (handles.ContainsKey (obj)) 
+                Debug.WriteLine ("Pinning already pinned object: {0}", obj);
+                
+            GCHandle hnd = GCHandle.Alloc (obj.ToArray(), GCHandleType.Pinned);
+            handles.Add (obj, hnd);
+            return hnd.AddrOfPinnedObject ();
+        }
+        //public static void Unpin<T> (this List<T> obj) {
+        //    if (!handles.ContainsKey (obj)) {
+        //        Debug.WriteLine ("Trying to unpin {0}, but object has not been pinned.", obj);
+        //        return;
+        //    }
+        //    handles[obj].Free ();
+        //    handles.Remove (obj);
+        //}
     }
 }

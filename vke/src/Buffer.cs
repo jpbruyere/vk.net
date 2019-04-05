@@ -111,9 +111,12 @@ namespace VKE {
         }
 
         public override void Activate () {
-            allocateMemory ();
-            bindMemory (0);
-            SetupDescriptor ();
+			if (state != ActivableState.Activated) {
+				allocateMemory ();
+				bindMemory (0);
+				SetupDescriptor ();
+			}
+			base.Activate ();
         }
 
 
@@ -158,18 +161,11 @@ namespace VKE {
             Utils.CheckResult (vkBindBufferMemory (dev.VkDev, handle, vkMemory, offset));
         }
         protected override void Dispose (bool disposing) {
-			if (references>0)
-				return;
-            if (!isDisposed) {
-                base.Dispose (disposing);
-                if (!disposing)
-                    System.Diagnostics.Debug.WriteLine ($"A Buffer Ressource was not properly disposed.");
-
-                        
-                vkDestroyBuffer (dev.VkDev, handle, IntPtr.Zero);
-
-                isDisposed = true;
-            }
+			if (state == ActivableState.Activated) {
+				base.Dispose (disposing);
+				vkDestroyBuffer (dev.VkDev, handle, IntPtr.Zero);
+			}
+			state = ActivableState.Disposed;
         }
     }
 }
