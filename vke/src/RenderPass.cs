@@ -64,7 +64,6 @@ namespace VKE {
 				subpass0.AddResolveReference (2, VkImageLayout.ColorAttachmentOptimal);
 			}
 
-
             AddSubpass (subpass0);
 
             AddDependency (VulkanNative.SubpassExternal, 0,
@@ -178,6 +177,10 @@ namespace VKE {
         public void End (CommandBuffer cmd) {
             vkCmdEndRenderPass (cmd.Handle);
         }
+
+		public override string ToString () {
+			return string.Format ($"{base.ToString ()}[0x{handle.Handle.ToString("x")}]");
+		}
         
 		#region IDisposable Support
 		protected override void Dispose (bool disposing) {

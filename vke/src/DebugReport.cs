@@ -30,12 +30,7 @@ using static Vulkan.VulkanNative;
 
 namespace VKE {
 
-    public class DebugReport : IDisposable {
-        public delegate VkResult PFN_vkCreateDebugReportCallbackEXT (VkInstance instance, ref VkDebugReportCallbackCreateInfoEXT pCreateInfo, IntPtr pAllocator, out VkDebugReportCallbackEXT pCallback);
-        public delegate void PFN_vkDestroyDebugReportCallbackEXT (VkInstance instance, VkDebugReportCallbackEXT callback, IntPtr pAllocator);
-        public PFN_vkCreateDebugReportCallbackEXT CreateDebugReportCallback;
-        public PFN_vkDestroyDebugReportCallbackEXT DestroyDebugReportCallback;
-        
+    public class DebugReport : IDisposable {        
         VkDebugReportCallbackEXT handle;
 		Instance inst;
 
@@ -70,8 +65,6 @@ namespace VKE {
         
         public DebugReport (Instance instance, VkDebugReportFlagsEXT flags = VkDebugReportFlagsEXT.ErrorEXT | VkDebugReportFlagsEXT.WarningEXT) {
 			inst = instance;
-            inst.GetDelegate ("vkCreateDebugReportCallbackEXT", out CreateDebugReportCallback);
-            inst.GetDelegate ("vkDestroyDebugReportCallbackEXT", out DestroyDebugReportCallback);
 
             VkDebugReportCallbackCreateInfoEXT dbgInfo = new VkDebugReportCallbackCreateInfoEXT {
                 sType = VkStructureType.DebugReportCallbackCreateInfoEXT,
@@ -79,7 +72,7 @@ namespace VKE {
                 pfnCallback = Marshal.GetFunctionPointerForDelegate (debugCallbackDelegate)
             };
 
-            Utils.CheckResult (CreateDebugReportCallback (inst.Handle, ref dbgInfo, IntPtr.Zero, out handle));
+            Utils.CheckResult (vkCreateDebugReportCallbackEXT (inst.Handle, ref dbgInfo, IntPtr.Zero, out handle));
         }
 
 		#region IDisposable Support
@@ -91,7 +84,7 @@ namespace VKE {
 					// TODO: supprimer l'état managé (objets managés).
 				}
 
-				DestroyDebugReportCallback (inst.Handle, handle, IntPtr.Zero);
+				vkDestroyDebugReportCallbackEXT (inst.Handle, handle, IntPtr.Zero);
 
 				disposedValue = true;
 			}

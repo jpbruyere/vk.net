@@ -146,7 +146,7 @@ namespace Vulkan
         public IntPtr ppEnabledLayerNames;
         public uint enabledExtensionCount;
         public IntPtr ppEnabledExtensionNames;
-        public VkPhysicalDeviceFeatures* pEnabledFeatures;
+        public IntPtr pEnabledFeatures;
         public static VkDeviceCreateInfo New()
         {
             VkDeviceCreateInfo ret = new VkDeviceCreateInfo();
@@ -275,9 +275,9 @@ namespace Vulkan
         public uint dstArrayElement;
         public uint descriptorCount;
         public VkDescriptorType descriptorType;
-        public VkDescriptorImageInfo* pImageInfo;
-        public VkDescriptorBufferInfo* pBufferInfo;
-        public VkBufferView* pTexelBufferView;
+        public IntPtr pImageInfo;
+        public IntPtr pBufferInfo;
+        public IntPtr pTexelBufferView;
         public static VkWriteDescriptorSet New()
         {
             VkWriteDescriptorSet ret = new VkWriteDescriptorSet();

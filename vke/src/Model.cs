@@ -266,7 +266,7 @@ namespace VKE {
 			VkDescriptorSetLayoutBinding dslb =
 				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler);
 
-			using (DescriptorSetWrites uboUpdate = new DescriptorSetWrites (dev)) {
+			using (DescriptorSetWrites2 uboUpdate = new DescriptorSetWrites2 (dev)) {
 				for (uint i = 0; i < attachments.Length; i++) {
 					dslb.binding = i;
 					switch (attachments[i]) {

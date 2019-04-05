@@ -118,7 +118,7 @@ namespace VKE {
             swapChain = new SwapChain (presentQueue as PresentQueue, width, height, VkFormat.B8g8r8a8Unorm,
                 vSync ? VkPresentModeKHR.FifoKHR : VkPresentModeKHR.MailboxKHR );
 
-            cmdPool = dev.CreateCommandPool (presentQueue.qFamIndex);
+            cmdPool = new CommandPool(dev, presentQueue.qFamIndex);
 
             cmds = new CommandBuffer[swapChain.ImageCount];
             drawComplete = new VkSemaphore[swapChain.ImageCount];
@@ -237,7 +237,7 @@ namespace VKE {
 
 				vkDestroySurfaceKHR (instance.Handle, hSurf, IntPtr.Zero);
 
-				cmdPool.Destroy ();
+				cmdPool.Dispose ();
 
 				if (disposing) {
 					dev.Dispose ();

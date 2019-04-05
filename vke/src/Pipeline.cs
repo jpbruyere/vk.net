@@ -190,6 +190,10 @@ namespace VKE {
             vkCmdBindPipeline (cmd.Handle, bindPoint, handle);
         }
 
+		public override string ToString () {
+			return string.Format ($"{base.ToString ()}[0x{handle.Handle.ToString("x")}]");
+		}
+
 		#region IDisposable Support
 		protected override void Dispose (bool disposing) {
 			if (disposing) { 

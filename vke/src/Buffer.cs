@@ -160,12 +160,19 @@ namespace VKE {
         protected override void bindMemory (ulong offset) {
             Utils.CheckResult (vkBindBufferMemory (dev.VkDev, handle, vkMemory, offset));
         }
-        protected override void Dispose (bool disposing) {
+
+		public override string ToString () {
+			return string.Format ($"{base.ToString ()}[0x{handle.Handle.ToString("x")}]");
+		}
+
+		#region IDisposable Support
+		protected override void Dispose (bool disposing) {
 			if (state == ActivableState.Activated) {
 				base.Dispose (disposing);
 				vkDestroyBuffer (dev.VkDev, handle, IntPtr.Zero);
 			}
 			state = ActivableState.Disposed;
         }
+		#endregion
     }
 }

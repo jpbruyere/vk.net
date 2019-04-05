@@ -95,7 +95,7 @@ namespace ModelSample {
 			uboMats = new HostBuffer (dev, VkBufferUsageFlags.UniformBuffer, (ulong)Marshal.SizeOf<Matrices>());
 			uboMats.Map ();//permanent map
 
-			using (DescriptorSetWrites uboUpdate = new DescriptorSetWrites (dev)) {
+			using (DescriptorSetWrites2 uboUpdate = new DescriptorSetWrites2 (dev)) {
 				uboUpdate.AddWriteInfo (dsMats, descLayoutMatrix.Bindings[0], uboMats.Descriptor);
 				uboUpdate.Update ();
 			}

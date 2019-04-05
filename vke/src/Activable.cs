@@ -34,11 +34,13 @@ namespace VKE {
 	public abstract class Activable : IDisposable { 
 		protected uint references;
 		protected ActivableState state;
+		protected string name;
 
 		public Device dev { get; private set; }
 
 		protected Activable (Device dev) {
 			this.dev = dev;
+			this.name = GetType ().Name;
 		}
 
 		public virtual void Activate () {
@@ -48,8 +50,10 @@ namespace VKE {
 			references++;
 		}
 
-		public void Desactivate () { 
+		public override string ToString () {
+			return name;
 		}
+
 		#region IDisposable Support
 		protected virtual void Dispose (bool disposing) {
 			state = ActivableState.Disposed;

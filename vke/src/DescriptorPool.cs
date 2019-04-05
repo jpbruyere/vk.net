@@ -24,40 +24,43 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 using System;
+using System.Collections.Generic;
 using Vulkan;
 using static Vulkan.VulkanNative;
 
 namespace VKE {
-    public class DescriptorPool : IDisposable {
-        internal VkDescriptorPool handle;
-        internal Device dev;
-        public uint MaxSets;
+    public class DescriptorPool : Activable {
+        internal VkDescriptorPool handle;        
+        public readonly uint MaxSets;
 
-        public NativeList<VkDescriptorPoolSize> PoolSizes = new NativeList<VkDescriptorPoolSize> ();
+        public List<VkDescriptorPoolSize> PoolSizes = new List<VkDescriptorPoolSize> ();
 
-        public DescriptorPool (Device device, uint maxSets = 1) {
-            dev = device;
+		#region CTORS
+		public DescriptorPool (Device device, uint maxSets = 1) : base (device) {            
             MaxSets = maxSets;
         }
         public DescriptorPool (Device device, uint maxSets = 1, params VkDescriptorPoolSize[] poolSizes)
             : this (device, maxSets) {
 
-            foreach (VkDescriptorPoolSize poolSize in poolSizes)
-                PoolSizes.Add (poolSize);
+			PoolSizes.AddRange (poolSizes);
+
             Activate ();            
         }
-        public void Activate () {
-			if (isDisposed) {
-				GC.ReRegisterForFinalize (this);
-				isDisposed = false;
-			}
-			VkDescriptorPoolCreateInfo info = VkDescriptorPoolCreateInfo.New ();
-            info.poolSizeCount = PoolSizes.Count;
-            info.pPoolSizes = PoolSizes.Data;
-            info.maxSets = MaxSets;
+		#endregion
 
-            Utils.CheckResult (vkCreateDescriptorPool (dev.VkDev, ref info, IntPtr.Zero, out handle));
-        }
+		public override void Activate () {
+			if (state != ActivableState.Activated) {            
+				VkDescriptorPoolCreateInfo info = VkDescriptorPoolCreateInfo.New ();
+	            info.poolSizeCount = (uint)PoolSizes.Count;
+	            info.pPoolSizes = PoolSizes.Pin ();
+	            info.maxSets = MaxSets;
+
+	            Utils.CheckResult (vkCreateDescriptorPool (dev.VkDev, ref info, IntPtr.Zero, out handle));
+				PoolSizes.Unpin ();
+			}
+			base.Activate ();
+		}
+
         /// <summary>
         /// Create and allocate a new DescriptorSet
         /// </summary>
@@ -89,28 +92,18 @@ namespace VKE {
             Utils.CheckResult (vkResetDescriptorPool (dev.VkDev, handle, 0));
         }
 
+		public override string ToString () {
+			return string.Format ($"{base.ToString ()}[0x{handle.Handle.ToString("x")}]");
+		}
+
 		#region IDisposable Support
-		private bool isDisposed = false; // Pour détecter les appels redondants
-
-		protected virtual void Dispose (bool disposing) {
-			if (!isDisposed) {
-				if (disposing) {
-					PoolSizes.Dispose ();
-				} else
-					System.Diagnostics.Debug.WriteLine ("A descriptorPool has not been disposed.");
-				dev.DestroyDescriptorPool (handle); 
-				isDisposed = true;
-			}
-		}
-
-		~DescriptorPool () {
-			Dispose (false);
-		}
-		public void Dispose () {
-			Dispose (true);
-			GC.SuppressFinalize (this);
+		protected override void Dispose (bool disposing) {
+			if (!disposing)
+				System.Diagnostics.Debug.WriteLine ("VKE DescriptorPool disposed by finalizer");
+			if (state == ActivableState.Activated)
+				vkDestroyDescriptorPool (dev.VkDev, handle, IntPtr.Zero);
+			base.Dispose (disposing);
 		}
 		#endregion
-
 	}
 }

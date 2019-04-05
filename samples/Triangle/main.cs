@@ -74,7 +74,7 @@ namespace ModelSample {
 
             pipeline.Activate ();
 
-            using (DescriptorSetWrites uboUpdate = new DescriptorSetWrites (dev)) {
+            using (DescriptorSetWrites2 uboUpdate = new DescriptorSetWrites2 (dev)) {
                 uboUpdate.AddWriteInfo (descriptorSet, dsLayout.Bindings[0], uboMats.Descriptor);
                 uboUpdate.Update ();
             }
