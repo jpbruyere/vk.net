@@ -479,27 +479,30 @@ namespace VKE {
 							GL.Accessor acc = ctx.gltf.Accessors[(int)p.Indices];
 							bv = ctx.gltf.BufferViews[(int)acc.BufferView];
 
-							#region check index type
-							VkIndexType idxType;
-							if (acc.ComponentType == GL.Accessor.ComponentTypeEnum.UNSIGNED_SHORT)
-								idxType = VkIndexType.Uint16;
-							else if (acc.ComponentType == GL.Accessor.ComponentTypeEnum.UNSIGNED_INT)
-								idxType = VkIndexType.Uint32;
-							else
-								throw new NotImplementedException ();
-
-							if (idxType != ctx.IndexType)
-								throw new Exception ("primitive index type different from loadingContext index type");
-							#endregion
-
 							byte* inIdxPtr = (byte*)ctx.bufferHandles[bv.Buffer].AddrOfPinnedObject ().ToPointer ();
 							inIdxPtr += acc.ByteOffset + bv.ByteOffset;
 
-							System.Buffer.MemoryCopy (inIdxPtr, stagIdxPtr, bv.ByteLength, bv.ByteLength);
-
+							VkIndexType idxType;
+							if (acc.ComponentType == GL.Accessor.ComponentTypeEnum.UNSIGNED_SHORT) {
+								idxType = VkIndexType.Uint16;
+								System.Buffer.MemoryCopy (inIdxPtr, stagIdxPtr, bv.ByteLength, bv.ByteLength);
+								stagIdxPtr += bv.ByteLength;
+							} else if (acc.ComponentType == GL.Accessor.ComponentTypeEnum.UNSIGNED_INT) {
+								idxType = VkIndexType.Uint32;
+								System.Buffer.MemoryCopy (inIdxPtr, stagIdxPtr, bv.ByteLength, bv.ByteLength);
+								stagIdxPtr += bv.ByteLength;
+							} else if (acc.ComponentType == GL.Accessor.ComponentTypeEnum.UNSIGNED_BYTE) {
+								//convert to Uint16
+								idxType = VkIndexType.Uint16;
+								for (int i = 0; i < bv.ByteLength; i++) {
+									ushort* usPtr = (ushort*)stagIdxPtr;
+									usPtr[0] = (ushort)inIdxPtr[i];
+								}
+								stagIdxPtr += bv.ByteLength*2;
+							} else
+								throw new NotImplementedException ();
+								
 							prim.indexCount = (uint)acc.Count;
-
-							stagIdxPtr += bv.ByteLength;
 							indexCount += acc.Count;
 						}
 
@@ -611,11 +614,15 @@ namespace VKE {
 			foreach (GL.Image img in ctx.gltf.Images) {
 				VKE.Image vkimg = null;
 
-				if (img.Uri.StartsWith ("data:", StringComparison.Ordinal)) {
+				if (img.BufferView != null) {//load image from gltf buffer view
+					GL.BufferView bv = ctx.gltf.BufferViews[(int)img.BufferView];
+					ctx.EnsureBufferIsLoaded (bv.Buffer);
+					vkimg = Image.Load (dev, ctx.transferQ, ctx.cmdPool, ctx.bufferHandles[bv.Buffer].AddrOfPinnedObject () + bv.ByteOffset, (ulong)bv.ByteLength);
+				} else if (img.Uri.StartsWith ("data:", StringComparison.Ordinal)) {//load base64 encoded image
 					Debug.WriteLine ("loading embedded image {0} : {1}", img.Name, img.MimeType);
 					vkimg = Image.Load (dev, ctx.transferQ, ctx.cmdPool, LoadingContext<I>.loadDataUri(img));
 				} else {
-					Debug.WriteLine ("loading image {0} : {1} : {2}", img.Name, img.MimeType, img.Uri);
+					Debug.WriteLine ("loading image {0} : {1} : {2}", img.Name, img.MimeType, img.Uri);//load image from file path in uri
 					vkimg = Image.Load (dev, ctx.transferQ, ctx.cmdPool, Path.Combine (ctx.baseDirectory, img.Uri));
 				}
 
