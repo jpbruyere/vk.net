@@ -50,36 +50,36 @@ namespace ModelSample {
         ushort[] indices = new ushort[] { 0, 1, 2 };
 
         Program () : base () {
-            vbo = new HostBuffer<Vertex> (dev, VkBufferUsageFlags.VertexBuffer, vertices);
-            ibo = new HostBuffer<ushort> (dev, VkBufferUsageFlags.IndexBuffer, indices);
-            uboMats = new HostBuffer (dev, VkBufferUsageFlags.UniformBuffer, matrices);
-            
+			vbo = new HostBuffer<Vertex> (dev, VkBufferUsageFlags.VertexBuffer, vertices);
+			ibo = new HostBuffer<ushort> (dev, VkBufferUsageFlags.IndexBuffer, indices);
+			uboMats = new HostBuffer (dev, VkBufferUsageFlags.UniformBuffer, matrices);
+
 			descriptorPool = new DescriptorPool (dev, 1, new VkDescriptorPoolSize (VkDescriptorType.UniformBuffer));
-            dsLayout = new DescriptorSetLayout (dev,
+			dsLayout = new DescriptorSetLayout (dev,
 				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Vertex|VkShaderStageFlags.Fragment, VkDescriptorType.UniformBuffer));
-            
+
 			descriptorSet = descriptorPool.Allocate (dsLayout);
 
-            pipeline = new Pipeline (dev,
-				swapChain.ColorFormat,
-				dev.GetSuitableDepthFormat (),
-				VkPrimitiveTopology.TriangleList, VkSampleCountFlags.Count1);
-			pipeline.Layout = new PipelineLayout (dev, dsLayout);
+			PipelineConfig cfg = PipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, VkSampleCountFlags.Count1);
 
-			pipeline.AddVertexBinding<Vertex> (0);
-			pipeline.SetVertexAttributes (0, VkFormat.R32g32b32Sfloat, VkFormat.R32g32b32Sfloat);
+			cfg.Layout = new PipelineLayout (dev, dsLayout);
+			cfg.Layout.AddPushConstants (
+				new VkPushConstantRange (VkShaderStageFlags.Vertex, (uint)Marshal.SizeOf<Matrix4x4> ()),
+				new VkPushConstantRange (VkShaderStageFlags.Fragment, (uint)Marshal.SizeOf<Model.PbrMaterial> (), 64)
+			);
+			cfg.RenderPass = new RenderPass (dev, swapChain.ColorFormat, dev.GetSuitableDepthFormat (), cfg.Samples);
+			cfg.AddVertexBinding<Vertex> (0);
+			cfg.SetVertexAttributes (0, VkFormat.R32g32b32Sfloat, VkFormat.R32g32b32Sfloat);
 
-            pipeline.AddShader (VkShaderStageFlags.Vertex, "shaders/triangle.vert.spv");
-            pipeline.AddShader (VkShaderStageFlags.Fragment, "shaders/triangle.frag.spv");
+			cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/triangle.vert.spv");
+			cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/triangle.frag.spv");
 
-            pipeline.Activate ();
+			pipeline = new Pipeline (cfg);
 
-            using (DescriptorSetWrites2 uboUpdate = new DescriptorSetWrites2 (dev)) {
-                uboUpdate.AddWriteInfo (descriptorSet, dsLayout.Bindings[0], uboMats.Descriptor);
-                uboUpdate.Update ();
-            }
+			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (descriptorSet, dsLayout);
+			uboUpdate.Write (dev, uboMats.Descriptor);
 
-            uboMats.Map ();
+			uboMats.Map ();
         }
 
         public override void Update () {

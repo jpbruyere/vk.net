@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using Glfw;
 using VKE;
 using Vulkan;
+using static VKE.Camera;
 using Buffer = VKE.Buffer;
 
 namespace ModelSample {
@@ -41,7 +42,7 @@ namespace ModelSample {
 
 		Model model;
 
-		Camera Camera = new Camera (Utils.DegreesToRadians (60f), 1f);
+		Camera2 Camera = new Camera2 (Utils.DegreesToRadians (60f), 1f);
 
 		Program () : base () {		
 			init ();
@@ -73,32 +74,28 @@ namespace ModelSample {
 
 			dsMats = descriptorPool.Allocate (descLayoutMatrix);
 
-			pipeline = new Pipeline (dev,
-				swapChain.ColorFormat,
-				dev.GetSuitableDepthFormat (),
-				VkPrimitiveTopology.TriangleList, samples);
+			PipelineConfig cfg = PipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, samples);
 
-			pipeline.Layout = new PipelineLayout (dev, descLayoutMatrix, descLayoutTextures);
-			pipeline.Layout.AddPushConstants (
+			cfg.Layout = new PipelineLayout (dev, descLayoutMatrix, descLayoutTextures);
+			cfg.Layout.AddPushConstants (
 				new VkPushConstantRange (VkShaderStageFlags.Vertex, (uint)Marshal.SizeOf<Matrix4x4> ()),
 				new VkPushConstantRange (VkShaderStageFlags.Fragment, (uint)Marshal.SizeOf<Model.PbrMaterial> (), 64)
 			);
+			cfg.RenderPass = new RenderPass (dev, swapChain.ColorFormat, dev.GetSuitableDepthFormat (), samples);
 
-			pipeline.AddVertexBinding<Model.Vertex> (0);
-			pipeline.SetVertexAttributes (0, VkFormat.R32g32b32Sfloat, VkFormat.R32g32b32Sfloat, VkFormat.R32g32Sfloat);
+			cfg.AddVertexBinding<Model.Vertex> (0);
+			cfg.SetVertexAttributes (0, VkFormat.R32g32b32Sfloat, VkFormat.R32g32b32Sfloat, VkFormat.R32g32Sfloat);
 
-			pipeline.AddShader (VkShaderStageFlags.Vertex, "shaders/pbrtest.vert.spv");
-			pipeline.AddShader (VkShaderStageFlags.Fragment, "shaders/pbrtest.frag.spv");
+			cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/pbrtest.vert.spv");
+			cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/pbrtest.frag.spv");
 
-			pipeline.Activate ();
+			pipeline = new Pipeline (cfg);
 
 			uboMats = new HostBuffer (dev, VkBufferUsageFlags.UniformBuffer, (ulong)Marshal.SizeOf<Matrices>());
 			uboMats.Map ();//permanent map
 
-			using (DescriptorSetWrites2 uboUpdate = new DescriptorSetWrites2 (dev)) {
-				uboUpdate.AddWriteInfo (dsMats, descLayoutMatrix.Bindings[0], uboMats.Descriptor);
-				uboUpdate.Update ();
-			}
+			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (dsMats, descLayoutMatrix.Bindings[0]);				
+			uboUpdate.Write (dev, uboMats.Descriptor);
 		}
 
 		void buildCommandBuffers () {
@@ -186,10 +183,10 @@ namespace ModelSample {
 						matrices.gamma += 0.1f;
 					break;
 				case Key.F3:
-					if (Camera.Type == Camera.CamType.FirstPerson)
-						Camera.Type = Camera.CamType.LookAt;
+					if (Camera.Type == CamType.FirstPerson)
+						Camera.Type = CamType.LookAt;
 					else
-						Camera.Type = Camera.CamType.FirstPerson;
+						Camera.Type = CamType.FirstPerson;
 					break;
 				default:
 					base.onKeyDown (key, scanCode, modifiers);

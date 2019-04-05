@@ -244,7 +244,7 @@ namespace VKE {
 				new VkDescriptorPoolSize (VkDescriptorType.CombinedImageSampler, (uint)(attachments.Length * materials.Count))
 			);
 
-			foreach (Model.Material mat in materials) 
+			foreach (Material mat in materials) 
 				WriteMaterialDescriptorSet (mat, layout, attachments);
 		}
 		/// <summary>
