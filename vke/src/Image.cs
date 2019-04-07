@@ -31,7 +31,7 @@ using static Vulkan.VulkanNative;
 
 namespace VKE {
     public class Image : Resource {
-        internal VkImage handle;
+		internal VkImage handle; 
         VkImageCreateInfo info = VkImageCreateInfo.New();
 
         bool imported = false;
@@ -40,11 +40,18 @@ namespace VKE {
         public VkImageCreateInfo CreateInfo => info;
         public VkExtent3D Extent => info.extent;
         public VkFormat Format => info.format;
+		public VkImage Handle => handle;
 
-        /// <summary>
-        /// Import vkImage handle into a new Image class, handle will be preserve on destruction.
-        /// </summary>
-        public Image (Device device, VkImage vkHandle, VkFormat format, VkImageUsageFlags usage, uint width, uint height)
+#if DEBUG && DEBUG_MARKER
+		protected override VkDebugMarkerObjectNameInfoEXT DebugMarkerInfo
+			=> new VkDebugMarkerObjectNameInfoEXT(VkDebugReportObjectTypeEXT.ImageEXT, handle.Handle);
+#endif
+
+#region CTORS
+		/// <summary>
+		/// Import vkImage handle into a new Image class, handle will be preserve on destruction.
+		/// </summary>
+		public Image (Device device, VkImage vkHandle, VkFormat format, VkImageUsageFlags usage, uint width, uint height)
         : base (device, VkMemoryPropertyFlags.DeviceLocal) {
             info.imageType = VkImageType.Image2D;
             info.format = format;
@@ -87,7 +94,9 @@ namespace VKE {
 
             Activate ();//DONT OVERRIDE Activate in derived classes!!!!
         }
+#endregion
 
+#region bitmap loading
 		/// <summary>
 		/// Load image from data pointed by IntPtr pointer containing full image file (jpg, png,...)
 		/// </summary>
@@ -253,6 +262,7 @@ namespace VKE {
 
             return img;
         }
+#endregion
 
         protected override VkMemoryRequirements getMemoryRequirements () {
             VkMemoryRequirements memReqs;
@@ -500,7 +510,7 @@ namespace VKE {
 		public override string ToString () {
 			return string.Format ($"{base.ToString ()}[0x{handle.Handle.ToString("x")}]");
 		}
-		#region IDisposable Support
+#region IDisposable Support
         protected override void Dispose (bool disposing) {
 			if (state == ActivableState.Activated) {
 				if (Descriptor.sampler.Handle != 0)
@@ -514,6 +524,6 @@ namespace VKE {
 			}
 			state = ActivableState.Disposed;
         }
-		#endregion
+#endregion
 	}
 }

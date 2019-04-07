@@ -111,7 +111,7 @@ namespace Vulkan {
         // an image and put it into an active command buffer
         // See chapter 11.4 "Image Layout" for details
 
-        unsafe public static void setImageLayout (
+        public static void setImageLayout (
             VkCommandBuffer cmdbuffer,
             VkImage image,
             VkImageAspectFlags aspectMask,

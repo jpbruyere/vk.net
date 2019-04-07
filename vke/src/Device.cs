@@ -31,8 +31,9 @@ using System.Linq;
 using Vulkan;
 using static Vulkan.VulkanNative;
 
+
 namespace VKE {
-    public class Device : IDisposable {
+    public class Device : IDisposable {	
         public readonly PhysicalDevice phy;
         VkDevice dev;
         public VkDevice VkDev => dev;
@@ -189,7 +190,6 @@ namespace VKE {
         public void DestroyRenderPass (VkRenderPass rp) {
             vkDestroyRenderPass (dev, rp, IntPtr.Zero);
         }
-
         // This function is used to request a Device memory type that supports all the property flags we request (e.g. Device local, host visibile)
         // Upon success it will return the index of the memory type that fits our requestes memory properties
         // This is necessary as implementations can offer an arbitrary number of memory types with different

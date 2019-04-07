@@ -35,7 +35,12 @@ namespace VKE {
 		public VkDescriptorSetLayoutCreateFlags Flags { get; private set; } = VkDescriptorSetLayoutCreateFlags.None;
         public List<VkDescriptorSetLayoutBinding> Bindings { get; private set; } = new List<VkDescriptorSetLayoutBinding> ();
 
-		#region CTORS
+#if DEBUG && DEBUG_MARKER
+		protected override VkDebugMarkerObjectNameInfoEXT DebugMarkerInfo 
+			=> new VkDebugMarkerObjectNameInfoEXT(VkDebugReportObjectTypeEXT.DescriptorSetLayoutEXT, handle.Handle);
+#endif
+
+#region CTORS
 		public DescriptorSetLayout (Device device, VkDescriptorSetLayoutCreateFlags flags) : base (device) {            
 			Flags = flags;
         }
@@ -48,7 +53,7 @@ namespace VKE {
                 Bindings.Add (b);
             Activate ();
         }
-		#endregion
+#endregion
 
 		public override void Activate () {
 			if (state != ActivableState.Activated) {
@@ -63,7 +68,7 @@ namespace VKE {
 			return string.Format ($"{base.ToString ()}[0x{handle.Handle.ToString("x")}]");
 		}
 
-		#region IDisposable Support
+#region IDisposable Support
 		protected override void Dispose (bool disposing) {
 			if (!disposing)
 				System.Diagnostics.Debug.WriteLine ("VKE DescriptorSetLayout disposed by finalizer");
@@ -71,6 +76,6 @@ namespace VKE {
 				vkDestroyDescriptorSetLayout (dev.VkDev, handle, IntPtr.Zero);
 			base.Dispose (disposing);
 		}
-		#endregion
+#endregion
 	}
 }

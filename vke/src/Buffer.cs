@@ -97,8 +97,13 @@ namespace VKE {
         public VkDescriptorBufferInfo Descriptor;
         protected VkBufferCreateInfo createInfo = VkBufferCreateInfo.New ();
 
+#if DEBUG && DEBUG_MARKER
+		protected override VkDebugMarkerObjectNameInfoEXT DebugMarkerInfo
+			=> new VkDebugMarkerObjectNameInfoEXT(VkDebugReportObjectTypeEXT.BufferEXT, handle.Handle);
+#endif
 
-        public Buffer (Device device, VkBufferUsageFlags usage, VkMemoryPropertyFlags _memoryPropertyFlags, UInt64 size)
+#region CTORS
+		public Buffer (Device device, VkBufferUsageFlags usage, VkMemoryPropertyFlags _memoryPropertyFlags, UInt64 size)
         : base (device, _memoryPropertyFlags) {
 
             createInfo.size = size;
@@ -109,6 +114,7 @@ namespace VKE {
 
             Activate ();//DONT OVERRIDE Activate in derived classes!!!!
         }
+#endregion
 
         public override void Activate () {
 			if (state != ActivableState.Activated) {
@@ -165,7 +171,7 @@ namespace VKE {
 			return string.Format ($"{base.ToString ()}[0x{handle.Handle.ToString("x")}]");
 		}
 
-		#region IDisposable Support
+#region IDisposable Support
 		protected override void Dispose (bool disposing) {
 			if (state == ActivableState.Activated) {
 				base.Dispose (disposing);
@@ -173,6 +179,6 @@ namespace VKE {
 			}
 			state = ActivableState.Disposed;
         }
-		#endregion
+#endregion
     }
 }

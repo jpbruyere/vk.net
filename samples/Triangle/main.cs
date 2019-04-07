@@ -82,7 +82,7 @@ namespace ModelSample {
 			uboMats.Map ();
         }
 
-        public override void Update () {
+        public override void UpdateView () {
             matrices.projection = Matrix4x4.CreatePerspectiveFieldOfView (Utils.DegreesToRadians (60f), (float)swapChain.Width / (float)swapChain.Height, 0.1f, 256.0f);
             matrices.view = Matrix4x4.CreateTranslation (0, 0, -2.5f * zoom);
             matrices.model =
@@ -91,7 +91,7 @@ namespace ModelSample {
                 Matrix4x4.CreateFromAxisAngle (Vector3.UnitX, rotX);
 
             uboMats.Update (matrices, (uint)Marshal.SizeOf<Matrices> ());
-            updateRequested = false;
+            updateViewRequested = false;
         }
 		   
         protected override void onMouseMove (double xPos, double yPos) {
@@ -103,7 +103,7 @@ namespace ModelSample {
 			} else if (MouseButton[1]) {
 				zoom += zoomSpeed * (float)diffY;
 			}
-            updateRequested = true;
+            updateViewRequested = true;
         }
 
         protected override void OnResize () {

@@ -6,7 +6,7 @@ using System.Diagnostics;
 namespace Vulkan
 {
     [DebuggerDisplay("{DebuggerDisplay,nq}")]
-    public partial struct VkInstance : IEquatable<VkInstance>
+    public struct VkInstance : IEquatable<VkInstance>
     {
         public readonly IntPtr Handle;
         public VkInstance(IntPtr existingHandle) { Handle = existingHandle; }
@@ -24,7 +24,7 @@ namespace Vulkan
 
     ///<summary>A dispatchable handle owned by a VkInstance.</summary>
     [DebuggerDisplay("{DebuggerDisplay,nq}")]
-    public partial struct VkPhysicalDevice : IEquatable<VkPhysicalDevice>
+    public struct VkPhysicalDevice : IEquatable<VkPhysicalDevice>
     {
         public readonly IntPtr Handle;
         public VkPhysicalDevice(IntPtr existingHandle) { Handle = existingHandle; }
@@ -42,7 +42,7 @@ namespace Vulkan
 
     ///<summary>A dispatchable handle owned by a VkPhysicalDevice.</summary>
     [DebuggerDisplay("{DebuggerDisplay,nq}")]
-    public partial struct VkDevice : IEquatable<VkDevice>
+    public struct VkDevice : IEquatable<VkDevice>
     {
         public readonly IntPtr Handle;
         public VkDevice(IntPtr existingHandle) { Handle = existingHandle; }
@@ -78,7 +78,7 @@ namespace Vulkan
 
     ///<summary>A dispatchable handle owned by a VkCommandPool.</summary>
     [DebuggerDisplay("{DebuggerDisplay,nq}")]
-    public partial struct VkCommandBuffer : IEquatable<VkCommandBuffer>
+    public struct VkCommandBuffer : IEquatable<VkCommandBuffer>
     {
         public readonly IntPtr Handle;
         public VkCommandBuffer(IntPtr existingHandle) { Handle = existingHandle; }
@@ -96,7 +96,7 @@ namespace Vulkan
 
     ///<summary>A non-dispatchable handle owned by a VkDevice.</summary>
     [DebuggerDisplay("{DebuggerDisplay,nq}")]
-    public partial struct VkDeviceMemory : IEquatable<VkDeviceMemory>
+    public struct VkDeviceMemory : IEquatable<VkDeviceMemory>
     {
         public readonly ulong Handle;
         public VkDeviceMemory(ulong existingHandle) { Handle = existingHandle; }
@@ -114,7 +114,7 @@ namespace Vulkan
 
     ///<summary>A non-dispatchable handle owned by a VkDevice.</summary>
     [DebuggerDisplay("{DebuggerDisplay,nq}")]
-    public partial struct VkCommandPool : IEquatable<VkCommandPool>
+    public struct VkCommandPool : IEquatable<VkCommandPool>
     {
         public readonly ulong Handle;
         public VkCommandPool(ulong existingHandle) { Handle = existingHandle; }
@@ -132,7 +132,7 @@ namespace Vulkan
 
     ///<summary>A non-dispatchable handle owned by a VkDevice.</summary>
     [DebuggerDisplay("{DebuggerDisplay,nq}")]
-    public partial struct VkBuffer : IEquatable<VkBuffer>
+    public struct VkBuffer : IEquatable<VkBuffer>
     {
         public readonly ulong Handle;
         public VkBuffer(ulong existingHandle) { Handle = existingHandle; }
@@ -150,7 +150,7 @@ namespace Vulkan
 
     ///<summary>A non-dispatchable handle owned by a VkDevice.</summary>
     [DebuggerDisplay("{DebuggerDisplay,nq}")]
-    public partial struct VkBufferView : IEquatable<VkBufferView>
+    public struct VkBufferView : IEquatable<VkBufferView>
     {
         public readonly ulong Handle;
         public VkBufferView(ulong existingHandle) { Handle = existingHandle; }
@@ -168,7 +168,7 @@ namespace Vulkan
 
     ///<summary>A non-dispatchable handle owned by a VkDevice.</summary>
     [DebuggerDisplay("{DebuggerDisplay,nq}")]
-    public partial struct VkImage : IEquatable<VkImage>
+    public struct VkImage : IEquatable<VkImage>
     {
         public readonly ulong Handle;
         public VkImage(ulong existingHandle) { Handle = existingHandle; }
@@ -186,7 +186,7 @@ namespace Vulkan
 
     ///<summary>A non-dispatchable handle owned by a VkDevice.</summary>
     [DebuggerDisplay("{DebuggerDisplay,nq}")]
-    public partial struct VkImageView : IEquatable<VkImageView>
+    public struct VkImageView : IEquatable<VkImageView>
     {
         public readonly ulong Handle;
         public VkImageView(ulong existingHandle) { Handle = existingHandle; }
@@ -204,7 +204,7 @@ namespace Vulkan
 
     ///<summary>A non-dispatchable handle owned by a VkDevice.</summary>
     [DebuggerDisplay("{DebuggerDisplay,nq}")]
-    public partial struct VkShaderModule : IEquatable<VkShaderModule>
+    public struct VkShaderModule : IEquatable<VkShaderModule>
     {
         public readonly ulong Handle;
         public VkShaderModule(ulong existingHandle) { Handle = existingHandle; }
@@ -222,7 +222,7 @@ namespace Vulkan
 
     ///<summary>A non-dispatchable handle owned by a VkDevice.</summary>
     [DebuggerDisplay("{DebuggerDisplay,nq}")]
-    public partial struct VkPipeline : IEquatable<VkPipeline>
+    public struct VkPipeline : IEquatable<VkPipeline>
     {
         public readonly ulong Handle;
         public VkPipeline(ulong existingHandle) { Handle = existingHandle; }
@@ -240,7 +240,7 @@ namespace Vulkan
 
     ///<summary>A non-dispatchable handle owned by a VkDevice.</summary>
     [DebuggerDisplay("{DebuggerDisplay,nq}")]
-    public partial struct VkPipelineLayout : IEquatable<VkPipelineLayout>
+    public struct VkPipelineLayout : IEquatable<VkPipelineLayout>
     {
         public readonly ulong Handle;
         public VkPipelineLayout(ulong existingHandle) { Handle = existingHandle; }
@@ -258,7 +258,7 @@ namespace Vulkan
 
     ///<summary>A non-dispatchable handle owned by a VkDevice.</summary>
     [DebuggerDisplay("{DebuggerDisplay,nq}")]
-    public partial struct VkSampler : IEquatable<VkSampler>
+    public struct VkSampler : IEquatable<VkSampler>
     {
         public readonly ulong Handle;
         public VkSampler(ulong existingHandle) { Handle = existingHandle; }
@@ -276,7 +276,7 @@ namespace Vulkan
 
     ///<summary>A non-dispatchable handle owned by a VkDescriptorPool.</summary>
     [DebuggerDisplay("{DebuggerDisplay,nq}")]
-    public partial struct VkDescriptorSet : IEquatable<VkDescriptorSet>
+    public struct VkDescriptorSet : IEquatable<VkDescriptorSet>
     {
         public readonly ulong Handle;
         public VkDescriptorSet(ulong existingHandle) { Handle = existingHandle; }
@@ -294,7 +294,7 @@ namespace Vulkan
 
     ///<summary>A non-dispatchable handle owned by a VkDevice.</summary>
     [DebuggerDisplay("{DebuggerDisplay,nq}")]
-    public partial struct VkDescriptorSetLayout : IEquatable<VkDescriptorSetLayout>
+    public struct VkDescriptorSetLayout : IEquatable<VkDescriptorSetLayout>
     {
         public readonly ulong Handle;
         public VkDescriptorSetLayout(ulong existingHandle) { Handle = existingHandle; }
@@ -312,7 +312,7 @@ namespace Vulkan
 
     ///<summary>A non-dispatchable handle owned by a VkDevice.</summary>
     [DebuggerDisplay("{DebuggerDisplay,nq}")]
-    public partial struct VkDescriptorPool : IEquatable<VkDescriptorPool>
+    public struct VkDescriptorPool : IEquatable<VkDescriptorPool>
     {
         public readonly ulong Handle;
         public VkDescriptorPool(ulong existingHandle) { Handle = existingHandle; }
@@ -330,7 +330,7 @@ namespace Vulkan
 
     ///<summary>A non-dispatchable handle owned by a VkDevice.</summary>
     [DebuggerDisplay("{DebuggerDisplay,nq}")]
-    public partial struct VkFence : IEquatable<VkFence>
+    public struct VkFence : IEquatable<VkFence>
     {
         public readonly ulong Handle;
         public VkFence(ulong existingHandle) { Handle = existingHandle; }
@@ -348,7 +348,7 @@ namespace Vulkan
 
     ///<summary>A non-dispatchable handle owned by a VkDevice.</summary>
     [DebuggerDisplay("{DebuggerDisplay,nq}")]
-    public partial struct VkSemaphore : IEquatable<VkSemaphore>
+    public struct VkSemaphore : IEquatable<VkSemaphore>
     {
         public readonly ulong Handle;
         public VkSemaphore(ulong existingHandle) { Handle = existingHandle; }
@@ -366,7 +366,7 @@ namespace Vulkan
 
     ///<summary>A non-dispatchable handle owned by a VkDevice.</summary>
     [DebuggerDisplay("{DebuggerDisplay,nq}")]
-    public partial struct VkEvent : IEquatable<VkEvent>
+    public struct VkEvent : IEquatable<VkEvent>
     {
         public readonly ulong Handle;
         public VkEvent(ulong existingHandle) { Handle = existingHandle; }

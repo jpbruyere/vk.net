@@ -127,7 +127,7 @@ namespace TextureSample {
 					VkImageUsageFlags.Sampled, VkMemoryPropertyFlags.DeviceLocal, true);
 			else
 				nextTexture = Image.Load (dev, path);
-			updateRequested = true;
+			updateViewRequested = true;
 		}
 
 		//in the main vulkan thread
@@ -161,7 +161,7 @@ namespace TextureSample {
 			features.textureCompressionBC = true;
 		}
 
-		public override void Update () {
+		public override void UpdateView () {
 			if (nextTexture != null) {
 				dev.WaitIdle ();
 				updateTextureSet ();
@@ -169,7 +169,7 @@ namespace TextureSample {
 			} else 
 				updateMatrices ();
 
-			updateRequested = false;
+			updateViewRequested = false;
 		}
 
 		protected override void onMouseMove (double xPos, double yPos) {
@@ -182,7 +182,7 @@ namespace TextureSample {
 				zoom += zoomSpeed * (float)diffY;
 			}
 
-			updateRequested = true;
+			updateViewRequested = true;
 		}
 
 		protected override void onKeyDown (Key key, int scanCode, Modifier modifiers) {

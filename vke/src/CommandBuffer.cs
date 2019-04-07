@@ -32,7 +32,6 @@ namespace VKE {
     public class CommandBuffer {
         CommandPool pool;
         VkCommandBuffer handle;
-        internal bool isAllocated;
 
         public VkCommandBuffer Handle => handle;
 		public Device Device => pool?.dev;//this help
@@ -107,6 +106,31 @@ namespace VKE {
 			vkCmdPushConstants (handle, pipelineLayout.handle, stageFlags, offset, (uint)Marshal.SizeOf (data), data.Pin ());
 			data.Unpin ();
 		}
+
+#if DEBUG && DEBUG_MARKER
+		public void BeginRegion (string name, float r = 1f, float g = 0.1f, float b=0.1f, float a = 1f) {
+			VkDebugMarkerMarkerInfoEXT info = VkDebugMarkerMarkerInfoEXT.New ();
+			info.pMarkerName = name.Pin ();
+			info.color_0 = r;
+			info.color_1 = g;
+			info.color_2 = b;
+			vkCmdDebugMarkerBeginEXT (Handle, ref info);
+			name.Unpin ();
+		}
+		public void InsertDebugMarker (string name, float r = 1f, float g = 0.1f, float b=0.1f, float a = 1f) {
+			VkDebugMarkerMarkerInfoEXT info = VkDebugMarkerMarkerInfoEXT.New ();
+			info.pMarkerName = name.Pin ();
+			info.color_0 = r;
+			info.color_1 = g;
+			info.color_2 = b;
+			vkCmdDebugMarkerInsertEXT (Handle, ref info);
+			name.Unpin ();
+		}
+		public void EndRegion () {
+			vkCmdDebugMarkerEndEXT (Handle);
+		}
+#endif
+
 		public void Free () {
             pool.FreeCommandBuffers (this);
         }
