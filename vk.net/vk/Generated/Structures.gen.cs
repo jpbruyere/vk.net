@@ -96,9 +96,9 @@ namespace Vulkan
     {
         public VkStructureType sType;
         public IntPtr pNext;
-        public byte* pApplicationName;
+        public IntPtr pApplicationName;
         public uint applicationVersion;
-        public byte* pEngineName;
+        public IntPtr pEngineName;
         public uint engineVersion;
         public uint apiVersion;
         public static VkApplicationInfo New()
@@ -1465,10 +1465,15 @@ namespace Vulkan
         public VkQueryType queryType;
         public uint queryCount;
         public VkQueryPipelineStatisticFlags pipelineStatistics;
-        public static VkQueryPoolCreateInfo New()
+
+        public static VkQueryPoolCreateInfo New(VkQueryType queryType = VkQueryType.Timestamp,
+			VkQueryPipelineStatisticFlags statisticFlags = VkQueryPipelineStatisticFlags.None, uint count = 1)
         {
             VkQueryPoolCreateInfo ret = new VkQueryPoolCreateInfo();
             ret.sType = VkStructureType.QueryPoolCreateInfo;
+			ret.pipelineStatistics = statisticFlags;
+			ret.queryType = queryType;
+			ret.queryCount = count;
             return ret;
         }
     }
@@ -1538,7 +1543,7 @@ namespace Vulkan
     public unsafe partial struct VkDisplayPropertiesKHR
     {
         public VkDisplayKHR display;
-        public byte* displayName;
+        public IntPtr displayName;
         public VkExtent2D physicalDimensions;
         public VkExtent2D physicalResolution;
         public VkSurfaceTransformFlagsKHR supportedTransforms;
@@ -1842,14 +1847,22 @@ namespace Vulkan
         public VkStructureType sType;
         public IntPtr pNext;
         public VkDebugReportObjectTypeEXT objectType;
-        public ulong @object;
-        public byte* pObjectName;
+        public ulong obj;
+        public IntPtr pObjectName;
         public static VkDebugMarkerObjectNameInfoEXT New()
         {
             VkDebugMarkerObjectNameInfoEXT ret = new VkDebugMarkerObjectNameInfoEXT();
             ret.sType = VkStructureType.DebugMarkerObjectNameInfoEXT;
             return ret;
         }
+		//VkDebugMarkerObjectNameInfoEXT(VkDebugReportObjectTypeEXT.BufferEXT, handle.Handle);
+		public VkDebugMarkerObjectNameInfoEXT (VkDebugReportObjectTypeEXT objectType, ulong handle) {
+			sType = VkStructureType.DebugMarkerObjectNameInfoEXT;
+			pNext = IntPtr.Zero;
+			this.objectType = objectType;
+			obj = handle;
+			pObjectName = IntPtr.Zero;
+		}
     }
 
     public unsafe partial struct VkDebugMarkerObjectTagInfoEXT
@@ -1873,7 +1886,7 @@ namespace Vulkan
     {
         public VkStructureType sType;
         public IntPtr pNext;
-        public byte* pMarkerName;
+        public IntPtr pMarkerName;
         public float color_0;
         public float color_1;
         public float color_2;

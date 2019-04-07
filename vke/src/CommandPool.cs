@@ -31,6 +31,7 @@ namespace VKE {
     public sealed class CommandPool : Activable {
         public readonly uint QFamIndex;
         VkCommandPool handle;
+
 		#region CTORS
 		public CommandPool (Device device, uint qFamIdx) : base(device)
         {            
@@ -39,6 +40,11 @@ namespace VKE {
 			Activate ();
         }
 		#endregion
+
+#if DEBUG && DEBUG_MARKER
+		protected override VkDebugMarkerObjectNameInfoEXT DebugMarkerInfo
+			=> new VkDebugMarkerObjectNameInfoEXT(VkDebugReportObjectTypeEXT.CommandPoolEXT, handle.Handle);
+#endif
 
 		public override void Activate () {
 			if (state != ActivableState.Activated) {            

@@ -205,11 +205,16 @@ namespace Vulkan
         }
 
         private static IntPtr vkCmdBeginQuery_ptr;
+        [Generator.CalliRewrite]
+        public static void vkCmdBeginQuery(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint query, VkQueryControlFlags flags)
+        {
+            throw new NotImplementedException();
+        }
 
         private static IntPtr vkCmdBeginRenderPass_ptr;
 
         [Generator.CalliRewrite]
-        public static unsafe void vkCmdBeginRenderPass(VkCommandBuffer commandBuffer, ref VkRenderPassBeginInfo pRenderPassBegin, VkSubpassContents contents)
+        public static void vkCmdBeginRenderPass(VkCommandBuffer commandBuffer, ref VkRenderPassBeginInfo pRenderPassBegin, VkSubpassContents contents)
         {
             throw new NotImplementedException();
         }
@@ -445,12 +450,18 @@ namespace Vulkan
         }
 
         [Generator.CalliRewrite]
-        public static unsafe void vkCmdDebugMarkerBeginEXT(VkCommandBuffer commandBuffer, IntPtr pMarkerInfo)
+        public static void vkCmdDebugMarkerBeginEXT(VkCommandBuffer commandBuffer, IntPtr pMarkerInfo)
         {
             throw new NotImplementedException();
         }
 
         private static IntPtr vkCmdDebugMarkerEndEXT_ptr;
+
+        [Generator.CalliRewrite]
+        public static unsafe void vkCmdDebugMarkerEndEXT(VkCommandBuffer commandBuffer)
+        {
+            throw new NotImplementedException();
+        }
 
         private static IntPtr vkCmdDebugMarkerInsertEXT_ptr;
 
@@ -496,6 +507,11 @@ namespace Vulkan
         private static IntPtr vkCmdDrawIndirectCountAMD_ptr;
 
         private static IntPtr vkCmdEndQuery_ptr;
+        [Generator.CalliRewrite]
+        public static unsafe void vkCmdEndQuery(VkCommandBuffer commandBuffer, VkQueryPool queryPool, uint query)
+        {
+            throw new NotImplementedException();
+        }
 
         private static IntPtr vkCmdEndRenderPass_ptr;
         [Generator.CalliRewrite]
@@ -4125,6 +4141,13 @@ namespace Vulkan
 
 
         private static IntPtr vkGetQueryPoolResults_ptr;
+
+        [Generator.CalliRewrite]
+        public static unsafe VkBool32 vkGetQueryPoolResults(VkDevice device, VkQueryPool queryPool, uint firstQuery, uint queryCount, ulong dataSize, IntPtr pData, ulong stride, VkQueryResultFlags flags)
+        {
+            throw new NotImplementedException();
+        }
+
 
         private static IntPtr vkGetRandROutputDisplayEXT_ptr;
 

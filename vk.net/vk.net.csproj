@@ -55,6 +55,7 @@
     <Compile Include="vk\Generated\Handles.gen.cs" />
     <Compile Include="vk\Generated\Structures.gen.cs" />
     <Compile Include="vk\Generated\Unions.gen.cs" />
+    <Compile Include="vk\Generated\extensions_gen.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\vk.rewrite\vk.rewrite.csproj">

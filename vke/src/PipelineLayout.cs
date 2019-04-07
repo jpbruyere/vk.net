@@ -36,6 +36,12 @@ namespace VKE {
 		public List<DescriptorSetLayout> DescriptorSetLayouts = new List<DescriptorSetLayout> ();
 		public List<VkPushConstantRange> PushConstantRanges = new List<VkPushConstantRange> ();
 
+#if DEBUG && DEBUG_MARKER
+		protected override VkDebugMarkerObjectNameInfoEXT DebugMarkerInfo
+			=> new VkDebugMarkerObjectNameInfoEXT(VkDebugReportObjectTypeEXT.PipelineLayoutEXT, handle.Handle);
+#endif
+
+#region CTORS
 		public PipelineLayout (Device device) : base (device) {	}
 		public PipelineLayout (Device device, VkPushConstantRange pushConstantRange, params DescriptorSetLayout[] descriptorSetLayouts) 
 		: this (device, descriptorSetLayouts) {
@@ -52,10 +58,13 @@ namespace VKE {
 			if (descriptorSetLayouts.Length > 0)
 				DescriptorSetLayouts.AddRange (descriptorSetLayouts);
         }
+#endregion
+
 		public void AddPushConstants (params VkPushConstantRange[] pushConstantRanges) { 
 			foreach (VkPushConstantRange pcr in pushConstantRanges)
 				PushConstantRanges.Add (pcr);
 		}
+
 		public override void Activate () {
 			if (state != ActivableState.Activated) {
 				VkPipelineLayoutCreateInfo info = VkPipelineLayoutCreateInfo.New ();
@@ -80,7 +89,7 @@ namespace VKE {
 			return string.Format ($"{base.ToString ()}[0x{handle.Handle.ToString("x")}]");
 		}
 
-		#region IDisposable Support
+#region IDisposable Support
 		protected override void Dispose (bool disposing) {
 			if (!disposing)
 				System.Diagnostics.Debug.WriteLine ("VKE Activable PipelineLayout disposed by finalizer");
@@ -88,6 +97,6 @@ namespace VKE {
 				vkDestroyPipelineLayout (dev.VkDev, handle, IntPtr.Zero);
 			base.Dispose (disposing);
 		}
-		#endregion
+#endregion
 	}
 }

@@ -84,6 +84,9 @@ namespace VKE {
             createInfos.clipped = true;
 
             presentComplete = dev.CreateSemaphore ();
+#if DEBUG && DEBUG_MARKER
+			presentComplete.SetDebugMarkerName (dev, "Semaphore PresentComplete");
+#endif
 
             Create ();
         }
@@ -120,6 +123,10 @@ namespace VKE {
             for (int i = 0; i < tmp.Length; i++) {
                 images[i] = new Image (dev, tmp[i], ColorFormat, ImageUsage, Width, Height);
                 images[i].CreateView ();
+#if DEBUG && DEBUG_MARKER
+				images[i].SetName ("SwapChain Img" + i);
+				images[i].Descriptor.imageView.SetDebugMarkerName (dev, "SwapChain Img" + i + " view");
+#endif
             }
         }
 

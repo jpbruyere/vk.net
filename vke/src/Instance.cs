@@ -80,6 +80,7 @@ namespace VKE {
 
 #if DEBUG
 			instanceExtensions.Add (Strings.VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+
 			enabledLayerNames.Add (Strings.StandardValidationLayeName);
 #if RENDERDOC
 			enabledLayerNames.Add (Strings.RenderdocCaptureLayerName);

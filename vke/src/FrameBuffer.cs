@@ -43,8 +43,13 @@ namespace VKE {
         public uint Height => createInfo.height;
         public uint Layers => createInfo.layers;
 
+#if DEBUG && DEBUG_MARKER
+		protected override VkDebugMarkerObjectNameInfoEXT DebugMarkerInfo 
+			=> new VkDebugMarkerObjectNameInfoEXT(VkDebugReportObjectTypeEXT.FramebufferEXT, handle.Handle);
+#endif
 
-        public Framebuffer (RenderPass _renderPass, uint _width, uint _height, uint _layers = 1) : base(_renderPass.dev) {
+#region CTORS
+		public Framebuffer (RenderPass _renderPass, uint _width, uint _height, uint _layers = 1) : base(_renderPass.dev) {
             renderPass = _renderPass;
             createInfo.width = _width;
             createInfo.height = _height;
@@ -78,6 +83,7 @@ namespace VKE {
 			}
             Activate ();
 		}
+#endregion
 
 		public override void Activate () {
 			if (state != ActivableState.Activated) {
@@ -130,7 +136,7 @@ namespace VKE {
 			return string.Format ($"{base.ToString ()}[0x{handle.Handle.ToString("x")}]");
 		}
 
-		#region IDisposable Support
+#region IDisposable Support
 		protected override void Dispose (bool disposing) {
 			if (state == ActivableState.Activated)
 				dev.DestroyFramebuffer (handle);
@@ -142,7 +148,7 @@ namespace VKE {
 				
 			base.Dispose (disposing);
 		}
-		#endregion
+#endregion
 
 	}
 }

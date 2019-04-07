@@ -14,7 +14,11 @@ namespace ModelSample {
 				vke.Run ();
 			}
 		}
-			
+
+#if DEBUG && DEBUG_MARKER
+		public override string[] EnabledExtensions =>  new string[] {"VK_KHR_swapchain","VK_EXT_debug_marker"};
+#endif	
+				
         public struct Matrices {
 			public Matrix4x4 projection;
 			public Matrix4x4 view;
@@ -100,7 +104,7 @@ namespace ModelSample {
 
 		void buildCommandBuffers () {
 			for (int i = 0; i < swapChain.ImageCount; ++i) { 								
-                  	cmds[i]?.Free ();
+                cmds[i]?.Free ();
 				cmds[i] = cmdPool.AllocateCommandBuffer ();
 				cmds[i].Start ();
 
@@ -133,9 +137,9 @@ namespace ModelSample {
 			uboMats.Update (matrices, (uint)Marshal.SizeOf<Matrices> ());
 		}
 			
-		public override void Update () {
+		public override void UpdateView () {
 			updateMatrices ();
-			updateRequested = false;
+			updateViewRequested = false;
 		}
 
 		protected override void onMouseMove (double xPos, double yPos) {
@@ -147,7 +151,7 @@ namespace ModelSample {
 				Camera.Zoom ((float)diffY);
 			}
 
-			updateRequested = true;
+			updateViewRequested = true;
 		}
 
 		protected override void onKeyDown (Key key, int scanCode, Modifier modifiers) {
@@ -192,7 +196,7 @@ namespace ModelSample {
 					base.onKeyDown (key, scanCode, modifiers);
 					return;
 			}
-			updateRequested = true;
+			updateViewRequested = true;
 		}
 
 		protected override void OnResize () {

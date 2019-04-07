@@ -221,9 +221,9 @@ namespace PbrSample {
 			uboMats.Update (matrices, (uint)Marshal.SizeOf<Matrices> (), (uint)Marshal.SizeOf<Matrices> ());
 		}
 			
-		public override void Update () {
+		public override void UpdateView () {
 			updateMatrices ();
-			updateRequested = false;
+			updateViewRequested = false;
 		}
 
 		protected override void onMouseMove (double xPos, double yPos) {
@@ -235,7 +235,7 @@ namespace PbrSample {
 				Camera.Zoom ((float)diffY);
 			}
 
-			updateRequested = true;
+			updateViewRequested = true;
 		}
 
 		protected override void onKeyDown (Key key, int scanCode, Modifier modifiers) {
@@ -299,7 +299,7 @@ namespace PbrSample {
 					base.onKeyDown (key, scanCode, modifiers);
 					return;
 			}
-			updateRequested = true;
+			updateViewRequested = true;
 		}
 
 		protected override void OnResize () {

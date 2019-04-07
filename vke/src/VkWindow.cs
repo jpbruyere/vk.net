@@ -29,6 +29,7 @@ using System.Diagnostics;
 using Glfw;
 using Vulkan;
 using static Vulkan.VulkanNative;
+using Vk.Extensions;
 
 namespace VKE {
     public abstract class VkWindow : IDisposable {
@@ -49,14 +50,14 @@ namespace VKE {
         protected CommandBuffer[] cmds;
         protected VkSemaphore[] drawComplete;
 
-        protected bool updateRequested = true;
+        protected bool updateViewRequested = true;
 		protected double lastMouseX, lastMouseY;
 
         uint width, height;
 
 		public virtual string[] EnabledExtensions {
 			get {
-				return new string[] {"VK_KHR_swapchain"};
+				return new string[] {Ext.Dev.VK_KHR_swapchain};
 			} 
 		}
 
@@ -125,6 +126,12 @@ namespace VKE {
 
             for (int i = 0; i < swapChain.ImageCount; i++)
                 drawComplete[i] = dev.CreateSemaphore ();
+
+#if DEBUG && DEBUG_MARKER
+			cmdPool.SetName ("main CmdPool");
+			for (int i = 0; i < swapChain.ImageCount; i++)
+				drawComplete[i].SetDebugMarkerName (dev, "Semaphore DrawComplete" + i);
+#endif
         }
 
         protected virtual void configureEnabledFeatures (ref VkPhysicalDeviceFeatures features) {
@@ -185,20 +192,20 @@ namespace VKE {
         }
 
         Stopwatch frameChrono;
-        uint fps;
+        protected uint fps;
         uint frameCount;
 
         public virtual void Run () {
             OnResize ();
-            Update ();
+            UpdateView ();
 
             frameChrono = Stopwatch.StartNew ();
 
             while (!Glfw3.WindowShouldClose (hWin)) {
                 render ();
 
-                if(updateRequested)
-                    Update ();
+                if(updateViewRequested)
+                    UpdateView ();
 
                 frameCount++;
 
@@ -209,6 +216,8 @@ namespace VKE {
 
                     Glfw3.SetWindowTitle (hWin, "FPS: " + fps.ToString ());
 
+					Update ();
+
                     frameCount = 0;
                     frameChrono.Restart ();
 
@@ -216,7 +225,8 @@ namespace VKE {
                 Glfw3.PollEvents ();
             }
         }
-        public virtual void Update () {}
+        public virtual void UpdateView () {}
+		public virtual void Update () {}
 
 		protected virtual void OnResize () {}
 

@@ -38,7 +38,12 @@ namespace VKE {
         internal List<SubPass> subpasses = new List<SubPass> ();
         List<VkSubpassDependency> dependencies = new List<VkSubpassDependency> ();
 
-		#region CTORS
+#if DEBUG && DEBUG_MARKER
+		protected override VkDebugMarkerObjectNameInfoEXT DebugMarkerInfo
+			=> new VkDebugMarkerObjectNameInfoEXT(VkDebugReportObjectTypeEXT.RenderPassEXT, handle.Handle);
+#endif
+
+#region CTORS
 		public RenderPass (Device device) : base(device) { }
 
         /// <summary>
@@ -73,7 +78,7 @@ namespace VKE {
                 VkPipelineStageFlags.ColorAttachmentOutput, VkPipelineStageFlags.BottomOfPipe,
                 VkAccessFlags.ColorAttachmentRead | VkAccessFlags.ColorAttachmentWrite, VkAccessFlags.MemoryRead);
         }
-		#endregion
+#endregion
 
 		public override void Activate () {
 			if (state != ActivableState.Activated) {
@@ -182,7 +187,7 @@ namespace VKE {
 			return string.Format ($"{base.ToString ()}[0x{handle.Handle.ToString("x")}]");
 		}
         
-		#region IDisposable Support
+#region IDisposable Support
 		protected override void Dispose (bool disposing) {
 			if (!disposing)
 				System.Diagnostics.Debug.WriteLine ("VKE Activable RenderPass disposed by finalizer");
@@ -190,6 +195,6 @@ namespace VKE {
 				dev.DestroyRenderPass (handle);
 			base.Dispose (disposing);
 		}
-		#endregion
+#endregion
 	}
 }

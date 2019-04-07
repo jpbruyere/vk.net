@@ -43,7 +43,7 @@ namespace VKE {
 		/// <summary>
 		/// Create a new Pipeline with supplied RenderPass
 		/// </summary>
-		public Pipeline (PipelineConfig cfg)
+		public Pipeline (PipelineConfig cfg, string name = "pipeline")
 		{
 			BindPoint = cfg.bindPoint;
 			RenderPass = cfg.RenderPass;
@@ -51,6 +51,10 @@ namespace VKE {
 			Samples = cfg.Samples;
 
 			dev = RenderPass.dev;
+
+#if DEBUG && DEBUG_MARKER
+			handle.SetDebugMarkerName (dev, name);
+#endif
 
 			init (cfg);
 		}

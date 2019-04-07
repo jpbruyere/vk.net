@@ -50,13 +50,11 @@ namespace VKE {
 		MetalRoughness = 0x32,
 		Emissive = 0x64,
 	};
-
+	//TODO:stride in buffer views?
 	public class Model : IDisposable {
         Device dev;        
 
-        UInt32 textureSize = 1024; //texture array size w/h
 		DescriptorPool descriptorPool;
-
 
         public List<Image> textures = new List<Image> ();
 		public List<Material> materials = new List<Material> ();
@@ -143,6 +141,7 @@ namespace VKE {
 
 
 		public class Material {
+			public string Name;
 			public PbrMaterial pbrDatas;
 
 			public DescriptorSet descriptorSet;
@@ -243,7 +242,9 @@ namespace VKE {
 			descriptorPool = new DescriptorPool (dev, (uint)materials.Count,
 				new VkDescriptorPoolSize (VkDescriptorType.CombinedImageSampler, (uint)(attachments.Length * materials.Count))
 			);
-
+#if DEBUG && DEBUG_MARKER
+			descriptorPool.SetName ("descPool gltfTextures");
+#endif
 			foreach (Material mat in materials) 
 				WriteMaterialDescriptorSet (mat, layout, attachments);
 		}
@@ -255,6 +256,9 @@ namespace VKE {
 		/// <param name="attachments">Layout Attachments meaning</param>
 		public void WriteMaterialDescriptorSet (Material mat, DescriptorSetLayout layout, params ShaderBinding[] attachments) {
 			mat.descriptorSet = descriptorPool.Allocate (layout);
+#if DEBUG && DEBUG_MARKER
+			mat.descriptorSet.handle.SetDebugMarkerName (dev, "descSet " + mat.Name);
+#endif
 			WriteMaterialDescriptorSet (mat, attachments);
 		}
 		/// <summary>
@@ -519,6 +523,11 @@ namespace VKE {
 			vbo = new GPUBuffer (dev, VkBufferUsageFlags.VertexBuffer | VkBufferUsageFlags.TransferDst, vertSize);
 			ibo = new GPUBuffer (dev, VkBufferUsageFlags.IndexBuffer | VkBufferUsageFlags.TransferDst, idxSize);
 
+#if DEBUG && DEBUG_MARKER
+			vbo.SetName ("vbo gltf");
+			ibo.SetName ("ibo gltf");
+#endif
+
 			CommandBuffer cmd = ctx.cmdPool.AllocateCommandBuffer ();
 			cmd.Start ();
 
@@ -614,6 +623,8 @@ namespace VKE {
 			foreach (GL.Image img in ctx.gltf.Images) {
 				VKE.Image vkimg = null;
 
+				string imgName = img.Name;
+
 				if (img.BufferView != null) {//load image from gltf buffer view
 					GL.BufferView bv = ctx.gltf.BufferViews[(int)img.BufferView];
 					ctx.EnsureBufferIsLoaded (bv.Buffer);
@@ -624,11 +635,18 @@ namespace VKE {
 				} else {
 					Debug.WriteLine ("loading image {0} : {1} : {2}", img.Name, img.MimeType, img.Uri);//load image from file path in uri
 					vkimg = Image.Load (dev, ctx.transferQ, ctx.cmdPool, Path.Combine (ctx.baseDirectory, img.Uri));
+					imgName += ";" + img.Uri;
 				}
 
 				vkimg.CreateView ();
 				vkimg.CreateSampler ();
 				vkimg.Descriptor.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
+
+#if DEBUG && DEBUG_MARKER
+				vkimg.SetName (imgName);
+				vkimg.Descriptor.imageView.SetDebugMarkerName (dev, "imgView " + imgName);
+				vkimg.Descriptor.sampler.SetDebugMarkerName (dev, "sampler " + imgName);
+#endif
 
 				textures.Add (vkimg);
 			}
@@ -641,6 +659,7 @@ namespace VKE {
 			foreach (GL.Material mat in ctx.gltf.Materials) {
 				Debug.WriteLine ("loading material: " + mat.Name);
 				Material pbr = new Material ();
+				pbr.Name = mat.Name;
 
 				pbr.pbrDatas.alphaCutoff = mat.AlphaCutoff;
 				pbr.pbrDatas.alphaMode = (AlphaMode)mat.AlphaMode;
