@@ -29,6 +29,26 @@ using Vulkan;
 using static Vulkan.VulkanNative;
 
 namespace VKE {
+	public class TimestampQueryPool : QueryPool {
+		public readonly float Period;
+
+		#region CTORS
+		public TimestampQueryPool (Device device, uint count = 2)
+		: base (device, VkQueryType.Timestamp, VkQueryPipelineStatisticFlags.None, count)
+		{
+			Period = dev.phy.Limits.timestampPeriod;
+
+			resultLength = 1;
+
+			Activate ();
+		}
+		#endregion
+
+		public void Write (CommandBuffer cmd) { 
+			
+		}
+
+	}
 	public class PipelineStatisticsQueryPool : QueryPool {
 
 		public readonly VkQueryPipelineStatisticFlags[] RequestedStats;
