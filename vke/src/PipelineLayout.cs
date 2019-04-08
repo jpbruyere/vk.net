@@ -26,8 +26,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Vulkan;
-using static Vulkan.VulkanNative;
+using VK;
+using static VK.Vk;
 
 namespace VKE {
 	public sealed class PipelineLayout : Activable {

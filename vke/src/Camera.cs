@@ -2,7 +2,7 @@
 using System.Numerics;
 using System.Runtime.InteropServices;
 
-using Vulkan;
+using VK;
 
 
 namespace VKE {

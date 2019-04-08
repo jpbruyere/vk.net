@@ -26,9 +26,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Vulkan;
+using VK;
 
-using static Vulkan.VulkanNative;
+using static VK.Vk;
 
 namespace VKE {
 
@@ -74,8 +74,8 @@ namespace VKE {
 					}
 
 					v = new Image (renderPass.dev, ad.format, usage, VkMemoryPropertyFlags.DeviceLocal,
-						_width, _height, VkImageType.Image2D, ad.samples, VkImageTiling.Optimal, 1, createInfo.layers);
-					v.CreateView (VkImageViewType.Image2D, aspectFlags);
+						_width, _height, VkImageType.Type2d, ad.samples, VkImageTiling.Optimal, 1, createInfo.layers);
+					v.CreateView (VkImageViewType.Type2d, aspectFlags);
 				} else
 					v.Activate ();//increase ref and create handle if not already activated
 

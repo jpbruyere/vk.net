@@ -26,9 +26,8 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
-using Vulkan;
-using static Vulkan.VulkanNative;
-using static Vulkan.Utils;
+using VK;
+using static VK.Vk;
 
 namespace VKE {
     public class Instance : IDisposable {

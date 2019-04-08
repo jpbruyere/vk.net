@@ -26,6 +26,7 @@
 using System;
 using System.IO;
 using System.Numerics;
+using VK;
 
 namespace Vulkan {
 	[Flags]

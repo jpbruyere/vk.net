@@ -28,8 +28,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Vulkan;
-using static Vulkan.VulkanNative;
+using VK;
+using static VK.Vk;
 
 
 namespace VKE {
@@ -153,17 +153,17 @@ namespace VKE {
         }
         unsafe public VkImage[] GetSwapChainImages (VkSwapchainKHR swapchain) {
             uint imageCount = 0;
-            Utils.CheckResult (vkGetSwapchainImagesKHR (dev, swapchain, ref imageCount, IntPtr.Zero));
+            Utils.CheckResult (vkGetSwapchainImagesKHR (dev, swapchain, out imageCount, IntPtr.Zero));
             if (imageCount == 0)
                 throw new Exception ("Swapchain image count is 0.");
             VkImage[] imgs = new VkImage[imageCount];
             
-            Utils.CheckResult (vkGetSwapchainImagesKHR (dev, swapchain, ref imageCount, imgs.Pin()));
+            Utils.CheckResult (vkGetSwapchainImagesKHR (dev, swapchain, out imageCount, imgs.Pin()));
 			imgs.Unpin ();
             
             return imgs;
         }
-        unsafe public VkImageView CreateImageView (VkImage image, VkFormat format, VkImageViewType viewType = VkImageViewType.Image2D, VkImageAspectFlags aspectFlags = VkImageAspectFlags.Color) {
+        unsafe public VkImageView CreateImageView (VkImage image, VkFormat format, VkImageViewType viewType = VkImageViewType.Type2d, VkImageAspectFlags aspectFlags = VkImageAspectFlags.Color) {
             VkImageView view;
             VkImageViewCreateInfo infos = VkImageViewCreateInfo.New ();
             infos.image = image;

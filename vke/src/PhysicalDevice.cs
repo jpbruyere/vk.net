@@ -24,8 +24,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 using System;
-using Vulkan;
-using static Vulkan.VulkanNative;
+using VK;
+using static VK.Vk;
 using static Vulkan.Utils;
 using System.Collections;
 using System.Collections.Generic;
@@ -82,6 +82,8 @@ namespace VKE {
         public VkPhysicalDeviceMemoryProperties memoryProperties { get; private set; }
         public VkQueueFamilyProperties[] QueueFamilies { get; private set; }
 
+		public VkPhysicalDeviceLimits Limits => deviceProperties.limits;
+
         public bool HasSwapChainSupport { get; private set; }
         public IntPtr Handle => phy;
 
@@ -136,6 +138,7 @@ namespace VKE {
                 }
             }
         }
+
 
         public bool GetPresentIsSupported (uint qFamilyIndex, VkSurfaceKHR surf) {
             VkBool32 isSupported = false;

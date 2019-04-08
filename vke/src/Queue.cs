@@ -25,9 +25,9 @@
 // THE SOFTWARE.
 using System;
 using System.Collections;
-using Vulkan;
+using VK;
 
-using static Vulkan.VulkanNative;
+using static VK.Vk;
 
 namespace VKE {
 

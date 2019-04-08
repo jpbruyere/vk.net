@@ -52,8 +52,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
-
-using Vulkan;
+using VK;
 
 namespace KTX {
 	public static class GLHelper {

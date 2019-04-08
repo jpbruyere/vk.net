@@ -28,7 +28,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.InteropServices;
-using Vulkan;
+using VK;
 
 namespace VKE {
     public static class ExtensionMethods {

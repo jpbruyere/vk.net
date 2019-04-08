@@ -25,8 +25,8 @@
 // THE SOFTWARE.
 using System;
 using System.Collections.Generic;
-using Vulkan;
-using static Vulkan.VulkanNative;
+using VK;
+using static VK.Vk;
 
 namespace VKE {
 	public class TimestampQueryPool : QueryPool {
@@ -45,7 +45,7 @@ namespace VKE {
 		#endregion
 
 		public void Write (CommandBuffer cmd) { 
-			
+
 		}
 
 	}

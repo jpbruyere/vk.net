@@ -1,9 +1,9 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Runtime.InteropServices;
-using Vulkan;
+using VK;
 
-using static Vulkan.VulkanNative;
+using static VK.Vk;
 
 namespace VKE {
     public abstract class Resource : Activable {

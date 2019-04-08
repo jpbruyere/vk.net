@@ -25,8 +25,9 @@
 // THE SOFTWARE.
 using System;
 using System.Runtime.InteropServices;
-using Vulkan;
-using static Vulkan.VulkanNative;
+using VK;
+using VK;
+using static VK.Vk;
 
 namespace VKE {
     public class CommandBuffer {
@@ -58,7 +59,7 @@ namespace VKE {
             submit_info.pCommandBuffers = &cmd;
             Utils.CheckResult (vkQueueSubmit (queue, 1, ref submit_info, fence));
         }
-        public void Start (VkCommandBufferUsageFlags usage = VkCommandBufferUsageFlags.None) {
+        public void Start (VkCommandBufferUsageFlags usage = 0) {
             VkCommandBufferBeginInfo cmdBufInfo = new VkCommandBufferBeginInfo (usage);
             Utils.CheckResult (vkBeginCommandBuffer (handle, ref cmdBufInfo));
         }

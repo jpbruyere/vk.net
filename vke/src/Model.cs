@@ -30,14 +30,14 @@ using System.Runtime.InteropServices;
 using glTFLoader;
 using GL = glTFLoader.Schema;
 
-using Vulkan;
+using VK;
 using System.Collections.Generic;
 using System.IO;
 
 
 
 namespace VKE {
-    using static Utils;
+    using static Vulkan.Utils;
 
 	[Flags]
 	public enum ShaderBinding : UInt32 {

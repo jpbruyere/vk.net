@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 
-using Vulkan;
+using VK;
 using VKE;
 using System.Runtime.InteropServices;
 
@@ -59,18 +59,18 @@ namespace KTX {
 					if (generateMipmaps)
 						usage |= (VkImageUsageFlags.TransferSrc | VkImageUsageFlags.TransferDst);
 
-					VkImageCreateFlags createFlags = VkImageCreateFlags.None;
+					VkImageCreateFlags createFlags = 0;
 
 					VkImageType imgType =
 						(pixelWidth == 0) ? throw new KtxException ("pixelWidth must be > 0") :
-						(pixelHeight == 0) ? imgType = VkImageType.Image1D :
-						(pixelDepth == 0) ? imgType = VkImageType.Image2D : imgType = VkImageType.Image3D;
+						(pixelHeight == 0) ? imgType = VkImageType.Type1d :
+						(pixelDepth == 0) ? imgType = VkImageType.Type2d : imgType = VkImageType.Type3d;
 						
 
 					VkSampleCountFlags samples = VkSampleCountFlags.Count1;
 
 					if (numberOfFaces > 1) {
-						if (imgType != VkImageType.Image2D)
+						if (imgType != VkImageType.Type2d)
 							throw new KtxException ("cubemap faces must be 2D textures");
 						createFlags = VkImageCreateFlags.CubeCompatible;
 						samples = VkSampleCountFlags.Count1;
@@ -81,7 +81,7 @@ namespace KTX {
 							numberOfArrayElements = 1;
 					}
 
-					if (imgType != VkImageType.Image3D)
+					if (imgType != VkImageType.Type3d)
 						pixelDepth = 1;
 
 
@@ -144,7 +144,7 @@ namespace KTX {
 									imgHeight /= 2;
 								}
 								stagging.Unmap ();
-								VulkanNative.vkCmdCopyBufferToImage (cmd.Handle, stagging.handle, img.handle, VkImageLayout.TransferDstOptimal,
+								Vk.vkCmdCopyBufferToImage (cmd.Handle, stagging.handle, img.handle, VkImageLayout.TransferDstOptimal,
 									buffCopies.Count, buffCopies.Data);
 
 

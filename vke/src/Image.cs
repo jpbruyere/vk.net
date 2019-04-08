@@ -25,9 +25,9 @@
 // THE SOFTWARE.
 using System;
 using System.Diagnostics;
-using Vulkan;
+using VK;
 
-using static Vulkan.VulkanNative;
+using static VK.Vk;
 
 namespace VKE {
     public class Image : Resource {
@@ -53,7 +53,7 @@ namespace VKE {
 		/// </summary>
 		public Image (Device device, VkImage vkHandle, VkFormat format, VkImageUsageFlags usage, uint width, uint height)
         : base (device, VkMemoryPropertyFlags.DeviceLocal) {
-            info.imageType = VkImageType.Image2D;
+            info.imageType = VkImageType.Type2d;
             info.format = format;
             info.extent.width = width;
             info.extent.height = height;
@@ -73,9 +73,9 @@ namespace VKE {
 
         public Image (Device device, VkFormat format, VkImageUsageFlags usage, VkMemoryPropertyFlags _memoryPropertyFlags,
             uint width, uint height,
-            VkImageType type = VkImageType.Image2D, VkSampleCountFlags samples = VkSampleCountFlags.Count1,
+            VkImageType type = VkImageType.Type2d, VkSampleCountFlags samples = VkSampleCountFlags.Count1,
             VkImageTiling tiling = VkImageTiling.Optimal, uint mipsLevels = 1, uint layers = 1, uint depth = 1,
-			VkImageCreateFlags createFlags = VkImageCreateFlags.None)
+			VkImageCreateFlags createFlags = 0)
             : base (device, _memoryPropertyFlags) {
 
             info.imageType = type;
@@ -104,7 +104,7 @@ namespace VKE {
 			IntPtr bitmap, ulong bitmapByteCount, VkFormat format = VkFormat.R8g8b8a8Unorm,
 			VkMemoryPropertyFlags memoryProps = VkMemoryPropertyFlags.DeviceLocal,
 			VkImageTiling tiling = VkImageTiling.Optimal, bool generateMipmaps = true,
-			VkImageType imageType = VkImageType.Image2D,
+			VkImageType imageType = VkImageType.Type2d,
 			VkImageUsageFlags usage = VkImageUsageFlags.Sampled | VkImageUsageFlags.TransferSrc | VkImageUsageFlags.TransferDst) { 
 
 			int width, height, channels;
@@ -136,7 +136,7 @@ namespace VKE {
 			byte[] bitmap, VkFormat format = VkFormat.R8g8b8a8Unorm,
 			VkMemoryPropertyFlags memoryProps = VkMemoryPropertyFlags.DeviceLocal,
 			VkImageTiling tiling = VkImageTiling.Optimal, bool generateMipmaps = true,
-			VkImageType imageType = VkImageType.Image2D,
+			VkImageType imageType = VkImageType.Type2d,
 			VkImageUsageFlags usage = VkImageUsageFlags.Sampled | VkImageUsageFlags.TransferSrc | VkImageUsageFlags.TransferDst) {
 
 			Image img = Load (dev, staggingQ, staggingCmdPool, bitmap.Pin (), (ulong)bitmap.Length, format, memoryProps, tiling, generateMipmaps,
@@ -208,7 +208,7 @@ namespace VKE {
 			string path, VkFormat format = VkFormat.R8g8b8a8Unorm,
 			VkMemoryPropertyFlags memoryProps = VkMemoryPropertyFlags.DeviceLocal,
 			VkImageTiling tiling = VkImageTiling.Optimal, bool generateMipmaps = true,
-			VkImageType imageType = VkImageType.Image2D,
+			VkImageType imageType = VkImageType.Type2d,
 			VkImageUsageFlags usage = VkImageUsageFlags.Sampled | VkImageUsageFlags.TransferSrc | VkImageUsageFlags.TransferDst) {
 
 			int width, height, channels;
@@ -239,7 +239,7 @@ namespace VKE {
 			string path, VkFormat format = VkFormat.R8g8b8a8Unorm, bool reserveSpaceForMipmaps = true,
 			VkMemoryPropertyFlags memoryProps = VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent,
 			VkImageTiling tiling = VkImageTiling.Linear, 
-			VkImageType imageType = VkImageType.Image2D, 
+			VkImageType imageType = VkImageType.Type2d, 
 			VkImageUsageFlags usage = VkImageUsageFlags.Sampled) {
 
 			int width, height, channels;
@@ -281,7 +281,7 @@ namespace VKE {
             base.Activate ();
         }
 
-        public void CreateView (VkImageViewType type = VkImageViewType.Image2D, VkImageAspectFlags aspectFlags = VkImageAspectFlags.Color,
+        public void CreateView (VkImageViewType type = VkImageViewType.Type2d, VkImageAspectFlags aspectFlags = VkImageAspectFlags.Color,
 			uint layerCount = 1,
             uint baseMipLevel = 0, uint levelCount = 1, uint baseArrayLayer = 0) {
 

@@ -23,7 +23,7 @@ namespace Vulkan
     }
 
     ///<summary>A dispatchable handle owned by a VkInstance.</summary>
-    [DebuggerDisplay("{DebuggerDisplay,nq}")]
+    [DebuggerDisplay("{DebuggerDisplay,nq}")]	
     public struct VkPhysicalDevice : IEquatable<VkPhysicalDevice>
     {
         public readonly IntPtr Handle;

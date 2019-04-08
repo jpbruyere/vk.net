@@ -2,7 +2,7 @@
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace Vulkan
+namespace VK
 {
     public unsafe class FixedUtf8String : IDisposable
     {
