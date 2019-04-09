@@ -32,7 +32,7 @@ using static VK.Vk;
 namespace VKE {
     public class Image : Resource {
 		internal VkImage handle; 
-        VkImageCreateInfo info = VkImageCreateInfo.New();
+        VkImageCreateInfo info = VkImageCreateInfo.New;
 
         bool imported = false;
 
@@ -53,14 +53,14 @@ namespace VKE {
 		/// </summary>
 		public Image (Device device, VkImage vkHandle, VkFormat format, VkImageUsageFlags usage, uint width, uint height)
         : base (device, VkMemoryPropertyFlags.DeviceLocal) {
-            info.imageType = VkImageType.Type2d;
+            info.imageType = VkImageType.Image2D;
             info.format = format;
             info.extent.width = width;
             info.extent.height = height;
             info.extent.depth = 1;
             info.mipLevels = 1;
             info.arrayLayers = 1;
-            info.samples = VkSampleCountFlags.Count1;
+            info.samples = VkSampleCountFlags.SampleCount1;
             info.tiling = VkImageTiling.Optimal;
             info.usage = usage;
 
@@ -73,7 +73,7 @@ namespace VKE {
 
         public Image (Device device, VkFormat format, VkImageUsageFlags usage, VkMemoryPropertyFlags _memoryPropertyFlags,
             uint width, uint height,
-            VkImageType type = VkImageType.Type2d, VkSampleCountFlags samples = VkSampleCountFlags.Count1,
+            VkImageType type = VkImageType.Image2D, VkSampleCountFlags samples = VkSampleCountFlags.SampleCount1,
             VkImageTiling tiling = VkImageTiling.Optimal, uint mipsLevels = 1, uint layers = 1, uint depth = 1,
 			VkImageCreateFlags createFlags = 0)
             : base (device, _memoryPropertyFlags) {
@@ -104,7 +104,7 @@ namespace VKE {
 			IntPtr bitmap, ulong bitmapByteCount, VkFormat format = VkFormat.R8g8b8a8Unorm,
 			VkMemoryPropertyFlags memoryProps = VkMemoryPropertyFlags.DeviceLocal,
 			VkImageTiling tiling = VkImageTiling.Optimal, bool generateMipmaps = true,
-			VkImageType imageType = VkImageType.Type2d,
+			VkImageType imageType = VkImageType.Image2D,
 			VkImageUsageFlags usage = VkImageUsageFlags.Sampled | VkImageUsageFlags.TransferSrc | VkImageUsageFlags.TransferDst) { 
 
 			int width, height, channels;
@@ -120,7 +120,7 @@ namespace VKE {
 			if (generateMipmaps)
 				usage |= (VkImageUsageFlags.TransferSrc | VkImageUsageFlags.TransferDst);
 
-			Image img = new Image (dev, format, usage, memoryProps, (uint)width, (uint)height, imageType, VkSampleCountFlags.Count1, tiling, mipLevels);
+			Image img = new Image (dev, format, usage, memoryProps, (uint)width, (uint)height, imageType, VkSampleCountFlags.SampleCount1, tiling, mipLevels);
 
 			img.load (staggingQ, staggingCmdPool, imgPtr, generateMipmaps);
 
@@ -136,7 +136,7 @@ namespace VKE {
 			byte[] bitmap, VkFormat format = VkFormat.R8g8b8a8Unorm,
 			VkMemoryPropertyFlags memoryProps = VkMemoryPropertyFlags.DeviceLocal,
 			VkImageTiling tiling = VkImageTiling.Optimal, bool generateMipmaps = true,
-			VkImageType imageType = VkImageType.Type2d,
+			VkImageType imageType = VkImageType.Image2D,
 			VkImageUsageFlags usage = VkImageUsageFlags.Sampled | VkImageUsageFlags.TransferSrc | VkImageUsageFlags.TransferDst) {
 
 			Image img = Load (dev, staggingQ, staggingCmdPool, bitmap.Pin (), (ulong)bitmap.Length, format, memoryProps, tiling, generateMipmaps,
@@ -156,7 +156,7 @@ namespace VKE {
 			//if (generateMipmaps)
 			//	usage |= (VkImageUsageFlags.TransferSrc | VkImageUsageFlags.TransferDst);
 
-			//Image img = new Image (dev, format, usage, memoryProps, (uint)width, (uint)height, imageType, VkSampleCountFlags.Count1, tiling, mipLevels);
+			//Image img = new Image (dev, format, usage, memoryProps, (uint)width, (uint)height, imageType, VkSampleCountFlags.SampleCount1, tiling, mipLevels);
 
 			//img.load (staggingQ, staggingCmdPool, imgPtr, generateMipmaps);
 
@@ -208,7 +208,7 @@ namespace VKE {
 			string path, VkFormat format = VkFormat.R8g8b8a8Unorm,
 			VkMemoryPropertyFlags memoryProps = VkMemoryPropertyFlags.DeviceLocal,
 			VkImageTiling tiling = VkImageTiling.Optimal, bool generateMipmaps = true,
-			VkImageType imageType = VkImageType.Type2d,
+			VkImageType imageType = VkImageType.Image2D,
 			VkImageUsageFlags usage = VkImageUsageFlags.Sampled | VkImageUsageFlags.TransferSrc | VkImageUsageFlags.TransferDst) {
 
 			int width, height, channels;
@@ -223,7 +223,7 @@ namespace VKE {
 			if (generateMipmaps)
 				usage |= (VkImageUsageFlags.TransferSrc | VkImageUsageFlags.TransferDst);
 
-			Image img = new Image (dev, format, usage, memoryProps, (uint)width, (uint)height, imageType, VkSampleCountFlags.Count1, tiling, mipLevels);
+			Image img = new Image (dev, format, usage, memoryProps, (uint)width, (uint)height, imageType, VkSampleCountFlags.SampleCount1, tiling, mipLevels);
 
 			img.load (staggingQ, staggingCmdPool, imgPtr, generateMipmaps);
 
@@ -239,7 +239,7 @@ namespace VKE {
 			string path, VkFormat format = VkFormat.R8g8b8a8Unorm, bool reserveSpaceForMipmaps = true,
 			VkMemoryPropertyFlags memoryProps = VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent,
 			VkImageTiling tiling = VkImageTiling.Linear, 
-			VkImageType imageType = VkImageType.Type2d, 
+			VkImageType imageType = VkImageType.Image2D, 
 			VkImageUsageFlags usage = VkImageUsageFlags.Sampled) {
 
 			int width, height, channels;
@@ -250,7 +250,7 @@ namespace VKE {
 			long size = width * height * 4;
 			uint mipLevels = reserveSpaceForMipmaps ? (uint)Math.Floor (Math.Log (Math.Max (width, height))) + 1 : 1;
 
-			Image img = new Image(dev, format, usage, memoryProps, (uint)width, (uint)height, imageType, VkSampleCountFlags.Count1, tiling, mipLevels);
+			Image img = new Image(dev, format, usage, memoryProps, (uint)width, (uint)height, imageType, VkSampleCountFlags.SampleCount1, tiling, mipLevels);
 
             img.Map ();
             unsafe {
@@ -281,12 +281,12 @@ namespace VKE {
             base.Activate ();
         }
 
-        public void CreateView (VkImageViewType type = VkImageViewType.Type2d, VkImageAspectFlags aspectFlags = VkImageAspectFlags.Color,
+        public void CreateView (VkImageViewType type = VkImageViewType.ImageView2D, VkImageAspectFlags aspectFlags = VkImageAspectFlags.Color,
 			uint layerCount = 1,
             uint baseMipLevel = 0, uint levelCount = 1, uint baseArrayLayer = 0) {
 
             VkImageView view = default(VkImageView);
-            VkImageViewCreateInfo viewInfo = VkImageViewCreateInfo.New ();
+            VkImageViewCreateInfo viewInfo = VkImageViewCreateInfo.New;
             viewInfo.image = handle;
             viewInfo.viewType = type;
             viewInfo.format = Format;
@@ -311,7 +311,7 @@ namespace VKE {
                                VkSamplerMipmapMode mipmapMode = VkSamplerMipmapMode.Linear, VkSamplerAddressMode addressMode = VkSamplerAddressMode.Repeat,
             float maxAnisotropy = 1.0f, float minLod = 0.0f, float maxLod = -1f) {
             VkSampler sampler;
-            VkSamplerCreateInfo sampInfo = VkSamplerCreateInfo.New ();
+            VkSamplerCreateInfo sampInfo = VkSamplerCreateInfo.New;
             sampInfo.maxAnisotropy = maxAnisotropy;
 			//samplerInfo.maxAnisotropy = device->enabledFeatures.samplerAnisotropy ? device->properties.limits.maxSamplerAnisotropy : 1.0f;
 			//samplerInfo.anisotropyEnable = device->enabledFeatures.samplerAnisotropy;
@@ -358,9 +358,9 @@ namespace VKE {
             VkPipelineStageFlags srcStageMask = VkPipelineStageFlags.AllCommands,
             VkPipelineStageFlags dstStageMask = VkPipelineStageFlags.AllCommands) {
             // Create an image barrier object
-            VkImageMemoryBarrier imageMemoryBarrier = VkImageMemoryBarrier.New ();
-            imageMemoryBarrier.srcQueueFamilyIndex = VulkanNative.QueueFamilyIgnored;
-            imageMemoryBarrier.dstQueueFamilyIndex = VulkanNative.QueueFamilyIgnored;
+            VkImageMemoryBarrier imageMemoryBarrier = VkImageMemoryBarrier.New;
+            imageMemoryBarrier.srcQueueFamilyIndex = Vk.QueueFamilyIgnored;
+            imageMemoryBarrier.dstQueueFamilyIndex = Vk.QueueFamilyIgnored;
             imageMemoryBarrier.oldLayout = oldImageLayout;
             imageMemoryBarrier.newLayout = newImageLayout;
             imageMemoryBarrier.image = handle;
@@ -455,7 +455,7 @@ namespace VKE {
             }
 
             // Put barrier inside setup command buffer
-            VulkanNative.vkCmdPipelineBarrier (
+            Vk.vkCmdPipelineBarrier (
                 cmdbuffer.Handle,
                 srcStageMask,
                 dstStageMask,

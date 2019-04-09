@@ -63,17 +63,17 @@ namespace KTX {
 
 					VkImageType imgType =
 						(pixelWidth == 0) ? throw new KtxException ("pixelWidth must be > 0") :
-						(pixelHeight == 0) ? imgType = VkImageType.Type1d :
-						(pixelDepth == 0) ? imgType = VkImageType.Type2d : imgType = VkImageType.Type3d;
+						(pixelHeight == 0) ? imgType = VkImageType.Image1D :
+						(pixelDepth == 0) ? imgType = VkImageType.Image2D : imgType = VkImageType.Image3D;
 						
 
-					VkSampleCountFlags samples = VkSampleCountFlags.Count1;
+					VkSampleCountFlags samples = VkSampleCountFlags.SampleCount1;
 
 					if (numberOfFaces > 1) {
-						if (imgType != VkImageType.Type2d)
+						if (imgType != VkImageType.Image2D)
 							throw new KtxException ("cubemap faces must be 2D textures");
 						createFlags = VkImageCreateFlags.CubeCompatible;
-						samples = VkSampleCountFlags.Count1;
+						samples = VkSampleCountFlags.SampleCount1;
 						numberOfArrayElements = numberOfFaces;
 					} else {
 						numberOfFaces = 1;
@@ -81,7 +81,7 @@ namespace KTX {
 							numberOfArrayElements = 1;
 					}
 
-					if (imgType != VkImageType.Type3d)
+					if (imgType != VkImageType.Image3D)
 						pixelDepth = 1;
 
 

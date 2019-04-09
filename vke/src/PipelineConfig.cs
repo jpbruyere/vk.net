@@ -35,11 +35,11 @@ namespace VKE {
 		public RenderPass RenderPass;
 
 		public VkPipelineBindPoint bindPoint = VkPipelineBindPoint.Graphics;
-        public VkPipelineInputAssemblyStateCreateInfo inputAssemblyState = VkPipelineInputAssemblyStateCreateInfo.New ();
-        public VkPipelineRasterizationStateCreateInfo rasterizationState = VkPipelineRasterizationStateCreateInfo.New ();
-        public VkPipelineViewportStateCreateInfo viewportState = VkPipelineViewportStateCreateInfo.New ();
-        public VkPipelineDepthStencilStateCreateInfo depthStencilState = VkPipelineDepthStencilStateCreateInfo.New ();
-        public VkPipelineMultisampleStateCreateInfo multisampleState = VkPipelineMultisampleStateCreateInfo.New ();
+        public VkPipelineInputAssemblyStateCreateInfo inputAssemblyState = VkPipelineInputAssemblyStateCreateInfo.New;
+        public VkPipelineRasterizationStateCreateInfo rasterizationState = VkPipelineRasterizationStateCreateInfo.New;
+        public VkPipelineViewportStateCreateInfo viewportState = VkPipelineViewportStateCreateInfo.New;
+        public VkPipelineDepthStencilStateCreateInfo depthStencilState = VkPipelineDepthStencilStateCreateInfo.New;
+        public VkPipelineMultisampleStateCreateInfo multisampleState = VkPipelineMultisampleStateCreateInfo.New;
         public List<VkPipelineColorBlendAttachmentState> blendAttachments = new List<VkPipelineColorBlendAttachmentState>();
         public List<VkDynamicState> dynamicStates = new List<VkDynamicState> ();
         public List<VkVertexInputBindingDescription> vertexBindings = new List<VkVertexInputBindingDescription> ();
@@ -55,7 +55,7 @@ namespace VKE {
 		}
 
 		public static PipelineConfig CreateDefault (VkPrimitiveTopology topology = VkPrimitiveTopology.TriangleList,
-			VkSampleCountFlags samples = VkSampleCountFlags.Count1)
+			VkSampleCountFlags samples = VkSampleCountFlags.SampleCount1)
 		{
 			PipelineConfig cfg = new PipelineConfig ();
 

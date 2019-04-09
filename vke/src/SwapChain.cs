@@ -51,7 +51,7 @@ namespace VKE {
             presentQueue = _presentableQueue;
             dev = presentQueue.dev;
 
-            createInfos = VkSwapchainCreateInfoKHR.New ();
+            createInfos = VkSwapchainCreateInfoKHR.New;
 
             VkSurfaceFormatKHR[] formats = dev.phy.GetSurfaceFormats (presentQueue.Surface);
             for (int i = 0; i < formats.Length; i++) {
@@ -81,7 +81,7 @@ namespace VKE {
             createInfos.imageSharingMode = VkSharingMode.Exclusive;
             createInfos.compositeAlpha = VkCompositeAlphaFlagsKHR.OpaqueKHR;
             createInfos.presentMode = presentMode;
-            createInfos.clipped = true;
+            createInfos.clipped = 1;
 
             presentComplete = dev.CreateSemaphore ();
 #if DEBUG && DEBUG_MARKER

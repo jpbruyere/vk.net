@@ -54,7 +54,7 @@ namespace VKE {
         public VkSurfaceKHR CreateSurface (IntPtr hWindow) {
             ulong surf;
             Utils.CheckResult ((VkResult)Glfw.Glfw3.CreateWindowSurface (inst.Handle, hWindow, IntPtr.Zero, out surf), "Create Surface Failed.");
-            return (VkSurfaceKHR)surf;
+            return surf;
         }
 
         public Instance () {
@@ -92,26 +92,27 @@ namespace VKE {
 				pEngineName = Strings.Name,
 			};
 
-			VkInstanceCreateInfo instanceCreateInfo = VkInstanceCreateInfo.New ();
-            instanceCreateInfo.pApplicationInfo = &appInfo;
+			VkInstanceCreateInfo instanceCreateInfo = VkInstanceCreateInfo.New;
+	         instanceCreateInfo.pApplicationInfo = appInfo.Pin();
 
-            if (instanceExtensions.Count > 0) {
-                instanceCreateInfo.enabledExtensionCount = instanceExtensions.Count;
-                instanceCreateInfo.ppEnabledExtensionNames = instanceExtensions.Data;
-            }
+			if (instanceExtensions.Count > 0) {
+			    instanceCreateInfo.enabledExtensionCount = instanceExtensions.Count;
+			    instanceCreateInfo.ppEnabledExtensionNames = instanceExtensions.Data;
+			}
 			if (enabledLayerNames.Count > 0) {
 				instanceCreateInfo.enabledLayerCount = enabledLayerNames.Count;
 				instanceCreateInfo.ppEnabledLayerNames = enabledLayerNames.Data;
 			}
 
-            VkResult result = vkCreateInstance (ref instanceCreateInfo, IntPtr.Zero, out inst);
-            if (result != VkResult.Success) 
-                throw new InvalidOperationException ("Could not create Vulkan instance. Error: " + result);
+			VkResult result = vkCreateInstance (ref instanceCreateInfo, IntPtr.Zero, out inst);
+			if (result != VkResult.Success) 
+			    throw new InvalidOperationException ("Could not create Vulkan instance. Error: " + result);
 
-			VulkanNative.LoadInstanceFunctionPointers (inst);
+			Vk.LoadInstanceFunctionPointers (inst);
 
-            instanceExtensions.Dispose ();
-            enabledLayerNames.Dispose ();            
+			appInfo.Unpin ();
+			instanceExtensions.Dispose ();
+			enabledLayerNames.Dispose ();            
         }
 
 

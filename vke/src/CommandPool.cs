@@ -48,7 +48,7 @@ namespace VKE {
 
 		public override void Activate () {
 			if (state != ActivableState.Activated) {            
-        	    VkCommandPoolCreateInfo infos = VkCommandPoolCreateInfo.New ();
+        	    VkCommandPoolCreateInfo infos = VkCommandPoolCreateInfo.New;
     	        infos.queueFamilyIndex = QFamIndex;
 	            Utils.CheckResult (vkCreateCommandPool (dev.VkDev, ref infos, IntPtr.Zero, out handle));
 			}
@@ -57,7 +57,7 @@ namespace VKE {
 
         public CommandBuffer AllocateCommandBuffer (VkCommandBufferLevel level = VkCommandBufferLevel.Primary) {
             VkCommandBuffer buff;
-            VkCommandBufferAllocateInfo infos = VkCommandBufferAllocateInfo.New ();
+            VkCommandBufferAllocateInfo infos = VkCommandBufferAllocateInfo.New;
             infos.commandPool = handle;
             infos.level = level;
             infos.commandBufferCount = 1;

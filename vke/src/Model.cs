@@ -37,7 +37,7 @@ using System.IO;
 
 
 namespace VKE {
-    using static Vulkan.Utils;
+    using static VK.Utils;
 
 	[Flags]
 	public enum ShaderBinding : UInt32 {

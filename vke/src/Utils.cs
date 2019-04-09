@@ -121,7 +121,7 @@ namespace VK {
             VkPipelineStageFlags srcStageMask = VkPipelineStageFlags.AllCommands,
             VkPipelineStageFlags dstStageMask = VkPipelineStageFlags.AllCommands) {
             // Create an image barrier object
-            VkImageMemoryBarrier imageMemoryBarrier = VkImageMemoryBarrier.New ();
+            VkImageMemoryBarrier imageMemoryBarrier = VkImageMemoryBarrier.New;
             imageMemoryBarrier.srcQueueFamilyIndex = Vk.QueueFamilyIgnored;
             imageMemoryBarrier.dstQueueFamilyIndex = Vk.QueueFamilyIgnored;
             imageMemoryBarrier.oldLayout = oldImageLayout;

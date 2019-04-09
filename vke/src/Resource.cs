@@ -24,7 +24,7 @@ namespace VKE {
 
         protected void allocateMemory () {
             VkMemoryRequirements memReqs = getMemoryRequirements ();
-            VkMemoryAllocateInfo memInfo = VkMemoryAllocateInfo.New ();
+            VkMemoryAllocateInfo memInfo = VkMemoryAllocateInfo.New;
             memInfo.allocationSize = memReqs.size;
             memInfo.memoryTypeIndex = dev.GetMemoryTypeIndex (memReqs.memoryTypeBits, MemoryFlags);
 
@@ -34,7 +34,8 @@ namespace VKE {
         }
 
         public void Map (ulong size = WholeSize, ulong offset = 0) {
-            Utils.CheckResult (vkMapMemory (dev.VkDev, vkMemory, offset, size, 0, ref mappedData));
+            Utils.CheckResult (vkMapMemory (dev.VkDev, vkMemory, offset, size, 0, mappedData.Pin()));
+			mappedData.Unpin ();
         }
         public void Unmap () {
             vkUnmapMemory (dev.VkDev, vkMemory);

@@ -64,7 +64,7 @@ namespace VKE {
 		/// </summary>
 		//public Pipeline (Device dev, VkFormat colorFormat, VkFormat depthFormat, 
 		//	VkPrimitiveTopology topology = VkPrimitiveTopology.TriangleList,
-		//	VkSampleCountFlags samples = VkSampleCountFlags.Count1)
+		//	VkSampleCountFlags samples = VkSampleCountFlags.SampleCount1)
 		//	: this (dev, , topology,samples)
 		//{
         //}
@@ -78,21 +78,21 @@ namespace VKE {
 			foreach (ShaderInfo shader in cfg.shaders)
 				shaderStages.Add (shader.GetStageCreateInfo(dev));
 
-			VkPipelineColorBlendStateCreateInfo colorBlendInfo = VkPipelineColorBlendStateCreateInfo.New ();
+			VkPipelineColorBlendStateCreateInfo colorBlendInfo = VkPipelineColorBlendStateCreateInfo.New;
 			colorBlendInfo.attachmentCount = (uint)cfg.blendAttachments.Count;
 			colorBlendInfo.pAttachments = cfg.blendAttachments.Pin ();
 
-			VkPipelineDynamicStateCreateInfo dynStatesInfo = VkPipelineDynamicStateCreateInfo.New ();
+			VkPipelineDynamicStateCreateInfo dynStatesInfo = VkPipelineDynamicStateCreateInfo.New;
 			dynStatesInfo.dynamicStateCount = (uint)cfg.dynamicStates.Count;
 			dynStatesInfo.pDynamicStates = cfg.dynamicStates.Pin ();
 
-			VkPipelineVertexInputStateCreateInfo vertInputInfo = VkPipelineVertexInputStateCreateInfo.New ();
+			VkPipelineVertexInputStateCreateInfo vertInputInfo = VkPipelineVertexInputStateCreateInfo.New;
 			vertInputInfo.vertexBindingDescriptionCount = (uint)cfg.vertexBindings.Count;
 			vertInputInfo.pVertexBindingDescriptions = cfg.vertexBindings.Pin ();
 			vertInputInfo.vertexAttributeDescriptionCount = (uint)cfg.vertexAttributes.Count;
 			vertInputInfo.pVertexAttributeDescriptions = cfg.vertexAttributes.Pin ();
 
-			VkGraphicsPipelineCreateInfo info = VkGraphicsPipelineCreateInfo.New ();
+			VkGraphicsPipelineCreateInfo info = VkGraphicsPipelineCreateInfo.New;
 			info.renderPass 			= RenderPass.handle;
 			info.layout					= Layout.handle;
 			info.pVertexInputState 		= vertInputInfo.Pin ();

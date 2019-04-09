@@ -37,7 +37,7 @@ namespace VKE {
         RenderPass renderPass;
         
 		public List<Image> attachments = new List<Image> ();
-        VkFramebufferCreateInfo createInfo = VkFramebufferCreateInfo.New ();
+        VkFramebufferCreateInfo createInfo = VkFramebufferCreateInfo.New;
 
         public uint Width => createInfo.width;
         public uint Height => createInfo.height;
@@ -64,8 +64,8 @@ namespace VKE {
 				if (v == null) {
 					//automatically create attachment if not in unused state in the renderpass
 					VkAttachmentDescription ad = renderPass.attachments[i];
-					VkImageUsageFlags usage = VkImageUsageFlags.None;
-					VkImageAspectFlags aspectFlags = VkImageAspectFlags.None;
+					VkImageUsageFlags usage = 0;
+					VkImageAspectFlags aspectFlags = 0;
 
 					checkLayoutRequirements (ad.initialLayout, ref usage, ref aspectFlags);
 					checkLayoutRequirements (ad.finalLayout, ref usage, ref aspectFlags);
@@ -74,8 +74,8 @@ namespace VKE {
 					}
 
 					v = new Image (renderPass.dev, ad.format, usage, VkMemoryPropertyFlags.DeviceLocal,
-						_width, _height, VkImageType.Type2d, ad.samples, VkImageTiling.Optimal, 1, createInfo.layers);
-					v.CreateView (VkImageViewType.Type2d, aspectFlags);
+						_width, _height, VkImageType.Image2D, ad.samples, VkImageTiling.Optimal, 1, createInfo.layers);
+					v.CreateView (VkImageViewType.ImageView2D, aspectFlags);
 				} else
 					v.Activate ();//increase ref and create handle if not already activated
 

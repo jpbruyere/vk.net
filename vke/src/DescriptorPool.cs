@@ -55,7 +55,7 @@ namespace VKE {
 
 		public override void Activate () {
 			if (state != ActivableState.Activated) {            
-				VkDescriptorPoolCreateInfo info = VkDescriptorPoolCreateInfo.New ();
+				VkDescriptorPoolCreateInfo info = VkDescriptorPoolCreateInfo.New;
 	            info.poolSizeCount = (uint)PoolSizes.Count;
 	            info.pPoolSizes = PoolSizes.Pin ();
 	            info.maxSets = MaxSets;
@@ -75,10 +75,10 @@ namespace VKE {
             return ds;
         }
         public unsafe void Allocate (DescriptorSet descriptorSet) {
-            VkDescriptorSetAllocateInfo allocInfo = VkDescriptorSetAllocateInfo.New ();
+            VkDescriptorSetAllocateInfo allocInfo = VkDescriptorSetAllocateInfo.New;
             allocInfo.descriptorPool = handle;
             allocInfo.descriptorSetCount = descriptorSet.descriptorSetLayouts.Count;
-            allocInfo.pSetLayouts = (VkDescriptorSetLayout*)descriptorSet.descriptorSetLayouts.Data.ToPointer ();
+            allocInfo.pSetLayouts = descriptorSet.descriptorSetLayouts.Data;
 
             Utils.CheckResult (vkAllocateDescriptorSets (dev.VkDev, ref allocInfo, out descriptorSet.handle));
         }

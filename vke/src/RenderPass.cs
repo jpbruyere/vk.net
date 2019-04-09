@@ -49,10 +49,10 @@ namespace VKE {
         /// <summary>
         /// Create default renderpass with one color and one depth attachments
         /// </summary>
-        public RenderPass (Device device, VkFormat colorFormat, VkFormat depthFormat, VkSampleCountFlags samples = VkSampleCountFlags.Count1)
+        public RenderPass (Device device, VkFormat colorFormat, VkFormat depthFormat, VkSampleCountFlags samples = VkSampleCountFlags.SampleCount1)
             : this (device){
 
-			AddAttachment (colorFormat, (samples == VkSampleCountFlags.Count1) ? VkImageLayout.PresentSrcKHR : VkImageLayout.ColorAttachmentOptimal, samples);
+			AddAttachment (colorFormat, (samples == VkSampleCountFlags.SampleCount1) ? VkImageLayout.PresentSrcKHR : VkImageLayout.ColorAttachmentOptimal, samples);
 			AddAttachment (depthFormat, VkImageLayout.DepthStencilAttachmentOptimal, samples);
 
             ClearValues.Add (new VkClearValue { color = new VkClearColorValue (0.0f, 0.0f, 0.2f) });
@@ -63,15 +63,15 @@ namespace VKE {
 			subpass0.AddColorReference (0, VkImageLayout.ColorAttachmentOptimal);
 			subpass0.SetDepthReference (1, VkImageLayout.DepthStencilAttachmentOptimal);
 
-			if (samples != VkSampleCountFlags.Count1) {
-				AddAttachment (colorFormat, VkImageLayout.PresentSrcKHR, VkSampleCountFlags.Count1);
+			if (samples != VkSampleCountFlags.SampleCount1) {
+				AddAttachment (colorFormat, VkImageLayout.PresentSrcKHR, VkSampleCountFlags.SampleCount1);
 				ClearValues.Add (new VkClearValue { color = new VkClearColorValue (0.0f, 0.0f, 0.2f) });
 				subpass0.AddResolveReference (2, VkImageLayout.ColorAttachmentOptimal);
 			}
 
             AddSubpass (subpass0);
 
-            AddDependency (VulkanNative.SubpassExternal, 0,
+            AddDependency (Vk.SubpassExternal, 0,
                 VkPipelineStageFlags.BottomOfPipe, VkPipelineStageFlags.ColorAttachmentOutput,
                 VkAccessFlags.MemoryRead, VkAccessFlags.ColorAttachmentRead | VkAccessFlags.ColorAttachmentWrite);
             AddDependency (0, 1,
@@ -86,7 +86,7 @@ namespace VKE {
 				foreach (SubPass sp in subpasses)
 					spDescs.Add (sp.SubpassDescription);
 
-				VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.New ();
+				VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.New;
 				renderPassInfo.attachmentCount = (uint)attachments.Count;
 				renderPassInfo.pAttachments = attachments.Pin ();
 				renderPassInfo.subpassCount = (uint)spDescs.Count;
@@ -105,7 +105,7 @@ namespace VKE {
 
 
         public void AddAttachment (VkFormat format,
-            VkImageLayout finalLayout, VkSampleCountFlags samples = VkSampleCountFlags.Count1,
+            VkImageLayout finalLayout, VkSampleCountFlags samples = VkSampleCountFlags.SampleCount1,
             VkAttachmentLoadOp loadOp = VkAttachmentLoadOp.Clear,
             VkAttachmentStoreOp storeOp = VkAttachmentStoreOp.Store,
             VkImageLayout initialLayout = VkImageLayout.Undefined) {
@@ -125,7 +125,7 @@ namespace VKE {
             VkAttachmentStoreOp stencilStoreOp,
             VkAttachmentLoadOp loadOp = VkAttachmentLoadOp.DontCare,
             VkAttachmentStoreOp storeOp = VkAttachmentStoreOp.DontCare,
-            VkSampleCountFlags samples = VkSampleCountFlags.Count1,
+            VkSampleCountFlags samples = VkSampleCountFlags.SampleCount1,
             VkImageLayout initialLayout = VkImageLayout.Undefined) {
             attachments.Add (new VkAttachmentDescription {
                 format = format,
@@ -167,7 +167,7 @@ namespace VKE {
         /// </summary>
         public unsafe void Begin (CommandBuffer cmd, Framebuffer frameBuffer, uint width, uint height) {
 
-            VkRenderPassBeginInfo info = VkRenderPassBeginInfo.New ();
+            VkRenderPassBeginInfo info = VkRenderPassBeginInfo.New;
             info.renderPass = handle;
             info.renderArea.extent.width = width;
             info.renderArea.extent.height = height;
