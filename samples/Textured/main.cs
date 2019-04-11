@@ -3,7 +3,7 @@ using System.Numerics;
 using System.Runtime.InteropServices;
 using Glfw;
 using VKE;
-using Vulkan;
+using VK;
 using Buffer = VKE.Buffer;
 
 namespace TextureSample {
@@ -62,13 +62,13 @@ namespace TextureSample {
 				new VkDescriptorPoolSize (VkDescriptorType.CombinedImageSampler)
 			);
 
-			dsLayout = new DescriptorSetLayout (dev, VkDescriptorSetLayoutCreateFlags.None,
+			dsLayout = new DescriptorSetLayout (dev, 0,
 				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Vertex, VkDescriptorType.UniformBuffer),
 				new VkDescriptorSetLayoutBinding (1, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler));
 
 			descriptorSet = descriptorPool.Allocate (dsLayout);
 
-			PipelineConfig cfg = PipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, VkSampleCountFlags.Count1);
+			PipelineConfig cfg = PipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, VkSampleCountFlags.SampleCount1);
 
 			cfg.Layout = new PipelineLayout (dev, dsLayout);
 			cfg.RenderPass = new RenderPass (dev, swapChain.ColorFormat, dev.GetSuitableDepthFormat (), cfg.Samples);
@@ -211,7 +211,7 @@ namespace TextureSample {
 
 			for (int i = 0; i < swapChain.ImageCount; ++i) {
 				frameBuffers[i] = new Framebuffer (pipeline.RenderPass, swapChain.Width, swapChain.Height,
-					(pipeline.Samples == VkSampleCountFlags.Count1) ? new Image[] {
+					(pipeline.Samples == VkSampleCountFlags.SampleCount1) ? new Image[] {
 						swapChain.images[i],
 						null
 					} : new Image[] {

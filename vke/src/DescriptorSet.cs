@@ -24,8 +24,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 using System;
-using Vulkan;
-using static Vulkan.VulkanNative;
+using VK;
+using static VK.Vk;
 
 namespace VKE {
     public class DescriptorSet {
@@ -47,7 +47,7 @@ namespace VKE {
             NativeList<VkWriteDescriptorSet> wdss = new NativeList<VkWriteDescriptorSet> ();
             foreach (DescriptorSetLayout dsl in dsLayouts) {
                 foreach (VkDescriptorSetLayoutBinding binding in dsl.Bindings) {
-                    VkWriteDescriptorSet wds = VkWriteDescriptorSet.New ();
+                    VkWriteDescriptorSet wds = VkWriteDescriptorSet.New();
                     wds.descriptorType = binding.descriptorType;
                     wds.descriptorCount = binding.descriptorCount;
                     wds.dstBinding = binding.binding;

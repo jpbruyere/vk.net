@@ -25,8 +25,8 @@
 // THE SOFTWARE.
 using System;
 using System.Runtime.InteropServices;
-using Vulkan;
-using static Vulkan.VulkanNative;
+using VK;
+using static VK.Vk;
 
 namespace VKE {
 

@@ -25,7 +25,7 @@
 // THE SOFTWARE.
 using System;
 using System.Runtime.InteropServices;
-using Vulkan;
+using VK;
 
 namespace VKE {
     public class MarshaledObject<T> : IDisposable where T : struct {

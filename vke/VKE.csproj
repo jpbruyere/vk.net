@@ -39,16 +39,16 @@
   </ItemGroup>
   <ItemGroup>        
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="src\**\*.cs" Exclude="src\Renderer.cs;src\QueueFamily.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\vk.net\vk.net.csproj">
-      <Project>{7B9878B1-9A69-4577-AC32-2A7A5568C1E8}</Project>
-      <Name>vk.net</Name>
-    </ProjectReference>
+    <Compile Include="src\**\*.cs" Exclude="src\Renderer.cs;src\QueueFamily.cs;src/DebugReport.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\vk.generator\VK\VK.csproj">
+      <Project>{F25D42B5-CE69-4B3B-A621-06908906739A}</Project>
+      <Name>VK</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />    
 </Project>

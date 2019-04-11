@@ -25,14 +25,14 @@
 // THE SOFTWARE.
 using System;
 using System.Collections.Generic;
-using Vulkan;
-using static Vulkan.VulkanNative;
+using VK;
+using static VK.Vk;
 
 namespace VKE {
     public sealed class DescriptorSetLayout : Activable {
         internal VkDescriptorSetLayout handle;
         
-		public VkDescriptorSetLayoutCreateFlags Flags { get; private set; } = VkDescriptorSetLayoutCreateFlags.None;
+		public VkDescriptorSetLayoutCreateFlags Flags { get; private set; } = 0;
         public List<VkDescriptorSetLayoutBinding> Bindings { get; private set; } = new List<VkDescriptorSetLayoutBinding> ();
 
 #if DEBUG && DEBUG_MARKER
@@ -45,7 +45,7 @@ namespace VKE {
 			Flags = flags;
         }
 		public DescriptorSetLayout (Device device, params VkDescriptorSetLayoutBinding[] bindings)
-        : this (device, VkDescriptorSetLayoutCreateFlags.None, bindings) {
+        : this (device, 0, bindings) {
         }
         public DescriptorSetLayout (Device device, VkDescriptorSetLayoutCreateFlags flags, params VkDescriptorSetLayoutBinding[] bindings)
         : this (device, flags) {

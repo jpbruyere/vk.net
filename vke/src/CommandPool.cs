@@ -24,8 +24,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 using System;
-using Vulkan;
-using static Vulkan.VulkanNative;
+using VK;
+using static VK.Vk;
 
 namespace VKE {
     public sealed class CommandPool : Activable {
@@ -48,7 +48,7 @@ namespace VKE {
 
 		public override void Activate () {
 			if (state != ActivableState.Activated) {            
-        	    VkCommandPoolCreateInfo infos = VkCommandPoolCreateInfo.New ();
+        	    VkCommandPoolCreateInfo infos = VkCommandPoolCreateInfo.New();
     	        infos.queueFamilyIndex = QFamIndex;
 	            Utils.CheckResult (vkCreateCommandPool (dev.VkDev, ref infos, IntPtr.Zero, out handle));
 			}
@@ -57,7 +57,7 @@ namespace VKE {
 
         public CommandBuffer AllocateCommandBuffer (VkCommandBufferLevel level = VkCommandBufferLevel.Primary) {
             VkCommandBuffer buff;
-            VkCommandBufferAllocateInfo infos = VkCommandBufferAllocateInfo.New ();
+            VkCommandBufferAllocateInfo infos = VkCommandBufferAllocateInfo.New();
             infos.commandPool = handle;
             infos.level = level;
             infos.commandBufferCount = 1;

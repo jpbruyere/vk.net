@@ -25,8 +25,8 @@
 // THE SOFTWARE.
 using System;
 using System.Collections.Generic;
-using Vulkan;
-using static Vulkan.VulkanNative;
+using VK;
+using static VK.Vk;
 
 namespace VKE {
 	public class TimestampQueryPool : QueryPool {
@@ -34,7 +34,7 @@ namespace VKE {
 
 		#region CTORS
 		public TimestampQueryPool (Device device, uint count = 2)
-		: base (device, VkQueryType.Timestamp, VkQueryPipelineStatisticFlags.None, count)
+		: base (device, VkQueryType.Timestamp, 0, count)
 		{
 			Period = dev.phy.Limits.timestampPeriod;
 
@@ -45,7 +45,7 @@ namespace VKE {
 		#endregion
 
 		public void Write (CommandBuffer cmd) { 
-			
+
 		}
 
 	}
@@ -131,7 +131,7 @@ namespace VKE {
 		public ulong[] GetResults () {
 			ulong[] results = new ulong[resultLength];
 			IntPtr ptr = results.Pin ();
-			vkGetQueryPoolResults (dev.VkDev, handle, 0, 1, resultLength * sizeof (ulong), ptr, sizeof (ulong), VkQueryResultFlags._64);
+			vkGetQueryPoolResults (dev.VkDev, handle, 0, 1, (UIntPtr)(resultLength * sizeof (ulong)), ptr, sizeof (ulong), VkQueryResultFlags.QueryResult64);
 			results.Unpin ();
 			return results;
 		}

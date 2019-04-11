@@ -27,9 +27,8 @@ using System;
 using System.Linq;
 using System.Diagnostics;
 using Glfw;
-using Vulkan;
-using static Vulkan.VulkanNative;
-using Vk.Extensions;
+using VK;
+using static VK.Vk;
 
 namespace VKE {
     public abstract class VkWindow : IDisposable {
@@ -57,7 +56,7 @@ namespace VKE {
 
 		public virtual string[] EnabledExtensions {
 			get {
-				return new string[] {Ext.Dev.VK_KHR_swapchain};
+				return new string[] {Ext.D.VK_KHR_swapchain};
 			} 
 		}
 

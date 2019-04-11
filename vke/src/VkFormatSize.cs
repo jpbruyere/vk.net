@@ -27,7 +27,7 @@ using System;
 using System.IO;
 using System.Numerics;
 
-namespace Vulkan {
+namespace VK {
 	[Flags]
 	public enum VkFormatSizeFlag {
 		SizePacked				= 0x00000001,

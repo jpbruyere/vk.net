@@ -28,8 +28,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Vulkan;
-using static Vulkan.VulkanNative;
+using VK;
+using static VK.Vk;
 
 
 namespace VKE {
@@ -77,7 +77,7 @@ namespace VKE {
             for (int i = 0; i < extensions.Length; i++) 
                 deviceExtensions.Add (new FixedUtf8String(extensions[i]));            
 				            
-            VkDeviceCreateInfo deviceCreateInfo = VkDeviceCreateInfo.New ();
+            VkDeviceCreateInfo deviceCreateInfo = VkDeviceCreateInfo.New();
             deviceCreateInfo.queueCreateInfoCount = (uint)qInfos.Count;
             deviceCreateInfo.pQueueCreateInfos = qInfos.Pin();
             deviceCreateInfo.pEnabledFeatures = enabledFeatures.Pin ();
@@ -102,7 +102,7 @@ namespace VKE {
 
         unsafe public VkSemaphore CreateSemaphore () {
             VkSemaphore tmp;
-            VkSemaphoreCreateInfo info = VkSemaphoreCreateInfo.New ();
+            VkSemaphoreCreateInfo info = VkSemaphoreCreateInfo.New();
             Utils.CheckResult (vkCreateSemaphore (dev, ref info, IntPtr.Zero, out tmp));
             return tmp;
         }
@@ -111,8 +111,8 @@ namespace VKE {
         }
         unsafe public VkFence CreateFence (bool signaled = false) {
             VkFence tmp;
-            VkFenceCreateInfo info = VkFenceCreateInfo.New ();
-            info.flags = signaled ? VkFenceCreateFlags.Signaled : VkFenceCreateFlags.None;
+            VkFenceCreateInfo info = VkFenceCreateInfo.New();
+            info.flags = signaled ? VkFenceCreateFlags.Signaled : 0;
             Utils.CheckResult (vkCreateFence (dev, ref info, IntPtr.Zero, out tmp));
             return tmp;
         }
@@ -120,13 +120,13 @@ namespace VKE {
             vkDestroyFence (dev, fence, IntPtr.Zero);
         }
         public void WaitForFence (VkFence fence, ulong timeOut = UInt64.MaxValue) {
-            vkWaitForFences (dev, 1, ref fence, true, timeOut);
+            vkWaitForFences (dev, 1, ref fence, 1, timeOut);
         }
         public void ResetFence (VkFence fence) {
             vkResetFences (dev, 1, ref fence);
         }
         public void WaitForFences (NativeList<VkFence> fences, ulong timeOut = UInt64.MaxValue) {
-            vkWaitForFences (dev, fences.Count, fences.Data, true, timeOut);
+            vkWaitForFences (dev, fences.Count, fences.Data, 1, timeOut);
         }
         public void ResetFences (NativeList<VkFence> fences) {
             vkResetFences (dev, fences.Count, fences.Data);
@@ -153,19 +153,19 @@ namespace VKE {
         }
         unsafe public VkImage[] GetSwapChainImages (VkSwapchainKHR swapchain) {
             uint imageCount = 0;
-            Utils.CheckResult (vkGetSwapchainImagesKHR (dev, swapchain, ref imageCount, IntPtr.Zero));
+            Utils.CheckResult (vkGetSwapchainImagesKHR (dev, swapchain, out imageCount, IntPtr.Zero));
             if (imageCount == 0)
                 throw new Exception ("Swapchain image count is 0.");
             VkImage[] imgs = new VkImage[imageCount];
             
-            Utils.CheckResult (vkGetSwapchainImagesKHR (dev, swapchain, ref imageCount, imgs.Pin()));
+            Utils.CheckResult (vkGetSwapchainImagesKHR (dev, swapchain, out imageCount, imgs.Pin()));
 			imgs.Unpin ();
             
             return imgs;
         }
-        unsafe public VkImageView CreateImageView (VkImage image, VkFormat format, VkImageViewType viewType = VkImageViewType.Image2D, VkImageAspectFlags aspectFlags = VkImageAspectFlags.Color) {
+        unsafe public VkImageView CreateImageView (VkImage image, VkFormat format, VkImageViewType viewType = VkImageViewType.ImageView2D, VkImageAspectFlags aspectFlags = VkImageAspectFlags.Color) {
             VkImageView view;
-            VkImageViewCreateInfo infos = VkImageViewCreateInfo.New ();
+            VkImageViewCreateInfo infos = VkImageViewCreateInfo.New();
             infos.image = image;
             infos.viewType = viewType;
             infos.format = format;
@@ -221,16 +221,16 @@ namespace VKE {
             byte[] shaderCode = File.ReadAllBytes (filename);
             ulong shaderSize = (ulong)shaderCode.Length;
             unsafe {
-                fixed (byte* scPtr = shaderCode) {
-                    // Create a new shader module that will be used for Pipeline creation
-                    VkShaderModuleCreateInfo moduleCreateInfo = VkShaderModuleCreateInfo.New ();
-                    moduleCreateInfo.codeSize = new UIntPtr (shaderSize);
-                    moduleCreateInfo.pCode = (uint*)scPtr;
+                // Create a new shader module that will be used for Pipeline creation
+                VkShaderModuleCreateInfo moduleCreateInfo = VkShaderModuleCreateInfo.New();
+                moduleCreateInfo.codeSize = new UIntPtr (shaderSize);
+                moduleCreateInfo.pCode = shaderCode.Pin();
 
-                    Utils.CheckResult (vkCreateShaderModule (VkDev, ref moduleCreateInfo, IntPtr.Zero, out VkShaderModule shaderModule));
+                Utils.CheckResult (vkCreateShaderModule (VkDev, ref moduleCreateInfo, IntPtr.Zero, out VkShaderModule shaderModule));
 
-                    return shaderModule;
-                }
+				shaderCode.Unpin ();
+
+                return shaderModule;            
             }
         }
 

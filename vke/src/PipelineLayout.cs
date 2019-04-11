@@ -26,8 +26,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Vulkan;
-using static Vulkan.VulkanNative;
+using VK;
+using static VK.Vk;
 
 namespace VKE {
 	public sealed class PipelineLayout : Activable {
@@ -67,7 +67,7 @@ namespace VKE {
 
 		public override void Activate () {
 			if (state != ActivableState.Activated) {
-				VkPipelineLayoutCreateInfo info = VkPipelineLayoutCreateInfo.New ();
+				VkPipelineLayoutCreateInfo info = VkPipelineLayoutCreateInfo.New();
 				VkDescriptorSetLayout[] dsls = DescriptorSetLayouts.Select (dsl => dsl.handle).ToArray ();
 
 				if (dsls.Length > 0) {
