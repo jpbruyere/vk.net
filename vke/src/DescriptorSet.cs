@@ -47,7 +47,7 @@ namespace VKE {
             NativeList<VkWriteDescriptorSet> wdss = new NativeList<VkWriteDescriptorSet> ();
             foreach (DescriptorSetLayout dsl in dsLayouts) {
                 foreach (VkDescriptorSetLayoutBinding binding in dsl.Bindings) {
-                    VkWriteDescriptorSet wds = VkWriteDescriptorSet.New;
+                    VkWriteDescriptorSet wds = VkWriteDescriptorSet.New();
                     wds.descriptorType = binding.descriptorType;
                     wds.descriptorCount = binding.descriptorCount;
                     wds.dstBinding = binding.binding;

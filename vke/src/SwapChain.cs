@@ -51,7 +51,7 @@ namespace VKE {
             presentQueue = _presentableQueue;
             dev = presentQueue.dev;
 
-            createInfos = VkSwapchainCreateInfoKHR.New;
+            createInfos = VkSwapchainCreateInfoKHR.New();
 
             VkSurfaceFormatKHR[] formats = dev.phy.GetSurfaceFormats (presentQueue.Surface);
             for (int i = 0; i < formats.Length; i++) {
@@ -131,7 +131,7 @@ namespace VKE {
         }
 
         public int GetNextImage () {
-            VkResult res = vkAcquireNextImageKHR (dev.VkDev, handle, UInt64.MaxValue, presentComplete, VkFence.Null, ref currentImageIndex);
+            VkResult res = vkAcquireNextImageKHR (dev.VkDev, handle, UInt64.MaxValue, presentComplete, VkFence.Null, out currentImageIndex);
             if (res == VkResult.ErrorOutOfDateKHR || res == VkResult.SuboptimalKHR) {
                 Create ();
                 return -1;

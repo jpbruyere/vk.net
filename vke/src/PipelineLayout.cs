@@ -67,7 +67,7 @@ namespace VKE {
 
 		public override void Activate () {
 			if (state != ActivableState.Activated) {
-				VkPipelineLayoutCreateInfo info = VkPipelineLayoutCreateInfo.New;
+				VkPipelineLayoutCreateInfo info = VkPipelineLayoutCreateInfo.New();
 				VkDescriptorSetLayout[] dsls = DescriptorSetLayouts.Select (dsl => dsl.handle).ToArray ();
 
 				if (dsls.Length > 0) {

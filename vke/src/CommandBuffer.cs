@@ -44,7 +44,7 @@ namespace VKE {
         }
 		//TODO:unpin all pinned obj
         public void Submit (VkQueue queue, VkSemaphore wait = default(VkSemaphore), VkSemaphore signal = default (VkSemaphore), VkFence fence = default(VkFence)) {
-            VkSubmitInfo submit_info = VkSubmitInfo.New;
+            VkSubmitInfo submit_info = VkSubmitInfo.New();
             VkPipelineStageFlags dstStageMask = VkPipelineStageFlags.ColorAttachmentOutput;
             submit_info.commandBufferCount = 1;
             submit_info.pWaitDstStageMask = dstStageMask.Pin();

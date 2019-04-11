@@ -86,7 +86,7 @@ namespace VKE {
 				foreach (SubPass sp in subpasses)
 					spDescs.Add (sp.SubpassDescription);
 
-				VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.New;
+				VkRenderPassCreateInfo renderPassInfo = VkRenderPassCreateInfo.New();
 				renderPassInfo.attachmentCount = (uint)attachments.Count;
 				renderPassInfo.pAttachments = attachments.Pin ();
 				renderPassInfo.subpassCount = (uint)spDescs.Count;
@@ -167,7 +167,7 @@ namespace VKE {
         /// </summary>
         public unsafe void Begin (CommandBuffer cmd, Framebuffer frameBuffer, uint width, uint height) {
 
-            VkRenderPassBeginInfo info = VkRenderPassBeginInfo.New;
+            VkRenderPassBeginInfo info = VkRenderPassBeginInfo.New();
             info.renderPass = handle;
             info.renderArea.extent.width = width;
             info.renderArea.extent.height = height;

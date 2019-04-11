@@ -37,7 +37,7 @@ namespace VKE {
         RenderPass renderPass;
         
 		public List<Image> attachments = new List<Image> ();
-        VkFramebufferCreateInfo createInfo = VkFramebufferCreateInfo.New;
+        VkFramebufferCreateInfo createInfo = VkFramebufferCreateInfo.New();
 
         public uint Width => createInfo.width;
         public uint Height => createInfo.height;

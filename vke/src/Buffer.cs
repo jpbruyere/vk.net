@@ -97,7 +97,7 @@ namespace VKE {
     public class Buffer : Resource {
         internal VkBuffer handle;
         public VkDescriptorBufferInfo Descriptor;
-        protected VkBufferCreateInfo createInfo = VkBufferCreateInfo.New;
+        protected VkBufferCreateInfo createInfo = VkBufferCreateInfo.New();
 
 #if DEBUG && DEBUG_MARKER
 		protected override VkDebugMarkerObjectNameInfoEXT DebugMarkerInfo

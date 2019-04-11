@@ -142,7 +142,7 @@ namespace VKE {
 
         public bool GetPresentIsSupported (uint qFamilyIndex, VkSurfaceKHR surf) {
             VkBool32 isSupported = false;
-            VulkanNative.vkGetPhysicalDeviceSurfaceSupportKHR (phy, qFamilyIndex, surf, out isSupported);
+            vkGetPhysicalDeviceSurfaceSupportKHR (phy, qFamilyIndex, surf, out isSupported);
             return isSupported;
         }
 

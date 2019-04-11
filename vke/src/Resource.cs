@@ -24,7 +24,7 @@ namespace VKE {
 
         protected void allocateMemory () {
             VkMemoryRequirements memReqs = getMemoryRequirements ();
-            VkMemoryAllocateInfo memInfo = VkMemoryAllocateInfo.New;
+            VkMemoryAllocateInfo memInfo = VkMemoryAllocateInfo.New();
             memInfo.allocationSize = memReqs.size;
             memInfo.memoryTypeIndex = dev.GetMemoryTypeIndex (memReqs.memoryTypeBits, MemoryFlags);
 

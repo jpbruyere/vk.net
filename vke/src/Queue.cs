@@ -63,7 +63,7 @@ namespace VKE {
         }
         public void Present (SwapChain swapChain, VkSemaphore wait) {
             unsafe {
-                VkPresentInfoKHR present = VkPresentInfoKHR.New;
+                VkPresentInfoKHR present = VkPresentInfoKHR.New();
 
                 uint idx = swapChain.currentImageIndex;
                 VkSwapchainKHR sc = swapChain.handle;

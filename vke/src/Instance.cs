@@ -92,7 +92,7 @@ namespace VKE {
 				pEngineName = Strings.Name,
 			};
 
-			VkInstanceCreateInfo instanceCreateInfo = VkInstanceCreateInfo.New;
+			VkInstanceCreateInfo instanceCreateInfo = VkInstanceCreateInfo.New();
 	         instanceCreateInfo.pApplicationInfo = appInfo.Pin();
 
 			if (instanceExtensions.Count > 0) {

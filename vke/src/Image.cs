@@ -32,7 +32,7 @@ using static VK.Vk;
 namespace VKE {
     public class Image : Resource {
 		internal VkImage handle; 
-        VkImageCreateInfo info = VkImageCreateInfo.New;
+        VkImageCreateInfo info = VkImageCreateInfo.New();
 
         bool imported = false;
 
@@ -286,7 +286,7 @@ namespace VKE {
             uint baseMipLevel = 0, uint levelCount = 1, uint baseArrayLayer = 0) {
 
             VkImageView view = default(VkImageView);
-            VkImageViewCreateInfo viewInfo = VkImageViewCreateInfo.New;
+            VkImageViewCreateInfo viewInfo = VkImageViewCreateInfo.New();
             viewInfo.image = handle;
             viewInfo.viewType = type;
             viewInfo.format = Format;
@@ -311,7 +311,7 @@ namespace VKE {
                                VkSamplerMipmapMode mipmapMode = VkSamplerMipmapMode.Linear, VkSamplerAddressMode addressMode = VkSamplerAddressMode.Repeat,
             float maxAnisotropy = 1.0f, float minLod = 0.0f, float maxLod = -1f) {
             VkSampler sampler;
-            VkSamplerCreateInfo sampInfo = VkSamplerCreateInfo.New;
+            VkSamplerCreateInfo sampInfo = VkSamplerCreateInfo.New();
             sampInfo.maxAnisotropy = maxAnisotropy;
 			//samplerInfo.maxAnisotropy = device->enabledFeatures.samplerAnisotropy ? device->properties.limits.maxSamplerAnisotropy : 1.0f;
 			//samplerInfo.anisotropyEnable = device->enabledFeatures.samplerAnisotropy;
@@ -358,7 +358,7 @@ namespace VKE {
             VkPipelineStageFlags srcStageMask = VkPipelineStageFlags.AllCommands,
             VkPipelineStageFlags dstStageMask = VkPipelineStageFlags.AllCommands) {
             // Create an image barrier object
-            VkImageMemoryBarrier imageMemoryBarrier = VkImageMemoryBarrier.New;
+            VkImageMemoryBarrier imageMemoryBarrier = VkImageMemoryBarrier.New();
             imageMemoryBarrier.srcQueueFamilyIndex = Vk.QueueFamilyIgnored;
             imageMemoryBarrier.dstQueueFamilyIndex = Vk.QueueFamilyIgnored;
             imageMemoryBarrier.oldLayout = oldImageLayout;
