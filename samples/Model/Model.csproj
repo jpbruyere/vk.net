@@ -55,13 +55,13 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\vk.net\vk.net.csproj">
-      <Project>{7B9878B1-9A69-4577-AC32-2A7A5568C1E8}</Project>
-      <Name>vk.net</Name>
-    </ProjectReference>
     <ProjectReference Include="..\..\vke\VKE.csproj">
       <Project>{32B7E80D-BEA7-4811-B82D-CC2533069F0A}</Project>
       <Name>VKE</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\vk.generator\VK\VK.csproj">
+      <Project>{F25D42B5-CE69-4B3B-A621-06908906739A}</Project>
+      <Name>VK</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

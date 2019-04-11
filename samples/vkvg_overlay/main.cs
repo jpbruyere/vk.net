@@ -3,7 +3,7 @@ using System.Numerics;
 using System.Runtime.InteropServices;
 using Glfw;
 using VKE;
-using Vulkan;
+using VK;
 using static VKE.Camera;
 using Buffer = VKE.Buffer;
 
@@ -127,7 +127,7 @@ namespace ModelSample {
 				ShaderBinding.Emissive);
 		}
 
-		void init (VkSampleCountFlags samples = VkSampleCountFlags.Count4) { 
+		void init (VkSampleCountFlags samples = VkSampleCountFlags.SampleCount4) { 
 			descriptorPool = new DescriptorPool (dev, 2,
 				new VkDescriptorPoolSize (VkDescriptorType.UniformBuffer),
 				new VkDescriptorPoolSize (VkDescriptorType.CombinedImageSampler)
@@ -264,7 +264,7 @@ namespace ModelSample {
 			    dstSubresource = imgSubResLayer,
 			    extent = new VkExtent3D { width = (uint)vkvgSurf.Width, height = (uint)vkvgSurf.Height }
 			};
-			VulkanNative.vkCmdCopyImage (cmd.Handle, srcImg, VkImageLayout.TransferSrcOptimal,
+			Vk.vkCmdCopyImage (cmd.Handle, srcImg, VkImageLayout.TransferSrcOptimal,
 			    dstImg, VkImageLayout.TransferDstOptimal, 1, ref cregion);
 
 			Utils.setImageLayout (cmd.Handle, dstImg, VkImageAspectFlags.Color,
@@ -378,7 +378,7 @@ namespace ModelSample {
 
 			for (int i = 0; i < swapChain.ImageCount; ++i) {
 				frameBuffers[i] = new Framebuffer (pipeline.RenderPass, swapChain.Width, swapChain.Height,
-					(pipeline.Samples == VkSampleCountFlags.Count1) ? new Image[] {
+					(pipeline.Samples == VkSampleCountFlags.SampleCount1) ? new Image[] {
 						swapChain.images[i],
 						null
 					} : new Image[] {

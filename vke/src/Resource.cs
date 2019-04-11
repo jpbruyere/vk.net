@@ -34,7 +34,7 @@ namespace VKE {
         }
 
         public void Map (ulong size = WholeSize, ulong offset = 0) {
-            Utils.CheckResult (vkMapMemory (dev.VkDev, vkMemory, offset, size, 0, mappedData.Pin()));
+            Utils.CheckResult (vkMapMemory (dev.VkDev, vkMemory, offset, size, 0, ref mappedData));
 			mappedData.Unpin ();
         }
         public void Unmap () {

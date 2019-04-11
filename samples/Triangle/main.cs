@@ -1,7 +1,7 @@
 ﻿using System.Numerics;
 using System.Runtime.InteropServices;
 using VKE;
-using Vulkan;
+using VK;
 
 namespace ModelSample {
     class Program : VkWindow {
@@ -60,7 +60,7 @@ namespace ModelSample {
 
 			descriptorSet = descriptorPool.Allocate (dsLayout);
 
-			PipelineConfig cfg = PipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, VkSampleCountFlags.Count1);
+			PipelineConfig cfg = PipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, VkSampleCountFlags.SampleCount1);
 
 			cfg.Layout = new PipelineLayout (dev, dsLayout);
 			cfg.Layout.AddPushConstants (
@@ -115,7 +115,7 @@ namespace ModelSample {
 
             for (int i = 0; i < swapChain.ImageCount; ++i) {
 				frameBuffers[i] = new Framebuffer (pipeline.RenderPass, swapChain.Width, swapChain.Height,
-					(pipeline.Samples == VkSampleCountFlags.Count1) ? new Image[] {
+					(pipeline.Samples == VkSampleCountFlags.SampleCount1) ? new Image[] {
 						swapChain.images[i],
 						null
 					} : new Image[] {

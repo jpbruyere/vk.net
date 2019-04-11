@@ -47,7 +47,7 @@ namespace VKE {
             VkSubmitInfo submit_info = VkSubmitInfo.New();
             VkPipelineStageFlags dstStageMask = VkPipelineStageFlags.ColorAttachmentOutput;
             submit_info.commandBufferCount = 1;
-            submit_info.pWaitDstStageMask = dstStageMask.Pin();
+            //submit_info.pWaitDstStageMask = dstStageMask.Pin();
             if (signal != VkSemaphore.Null) {
                 submit_info.signalSemaphoreCount = 1;
                 submit_info.pSignalSemaphores = signal.Pin();

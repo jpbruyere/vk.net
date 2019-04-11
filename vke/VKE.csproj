@@ -16,7 +16,7 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <Optimize>false</Optimize>    
     <CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
-    <DefineConstants>_DEBUG;_RENDERDOC;_DEBUG_MARKER</DefineConstants>
+    <DefineConstants>DEBUG;_RENDERDOC;_DEBUG_MARKER</DefineConstants>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <Optimize>true</Optimize>
@@ -46,7 +46,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\vk.generator\VK\VK.csproj">
-      <Project>{C4556091-4997-404A-866F-8F244EFCADD2}</Project>
+      <Project>{F25D42B5-CE69-4B3B-A621-06908906739A}</Project>
       <Name>VK</Name>
     </ProjectReference>
   </ItemGroup>
