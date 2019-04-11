@@ -24,8 +24,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 using System;
-using Vulkan;
-using static Vulkan.VulkanNative;
+using VK;
+using static VK.Vk;
 
 namespace VKE {
     public class SwapChain {
@@ -51,7 +51,7 @@ namespace VKE {
             presentQueue = _presentableQueue;
             dev = presentQueue.dev;
 
-            createInfos = VkSwapchainCreateInfoKHR.New ();
+            createInfos = VkSwapchainCreateInfoKHR.New();
 
             VkSurfaceFormatKHR[] formats = dev.phy.GetSurfaceFormats (presentQueue.Surface);
             for (int i = 0; i < formats.Length; i++) {
@@ -81,7 +81,7 @@ namespace VKE {
             createInfos.imageSharingMode = VkSharingMode.Exclusive;
             createInfos.compositeAlpha = VkCompositeAlphaFlagsKHR.OpaqueKHR;
             createInfos.presentMode = presentMode;
-            createInfos.clipped = true;
+            createInfos.clipped = 1;
 
             presentComplete = dev.CreateSemaphore ();
 #if DEBUG && DEBUG_MARKER
@@ -131,7 +131,7 @@ namespace VKE {
         }
 
         public int GetNextImage () {
-            VkResult res = vkAcquireNextImageKHR (dev.VkDev, handle, UInt64.MaxValue, presentComplete, VkFence.Null, ref currentImageIndex);
+            VkResult res = vkAcquireNextImageKHR (dev.VkDev, handle, UInt64.MaxValue, presentComplete, VkFence.Null, out currentImageIndex);
             if (res == VkResult.ErrorOutOfDateKHR || res == VkResult.SuboptimalKHR) {
                 Create ();
                 return -1;

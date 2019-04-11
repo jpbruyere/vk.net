@@ -25,9 +25,9 @@
 // THE SOFTWARE.
 using System;
 using System.Collections;
-using Vulkan;
+using VK;
 
-using static Vulkan.VulkanNative;
+using static VK.Vk;
 
 namespace VKE {
 
@@ -63,17 +63,21 @@ namespace VKE {
         }
         public void Present (SwapChain swapChain, VkSemaphore wait) {
             unsafe {
-                VkPresentInfoKHR present = VkPresentInfoKHR.New ();
+                VkPresentInfoKHR present = VkPresentInfoKHR.New();
 
                 uint idx = swapChain.currentImageIndex;
                 VkSwapchainKHR sc = swapChain.handle;
                 present.swapchainCount = 1;
-                present.pSwapchains = &sc;
+                present.pSwapchains = sc.Pin();
                 present.waitSemaphoreCount = 1;
-                present.pWaitSemaphores = &wait;
-                present.pImageIndices = &idx;
+                present.pWaitSemaphores = wait.Pin();
+                present.pImageIndices = idx.Pin();
 
                 Utils.CheckResult (vkQueuePresentKHR (handle, ref present));
+
+				sc.Unpin ();
+				wait.Unpin ();
+				idx.Unpin ();
             }
         }
     }

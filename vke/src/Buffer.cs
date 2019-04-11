@@ -25,10 +25,12 @@
 // THE SOFTWARE.
 using System;
 using System.Runtime.InteropServices;
-using Vulkan;
+using VK;
 using System.Runtime.CompilerServices;
 
-using static Vulkan.VulkanNative;
+using VK;
+using static VK.Vk;
+
 using System.Collections.Generic;
 
 namespace VKE {
@@ -95,7 +97,7 @@ namespace VKE {
     public class Buffer : Resource {
         internal VkBuffer handle;
         public VkDescriptorBufferInfo Descriptor;
-        protected VkBufferCreateInfo createInfo = VkBufferCreateInfo.New ();
+        protected VkBufferCreateInfo createInfo = VkBufferCreateInfo.New();
 
 #if DEBUG && DEBUG_MARKER
 		protected override VkDebugMarkerObjectNameInfoEXT DebugMarkerInfo

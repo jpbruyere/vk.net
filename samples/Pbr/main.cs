@@ -3,7 +3,7 @@ using System.Numerics;
 using System.Runtime.InteropServices;
 using Glfw;
 using VKE;
-using Vulkan;
+using VK;
 using Buffer = VKE.Buffer;
 
 namespace PbrSample {
@@ -105,7 +105,7 @@ namespace PbrSample {
 
 			cubemap = KTX.KTX.Load (presentQueue, cmdPool, cubemapPathes[0],
 				VkImageUsageFlags.Sampled, VkMemoryPropertyFlags.DeviceLocal, true);
-			cubemap.CreateView (VkImageViewType.ImageCube,VkImageAspectFlags.Color,6);
+			cubemap.CreateView (VkImageViewType.Cube,VkImageAspectFlags.Color,6);
 			cubemap.CreateSampler ();
 							
 			init ();
@@ -119,7 +119,7 @@ namespace PbrSample {
 				ShaderBinding.Emissive);
 		}
 
-		void init (VkSampleCountFlags samples = VkSampleCountFlags.Count4) { 
+		void init (VkSampleCountFlags samples = VkSampleCountFlags.SampleCount4) { 
 			descriptorPool = new DescriptorPool (dev, 2,
 				new VkDescriptorPoolSize (VkDescriptorType.UniformBuffer, 2),
 				new VkDescriptorPoolSize (VkDescriptorType.CombinedImageSampler, 2)
@@ -314,7 +314,7 @@ namespace PbrSample {
 
 			for (int i = 0; i < swapChain.ImageCount; ++i) {
 				frameBuffers[i] = new Framebuffer (pipeline.RenderPass, swapChain.Width, swapChain.Height,
-					(pipeline.Samples == VkSampleCountFlags.Count1) ? new Image[] {
+					(pipeline.Samples == VkSampleCountFlags.SampleCount1) ? new Image[] {
 						swapChain.images[i],
 						null
 					} : new Image[] {

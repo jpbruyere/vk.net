@@ -27,7 +27,7 @@ using System;
 using System.IO;
 using System.Numerics;
 
-namespace Vulkan {
+namespace VK {
     public static partial class Utils {
         public static void CheckResult (VkResult result, string errorString = "Call failed") {
             if (result != VkResult.Success)
@@ -121,9 +121,9 @@ namespace Vulkan {
             VkPipelineStageFlags srcStageMask = VkPipelineStageFlags.AllCommands,
             VkPipelineStageFlags dstStageMask = VkPipelineStageFlags.AllCommands) {
             // Create an image barrier object
-            VkImageMemoryBarrier imageMemoryBarrier = VkImageMemoryBarrier.New ();
-            imageMemoryBarrier.srcQueueFamilyIndex = VulkanNative.QueueFamilyIgnored;
-            imageMemoryBarrier.dstQueueFamilyIndex = VulkanNative.QueueFamilyIgnored;
+            VkImageMemoryBarrier imageMemoryBarrier = VkImageMemoryBarrier.New();
+            imageMemoryBarrier.srcQueueFamilyIndex = Vk.QueueFamilyIgnored;
+            imageMemoryBarrier.dstQueueFamilyIndex = Vk.QueueFamilyIgnored;
             imageMemoryBarrier.oldLayout = oldImageLayout;
             imageMemoryBarrier.newLayout = newImageLayout;
             imageMemoryBarrier.image = image;
@@ -218,7 +218,7 @@ namespace Vulkan {
             }
 
             // Put barrier inside setup command buffer
-            VulkanNative.vkCmdPipelineBarrier (
+            Vk.vkCmdPipelineBarrier (
                 cmdbuffer,
                 srcStageMask,
                 dstStageMask,

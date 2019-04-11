@@ -25,8 +25,9 @@
 // THE SOFTWARE.
 using System;
 using System.Runtime.InteropServices;
-using Vulkan;
-using static Vulkan.VulkanNative;
+using VK;
+using VK;
+using static VK.Vk;
 
 namespace VKE {
     public class CommandBuffer {
@@ -41,24 +42,25 @@ namespace VKE {
             pool = _pool;
             handle = _buff;
         }
-        unsafe public void Submit (VkQueue queue, VkSemaphore wait = default(VkSemaphore), VkSemaphore signal = default (VkSemaphore), VkFence fence = default(VkFence)) {
-            VkSubmitInfo submit_info = VkSubmitInfo.New ();
+		//TODO:unpin all pinned obj
+        public void Submit (VkQueue queue, VkSemaphore wait = default(VkSemaphore), VkSemaphore signal = default (VkSemaphore), VkFence fence = default(VkFence)) {
+            VkSubmitInfo submit_info = VkSubmitInfo.New();
             VkPipelineStageFlags dstStageMask = VkPipelineStageFlags.ColorAttachmentOutput;
             submit_info.commandBufferCount = 1;
-            submit_info.pWaitDstStageMask = &dstStageMask;
+            //submit_info.pWaitDstStageMask = dstStageMask.Pin();
             if (signal != VkSemaphore.Null) {
                 submit_info.signalSemaphoreCount = 1;
-                submit_info.pSignalSemaphores = &signal;
+                submit_info.pSignalSemaphores = signal.Pin();
             }
             if (wait != VkSemaphore.Null) {
                 submit_info.waitSemaphoreCount = 1;
-                submit_info.pWaitSemaphores = &wait;
+                submit_info.pWaitSemaphores = wait.Pin();
             }
             VkCommandBuffer cmd = handle;
-            submit_info.pCommandBuffers = &cmd;
+            submit_info.pCommandBuffers = cmd.Pin();
             Utils.CheckResult (vkQueueSubmit (queue, 1, ref submit_info, fence));
         }
-        public void Start (VkCommandBufferUsageFlags usage = VkCommandBufferUsageFlags.None) {
+        public void Start (VkCommandBufferUsageFlags usage = 0) {
             VkCommandBufferBeginInfo cmdBufInfo = new VkCommandBufferBeginInfo (usage);
             Utils.CheckResult (vkBeginCommandBuffer (handle, ref cmdBufInfo));
         }
@@ -109,7 +111,7 @@ namespace VKE {
 
 #if DEBUG && DEBUG_MARKER
 		public void BeginRegion (string name, float r = 1f, float g = 0.1f, float b=0.1f, float a = 1f) {
-			VkDebugMarkerMarkerInfoEXT info = VkDebugMarkerMarkerInfoEXT.New ();
+			VkDebugMarkerMarkerInfoEXT info = VkDebugMarkerMarkerInfoEXT.New;
 			info.pMarkerName = name.Pin ();
 			info.color_0 = r;
 			info.color_1 = g;
@@ -118,7 +120,7 @@ namespace VKE {
 			name.Unpin ();
 		}
 		public void InsertDebugMarker (string name, float r = 1f, float g = 0.1f, float b=0.1f, float a = 1f) {
-			VkDebugMarkerMarkerInfoEXT info = VkDebugMarkerMarkerInfoEXT.New ();
+			VkDebugMarkerMarkerInfoEXT info = VkDebugMarkerMarkerInfoEXT.New;
 			info.pMarkerName = name.Pin ();
 			info.color_0 = r;
 			info.color_1 = g;
