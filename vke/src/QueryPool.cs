@@ -131,7 +131,7 @@ namespace VKE {
 		public ulong[] GetResults () {
 			ulong[] results = new ulong[resultLength];
 			IntPtr ptr = results.Pin ();
-			vkGetQueryPoolResults (dev.VkDev, handle, 0, 1, resultLength * sizeof (ulong), ptr, sizeof (ulong), VkQueryResultFlags.QueryResult64);
+			vkGetQueryPoolResults (dev.VkDev, handle, 0, 1, (UIntPtr)(resultLength * sizeof (ulong)), ptr, sizeof (ulong), VkQueryResultFlags.QueryResult64);
 			results.Unpin ();
 			return results;
 		}
