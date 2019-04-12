@@ -27,7 +27,7 @@
     <Reference Include="System.Numerics" />
     <Reference Include="System" />
     <Reference Include="VK">
-      <HintPath>..\..\packages\VK.net.1.0.0\lib\netstandard2.0\VK.dll</HintPath>
+      <HintPath>..\..\packages\VK.net.0.1.0-alpha\lib\netstandard2.0\VK.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>

@@ -7,8 +7,8 @@
     <Description>C# vulkan binding</Description>
     <Company></Company>
     <Product>VK</Product>
-    <PackageId>VK.net</PackageId>
-<!--    <PackageVersion>$(AssemblyVersion)-alpha</PackageVersion>-->
+    <PackageId>Vulkan</PackageId>
+    <PackageVersion>$(AssemblyVersion)-alpha</PackageVersion>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <PackageProjectUrl>https://github.com/jpbruyere/vk.net/blob/master/README.md</PackageProjectUrl>
