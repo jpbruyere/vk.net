@@ -69,11 +69,7 @@ namespace Vk.Rewrite
                     foreach (MethodDefinition method in type.Methods)
 		            {
                         if (method.CustomAttributes.Any(ca => ca.AttributeType == s_calliRewriteRef))
-						{
-                            Console.WriteLine ($"rewrite {method.FullName}");
                             RewriteMethod (method);
-						    //method.CustomAttributes.Remove(method.CustomAttributes.Single(ca => ca.AttributeType == s_calliRewriteRef));
-						}
 		            }                
 				}
                 vkDll.Write(outputPath);

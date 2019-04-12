@@ -28,17 +28,17 @@
   <ItemGroup>
     <Reference Include="System.Numerics" />
     <Reference Include="VK">
-      <HintPath>..\..\packages\VK.net.1.0.0\lib\netstandard2.0\VK.dll</HintPath>
+      <HintPath>..\..\packages\Vulkan.0.1.1-alpha\lib\netstandard2.0\VK.dll</HintPath>
     </Reference>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\vke\VKE.csproj">
       <Project>{32B7E80D-BEA7-4811-B82D-CC2533069F0A}</Project>
       <Name>VKE</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)spirv.targets" />
