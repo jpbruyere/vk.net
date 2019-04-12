@@ -28,7 +28,6 @@ using System.Runtime.InteropServices;
 using VK;
 using System.Runtime.CompilerServices;
 
-using VK;
 using static VK.Vk;
 
 using System.Collections.Generic;

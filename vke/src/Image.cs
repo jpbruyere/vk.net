@@ -490,9 +490,9 @@ namespace VKE {
 			for (int i = 1; i < info.mipLevels; i++) {
 				VkImageBlit imageBlit = new VkImageBlit {
 					srcSubresource = new VkImageSubresourceLayers(VkImageAspectFlags.Color, info.arrayLayers, (uint)i - 1),
-					srcOffsets_1 = new VkOffset3D((int)info.extent.width >> (i - 1), (int)info.extent.height >> (i - 1),1),
+					srcOffsets_1 = new VkOffset3D ((int)info.extent.width >> (i - 1), (int)info.extent.height >> (i - 1), 1),
 					dstSubresource = new VkImageSubresourceLayers (VkImageAspectFlags.Color, info.arrayLayers, (uint)i),
-					dstOffsets_1 = new VkOffset3D ((int)info.extent.width >> i, (int)info.extent.height >> i, 1),
+					dstOffsets_1 = new VkOffset3D ((int)info.extent.width >> i, (int)info.extent.height >> i, 1)
 				};
 
 				mipSubRange.baseMipLevel = (uint)i;

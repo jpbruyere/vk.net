@@ -36,6 +36,9 @@
     <Reference Include="glTFLoader">
       <HintPath>..\packages\glTF2Loader.1.1.3-alpha\lib\net35\glTFLoader.dll</HintPath>
     </Reference>
+    <Reference Include="VK">
+      <HintPath>..\packages\VK.net.1.0.0\lib\netstandard2.0\VK.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>        
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -43,12 +46,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\vk.generator\VK\VK.csproj">
-      <Project>{F25D42B5-CE69-4B3B-A621-06908906739A}</Project>
-      <Name>VK</Name>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />    
 </Project>

@@ -4,7 +4,6 @@ using System.Runtime.InteropServices;
 using Glfw;
 using VKE;
 using VK;
-using Buffer = VKE.Buffer;
 
 namespace PbrSample {
 	class Program : VkWindow {
