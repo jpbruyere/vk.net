@@ -85,19 +85,19 @@ namespace VKE {
             initVulkan (vSync);
         }
 #if DEBUG
-		DebugReport dbgRepport;
+		//DebugReport dbgRepport;
 #endif
 		void initVulkan (bool vSync) {
             instance = new Instance ();
 
 #if DEBUG
-			dbgRepport = new DebugReport (instance,
-				VkDebugReportFlagsEXT.ErrorEXT 
-				| VkDebugReportFlagsEXT.DebugEXT 
-				| VkDebugReportFlagsEXT.WarningEXT 
-				| VkDebugReportFlagsEXT.PerformanceWarningEXT 
-				//| VkDebugReportFlagsEXT.InformationEXT
-			);
+			//dbgRepport = new DebugReport (instance,
+			//	VkDebugReportFlagsEXT.ErrorEXT 
+			//	| VkDebugReportFlagsEXT.DebugEXT 
+			//	| VkDebugReportFlagsEXT.WarningEXT 
+			//	| VkDebugReportFlagsEXT.PerformanceWarningEXT 
+			//	//| VkDebugReportFlagsEXT.InformationEXT
+			//);
 #endif
 
 			hSurf = instance.CreateSurface (hWin);
@@ -251,7 +251,7 @@ namespace VKE {
 				if (disposing) {
 					dev.Dispose ();
 #if DEBUG
-					dbgRepport.Dispose ();
+					//dbgRepport.Dispose ();
 #endif
 					instance.Dispose ();
 				} else

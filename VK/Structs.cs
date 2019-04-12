@@ -28,16 +28,16 @@ using System.Runtime.InteropServices;
 
 namespace VK {
 
-    public partial struct VkImageBlit {
-        public VkImageSubresourceLayers srcSubresource;
-        /// <summary> Specified in pixels for both compressed and uncompressed images </summary>
-        public VkOffset3D srcOffsets_0;
-        public VkOffset3D srcOffsets_1;
-        public VkImageSubresourceLayers dstSubresource;
-        /// <summary> Specified in pixels for both compressed and uncompressed images </summary>
-        public VkOffset3D dstOffsets_0;
-        public VkOffset3D dstOffsets_1;
-    }
+    //public partial struct VkImageBlit {
+    //    public VkImageSubresourceLayers srcSubresource;
+    //    /// <summary> Specified in pixels for both compressed and uncompressed images </summary>
+    //    public VkOffset3D srcOffsets_0;
+    //    public VkOffset3D srcOffsets_1;
+    //    public VkImageSubresourceLayers dstSubresource;
+    //    /// <summary> Specified in pixels for both compressed and uncompressed images </summary>
+    //    public VkOffset3D dstOffsets_0;
+    //    public VkOffset3D dstOffsets_1;
+    //}
 
 	[StructLayout (LayoutKind.Explicit)]
 	public struct VkClearValue {
@@ -217,21 +217,15 @@ namespace VK {
 		}
 	}
 
-    [StructLayout(LayoutKind.Sequential)]
-    public struct VkPhysicalDeviceMemoryProperties
-    {
-        public uint memoryTypeCount;
-        [MarshalAs (UnmanagedType.ByValArray, SizeConst = 32)]
-        public VkMemoryType[] memoryTypes;
-        public uint memoryHeapCount;
-        [MarshalAs (UnmanagedType.ByValArray, SizeConst = 16)]
-        public VkMemoryHeap[] memoryHeaps;
-    }
-
-    public unsafe struct VkExtensionProperties
-    {
-        public fixed byte extensionName[(int)Vk.MaxExtensionNameSize];
-        public uint specVersion;
-    }
+    //[StructLayout(LayoutKind.Sequential)]
+    //public struct VkPhysicalDeviceMemoryProperties
+    //{
+    //    public uint memoryTypeCount;
+    //    [MarshalAs (UnmanagedType.ByValArray, SizeConst = 32)]
+    //    public VkMemoryType[] memoryTypes;
+    //    public uint memoryHeapCount;
+    //    [MarshalAs (UnmanagedType.ByValArray, SizeConst = 16)]
+    //    public VkMemoryHeap[] memoryHeaps;
+    //}
 }
 

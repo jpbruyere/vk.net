@@ -45,9 +45,11 @@ namespace VKE {
 		//TODO:unpin all pinned obj
         public void Submit (VkQueue queue, VkSemaphore wait = default(VkSemaphore), VkSemaphore signal = default (VkSemaphore), VkFence fence = default(VkFence)) {
             VkSubmitInfo submit_info = VkSubmitInfo.New();
-            VkPipelineStageFlags dstStageMask = VkPipelineStageFlags.ColorAttachmentOutput;
-            submit_info.commandBufferCount = 1;
-            //submit_info.pWaitDstStageMask = dstStageMask.Pin();
+
+			IntPtr dstStageMask = Marshal.AllocHGlobal (sizeof(uint));
+			Marshal.WriteInt32 (dstStageMask, (int)VkPipelineStageFlags.ColorAttachmentOutput);
+
+            submit_info.pWaitDstStageMask = dstStageMask;
             if (signal != VkSemaphore.Null) {
                 submit_info.signalSemaphoreCount = 1;
                 submit_info.pSignalSemaphores = signal.Pin();
@@ -56,9 +58,17 @@ namespace VKE {
                 submit_info.waitSemaphoreCount = 1;
                 submit_info.pWaitSemaphores = wait.Pin();
             }
-            VkCommandBuffer cmd = handle;
-            submit_info.pCommandBuffers = cmd.Pin();
+
+            submit_info.commandBufferCount = 1;
+            submit_info.pCommandBuffers = handle.Pin();
+
             Utils.CheckResult (vkQueueSubmit (queue, 1, ref submit_info, fence));
+
+			handle.Unpin ();
+			signal.Unpin ();
+			wait.Unpin ();
+
+			Marshal.FreeHGlobal (dstStageMask);
         }
         public void Start (VkCommandBufferUsageFlags usage = 0) {
             VkCommandBufferBeginInfo cmdBufInfo = new VkCommandBufferBeginInfo (usage);
