@@ -37,7 +37,7 @@
       <HintPath>..\packages\glTF2Loader.1.1.3-alpha\lib\net35\glTFLoader.dll</HintPath>
     </Reference>
     <Reference Include="VK">
-      <HintPath>..\packages\Vulkan.0.1.0-alpha\lib\netstandard2.0\VK.dll</HintPath>
+      <HintPath>..\packages\Vulkan.0.1.1-alpha\lib\netstandard2.0\VK.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>        

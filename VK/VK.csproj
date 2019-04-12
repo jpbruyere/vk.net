@@ -3,7 +3,7 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     
     <Copyright></Copyright>
-    <AssemblyVersion>0.1.0</AssemblyVersion>
+    <AssemblyVersion>0.1.1</AssemblyVersion>
     <Description>C# vulkan binding</Description>
     <Company></Company>
     <Product>VK</Product>
@@ -18,18 +18,18 @@
     <PackageTags>C# vulkan net binding</PackageTags>    
     <Authors>Jean-Philippe Bruyère</Authors>
     <PackageReleaseNotes></PackageReleaseNotes>
-  </PropertyGroup>
-
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <CustomCommands>
       <CustomCommands>
         <Command>
           <type>AfterBuild</type>
-          <command>mono /mnt/devel/gts/vk.generator/vk.rewrite/bin/Debug/vk.rewrite.exe ${TargetFile}</command>
+          <command>mono $(SolutionDir)vk.rewrite/bin/$(Configuration)/vk.rewrite.exe ${TargetFile}</command>
         </Command>
       </CustomCommands>
-    </CustomCommands>
+    </CustomCommands>        
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <DefineConstants>VK_VERSION_1_0;VK_VERSION_1_1;TRACE;DEBUG;NETSTANDARD;NETSTANDARD2_0</DefineConstants>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
