@@ -162,7 +162,7 @@ namespace vk.generator {
 			{ "AHardwareBuffer", "Android.ANativeWindow" },//must be corrected
 
         };
-		static string[] skipStructs = { "VkImageBlit", "VkPhysicalDeviceMemoryProperties","VkExtensionProperties" };
+
 		static string[] skipEnums = { "VK_STRUCTURE_TYPE_SURFACE_CAPABILITIES2_EXT" };
 
 		static Dictionary<string, string[]> paramTypeAliases = new Dictionary<string, string[]> {
@@ -293,6 +293,7 @@ namespace vk.generator {
 			public bool nullTerminated;
 			public string lenMember;
 			public string defaultValue;
+			public string fixedArray;
 
 			public override string ToString () {
 				return string.Format ($"memberdef: {typedef.FullCTypeDecl} {name}");
@@ -397,18 +398,28 @@ namespace vk.generator {
 		}
 
 		static void gen_struct (IndentedTextWriter tw, StructDef sd) {
-			if (skipStructs.Contains (sd.Name))//struct with fixed array are done manually for now
-				return;
 			tw.WriteLine ($"public partial struct {sd.Name} {{");
 			tw.Indent++;
 			foreach (MemberDef mb in sd.members) {
 				if (!string.IsNullOrEmpty (mb.comment))
 					tw.WriteLine ($"/// <summary> {mb.comment} </summary>");
+
 				string typeStr;
 				if (mb.typedef.IndirectionLevel > 0)
 					typeStr = "IntPtr";
 				else
 					typeStr = mb.typedef.CSName;
+
+				if (!string.IsNullOrEmpty (mb.fixedArray)) {
+					int dim = 0;
+					if (int.TryParse (mb.fixedArray, out dim)) {
+						tw.WriteLine ($"[MarshalAs (UnmanagedType.ByValArray, SizeConst = {dim})]");
+					} else { 
+						tw.WriteLine ($"[MarshalAs (UnmanagedType.ByValArray, SizeConst = (int)Vk.{EnumerantValue.GetCSName(mb.fixedArray,null).Substring(2)})]");
+					}
+					typeStr += "[]";
+				}
+
 				tw.WriteLine ($"public {typeStr} {mb.Name};");
 			}
 
@@ -422,7 +433,7 @@ namespace vk.generator {
 		static void gen_structs (string englobingStaticClass) {
 			using (StreamWriter sr = new StreamWriter ($"structs_{englobingStaticClass}_gen.cs", false, System.Text.Encoding.UTF8)) {
 				using (IndentedTextWriter tw = new IndentedTextWriter (sr)) {
-					writePreamble (tw);
+					writePreamble (tw, "System.Runtime.InteropServices");
 					tw.Indent++;
 
 					//tw.WriteLine ($"public static partial class {englobingStaticClass} {{");
@@ -763,16 +774,16 @@ namespace vk.generator {
 
 			switch (pTrims.Substring(i).ToLower()) {
 				case "u":
-					tw.WriteLine ($"{"public const uint " + cd.GetCSName (),-50} = {cd.value};");
+					tw.WriteLine ($"{"public const uint " + cd.GetCSName ().Substring(2),-50} = {cd.value};");
 					break;
 				case "ull":
-					tw.WriteLine ($"{"public const ulong " + cd.GetCSName (),-50} = ({pTrims.Remove(pTrims.Length-1)});");
+					tw.WriteLine ($"{"public const ulong " + cd.GetCSName ().Substring(2),-50} = ({pTrims.Remove(pTrims.Length-1)});");
 					break;
 				case "f":
-					tw.WriteLine ($"{"public const float " + cd.GetCSName (),-50} = {cd.value};");
+					tw.WriteLine ($"{"public const float " + cd.GetCSName ().Substring(2),-50} = {cd.value};");
 					break;
 				default:
-					tw.WriteLine ($"{"public const uint " + cd.GetCSName (),-50} = {cd.value};");
+					tw.WriteLine ($"{"public const uint " + cd.GetCSName ().Substring(2),-50} = {cd.value};");
 					break;
 			}
 		}
@@ -813,16 +824,17 @@ namespace vk.generator {
 				case 1:
 					return (string.Format ($"IntPtr {md.Name}{(isLast ? ", " : ")")}"));
 				case 2:
-					return (string.Format ($"IntPtr {md.Name}{(isLast ? ", " : ")")}"));
+					return (string.Format ($"ref IntPtr {md.Name}{(isLast ? ", " : ")")}"));
 			}
 			return null;
 		}
 		static string getByRefParamSig (MemberDef md, bool isLast) {
+			string typeName = md.typedef.CSName == "void" ? "IntPtr" : md.typedef.CSName;
 			switch (md.typedef.IndirectionLevel) {
 				case 1:
 					return md.typedef.IsConst ?
-						(string.Format ($"ref {md.typedef.CSName} {md.Name}{(isLast ? ", " : ")")}")) :
-						(string.Format ($"out {md.typedef.CSName} {md.Name}{(isLast ? ", " : ")")}"));
+						(string.Format ($"ref {typeName} {md.Name}{(isLast ? ", " : ")")}")) :
+						(string.Format ($"out {typeName} {md.Name}{(isLast ? ", " : ")")}"));
 				case 2:
 					return md.typedef.IsConst ?
 						string.Format ($"ref IntPtr {md.Name}{(isLast ? ", " : ")")}") :
@@ -846,10 +858,13 @@ namespace vk.generator {
 
 			List<string> signatures = new List<string> () { "" };
 
+			//if (cd.Name == "vkRegisterObjectsNVX")
+				//Debugger.Break ();
+
 			for (int i = 0; i < cd.parameters.Count; i++) {
 				MemberDef md = cd.parameters[i];
 				List<string> typeSigs = new List<string> () { getDefaultParamSig (md, i < cd.parameters.Count - 1) };
-				if (md.typedef.IndirectionLevel > 0 && md.typedef.Name != "void")
+				if (md.typedef.IndirectionLevel == 1 && md.typedef.Name != "void")
 					typeSigs.Add (getByRefParamSig (md, i < cd.parameters.Count - 1));
 
 				string[] prevSigs = new string[signatures.Count];
@@ -987,6 +1002,114 @@ namespace vk.generator {
 		#endregion
 
 		#region vk.xml parsing
+		static void readType (XmlNode nType) {
+		 
+			if (nType.Attributes ["alias"] != null) {
+				aliases.Add (nType.Attributes["name"].Value, nType.Attributes["alias"].Value);
+				return;
+			}
+
+			TypeCategories category = TypeCategories.none;
+			if (nType.Attributes["category"] != null)
+				category = (TypeCategories)Enum.Parse (typeof (TypeCategories), nType.Attributes["category"].Value, true);
+			switch (category) {
+				case TypeCategories.none:
+					return;
+				case TypeCategories.basetype:
+					types.Add (new TypeDef {
+						category = category,
+						Name = nType["name"].InnerText,
+						baseType = nType["type"].InnerText
+					});
+					break;
+				case TypeCategories.bitmask:
+					TypeDef ed = new TypeDef {
+						category = category,
+						Name = nType["name"].InnerText
+					};
+					if (nType.Attributes ["requires"] == null)
+						ed.baseType = nType["type"].InnerXml;
+					else
+						ed.require = nType.Attributes["requires"].Value;
+					types.Add (ed);
+					break;
+				case TypeCategories.handle:
+					types.Add (new HandleDef {
+						category = category,
+						Name = nType["name"].InnerText,
+						baseType = nType["type"]?.InnerText,
+						parent = nType.Attributes["parent"]?.Value
+					});
+					break;
+				case TypeCategories.funcpointer:
+					FuncpointerDef fp = new FuncpointerDef {
+						category = category,
+						Name = nType["name"].InnerText
+					};
+					string returnTypeStr = nType.InnerText.Substring(8);//trim leading typedef
+					returnTypeStr = returnTypeStr.Remove (returnTypeStr.IndexOf ('(')).Trim();
+					switch (returnTypeStr) {
+						case "void":
+							fp.returnType = new ParamDef () { Name = "void" };
+							break;
+						case "void*":
+							fp.returnType = new ParamDef () { Name = "IntPtr" };
+							break;
+						default:
+							fp.returnType = new ParamDef () { Name = returnTypeStr };
+							break;
+					}
+					types.Add (fp);
+					break;
+				case TypeCategories.@enum:
+					types.Add (new TypeDef {
+						category = category,
+						Name = nType.Attributes["name"].Value,
+					});
+					break;
+				case TypeCategories.define:
+					Console.ForegroundColor = ConsoleColor.Cyan;
+					Console.WriteLine (nType.InnerXml);
+					break;
+				case TypeCategories.include:
+				case TypeCategories.group:
+				case TypeCategories.union:
+					Console.ForegroundColor = ConsoleColor.DarkMagenta;
+					Console.WriteLine ($"Unprocessed type category {category}: {nType.OuterXml}");
+					Console.ForegroundColor = ConsoleColor.Gray;
+					break;
+				case TypeCategories.@struct:
+					StructDef sd = new StructDef {
+						Name = nType.Attributes["name"].Value,
+						category = category
+					};
+					foreach (XmlNode m in nType.ChildNodes) {
+						if ((m.NodeType != XmlNodeType.Element)) {
+							Console.WriteLine ($"expecting element, having {m.NodeType}: {m.OuterXml}");
+							continue;
+						}
+						switch (m.Name) {
+							case "comment":
+								break;
+							case "member":
+								sd.members.Add (parseMember (m));
+								break;
+							default:
+								Console.ForegroundColor = ConsoleColor.Red;
+								Console.WriteLine ($"unknown element in struct def : {m.OuterXml}");
+								Console.ForegroundColor = ConsoleColor.Gray;
+								break;
+						}
+					}
+					types.Add (sd);
+					break;					
+				default:
+					Console.ForegroundColor = ConsoleColor.DarkMagenta;
+					Console.WriteLine ($"Unprocessed type: {nType.OuterXml}");
+					Console.ForegroundColor = ConsoleColor.Gray;
+					break;
+			}
+		}
 		public static void readEnum (XmlNode nEnum) {
 			if (nEnum.Attributes ["name"]?.Value == "API Constants") {
 				//constants
@@ -1233,11 +1356,13 @@ namespace vk.generator {
 			if (reservedNames.Contains (md.Name))
 				md.Name = "_" + md.Name;
 
-			//XmlNode ns = np["name"].NextSibling;
-			//if (ns?.NodeType == XmlNodeType.Text) {
-			//	if (!string.IsNullOrEmpty (ns.InnerText))
-			//		Debugger.Break ();
-			//}
+			XmlNode ns = np["name"].NextSibling;
+			if (ns?.NodeType == XmlNodeType.Text && ns.Value.StartsWith ("[",StringComparison.Ordinal)) {
+				if (np["enum"] != null) {
+					md.fixedArray = np["enum"].InnerXml;
+				} else
+					md.fixedArray = ns.Value.Substring(1, ns.InnerText.Length-2);
+			}
 
 
 
@@ -1282,119 +1407,11 @@ namespace vk.generator {
 			//	Console.WriteLine ($"{p.GetAttribute ("name"),-20}{p.GetAttribute ("protect"),-50}{p.GetAttribute ("comment")}");
 			//}
 
-			Console.WriteLine ("======== TAGS =========");
-			foreach (XmlNode p in doc.GetElementsByTagName ("tags").Item (0)) {
+			foreach (XmlNode p in doc.GetElementsByTagName ("tags").Item (0)) 
 				tags.Add (p.Attributes["name"].Value.ToString ());
-			}
 
-
-			Console.WriteLine ("======== TYPES =========");
-			foreach (XmlNode p in doc.GetElementsByTagName ("types").Item (0)) {
-				if (p.Attributes ["alias"] != null) {
-					aliases.Add (p.Attributes["name"].Value, p.Attributes["alias"].Value);
-					continue;
-				}
-				TypeCategories category = TypeCategories.none;
-				if (p.Attributes["category"] != null)
-					category = (TypeCategories)Enum.Parse (typeof (TypeCategories), p.Attributes["category"].Value, true);
-				switch (category) {
-					case TypeCategories.none:
-						continue;
-					case TypeCategories.basetype:
-						types.Add (new TypeDef {
-							category = category,
-							Name = p["name"].InnerText,
-							baseType = p["type"].InnerText
-						});
-						break;
-					case TypeCategories.bitmask:
-						TypeDef ed = new TypeDef {
-							category = category,
-							Name = p["name"].InnerText
-						};
-						if (p.Attributes ["requires"] == null)
-							ed.baseType = p["type"].InnerXml;
-						else
-							ed.require = p.Attributes["requires"].Value;
-						types.Add (ed);
-						break;
-					case TypeCategories.handle:
-						types.Add (new HandleDef {
-							category = category,
-							Name = p["name"].InnerText,
-							baseType = p["type"]?.InnerText,
-							parent = p.Attributes["parent"]?.Value
-						});
-						break;
-					case TypeCategories.funcpointer:
-						FuncpointerDef fp = new FuncpointerDef {
-							category = category,
-							Name = p["name"].InnerText
-						};
-						string returnTypeStr = p.InnerText.Substring(8);//trim leading typedef
-						returnTypeStr = returnTypeStr.Remove (returnTypeStr.IndexOf ('(')).Trim();
-						switch (returnTypeStr) {
-							case "void":
-								fp.returnType = new ParamDef () { Name = "void" };
-								break;
-							case "void*":
-								fp.returnType = new ParamDef () { Name = "IntPtr" };
-								break;
-							default:
-								fp.returnType = new ParamDef () { Name = returnTypeStr };
-								break;
-						}
-						types.Add (fp);
-						break;
-					case TypeCategories.@enum:
-						types.Add (new TypeDef {
-							category = category,
-							Name = p.Attributes["name"].Value,
-						});
-						break;
-					case TypeCategories.define:
-						Console.ForegroundColor = ConsoleColor.Cyan;
-						Console.WriteLine (p.InnerXml);
-						break;
-					case TypeCategories.include:
-					case TypeCategories.group:
-					case TypeCategories.union:
-						Console.ForegroundColor = ConsoleColor.DarkMagenta;
-						Console.WriteLine ($"Unprocessed type category {category}: {p.OuterXml}");
-						Console.ForegroundColor = ConsoleColor.Gray;
-						break;
-					case TypeCategories.@struct:
-						StructDef sd = new StructDef {
-							Name = p.Attributes["name"].Value,
-							category = category
-						};
-						foreach (XmlNode m in p.ChildNodes) {
-							if ((m.NodeType != XmlNodeType.Element)) {
-								Console.WriteLine ($"expecting element, having {m.NodeType}: {m.OuterXml}");
-								continue;
-							}
-							switch (m.Name) {
-								case "comment":
-									break;
-								case "member":
-									sd.members.Add (parseMember (m));
-									break;
-								default:
-									Console.ForegroundColor = ConsoleColor.Red;
-									Console.WriteLine ($"unknown element in struct def : {m.OuterXml}");
-									Console.ForegroundColor = ConsoleColor.Gray;
-									break;
-							}
-						}
-						types.Add (sd);
-						break;					
-					default:
-						Console.ForegroundColor = ConsoleColor.DarkMagenta;
-						Console.WriteLine ($"Unprocessed type: {p.OuterXml}");
-						Console.ForegroundColor = ConsoleColor.Gray;
-						break;
-				}
-			}
+			foreach (XmlNode p in doc.GetElementsByTagName ("types").Item (0)) 
+				readType (p);
 
 			XmlNodeList enumsNL = doc.GetElementsByTagName ("enums");
 			for (int i = 0; i < enumsNL.Count; i++)
