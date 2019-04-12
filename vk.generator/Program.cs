@@ -396,9 +396,9 @@ namespace vk.generator {
 			tw.Indent--;
 			tw.WriteLine (@"}");
 		}
-
+		static string[] valueTypes = { "byte", "int", "uint", "float", "ushort", "ulong" };
 		static void gen_struct (IndentedTextWriter tw, StructDef sd) {
-			tw.WriteLine ($"public partial struct {sd.Name} {{");
+			tw.WriteLine ($"public unsafe partial struct {sd.Name} {{");
 			tw.Indent++;
 			foreach (MemberDef mb in sd.members) {
 				if (!string.IsNullOrEmpty (mb.comment))
@@ -412,14 +412,24 @@ namespace vk.generator {
 
 				if (!string.IsNullOrEmpty (mb.fixedArray)) {
 					int dim = 0;
+					if (valueTypes.Contains (typeStr)) { 
+						if (int.TryParse (mb.fixedArray, out dim)) {
+							tw.WriteLine ($"public fixed {typeStr} {mb.Name}[{dim}];");
+						} else { 
+							tw.WriteLine ($"public fixed {typeStr} {mb.Name}[(int)Vk.{EnumerantValue.GetCSName(mb.fixedArray,null).Substring(2)}];");
+						}
+						continue;
+					}
 					if (int.TryParse (mb.fixedArray, out dim)) {
-						tw.WriteLine ($"[MarshalAs (UnmanagedType.ByValArray, SizeConst = {dim})]");
+						for (int i = 0; i < dim; i++) {
+							tw.WriteLine ($"public {typeStr} {mb.Name}_{i};");
+						}
 					} else { 
 						tw.WriteLine ($"[MarshalAs (UnmanagedType.ByValArray, SizeConst = (int)Vk.{EnumerantValue.GetCSName(mb.fixedArray,null).Substring(2)})]");
+						tw.WriteLine ($"public {typeStr}[] {mb.Name};");
 					}
-					typeStr += "[]";
+					continue;
 				}
-
 				tw.WriteLine ($"public {typeStr} {mb.Name};");
 			}
 
@@ -796,7 +806,7 @@ namespace vk.generator {
 					tw.WriteLine ($"public static partial class {englobingStaticClass} {{");
 					tw.Indent++;
 
-					foreach (EnumerantValue cd in Constants.Where(c=>c.definedBy.Count == 0))
+					foreach (EnumerantValue cd in Constants)
 						gen_constant_value (tw, cd);					
 
 					//foreach (FeatureDef fd in features) {

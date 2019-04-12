@@ -27,15 +27,17 @@
   </ItemGroup>  
   <ItemGroup>
     <Reference Include="System.Numerics" />
+    <Reference Include="VK">
+      <HintPath>..\..\packages\VK.net.1.0.0\lib\netstandard2.0\VK.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\vke\VKE.csproj">
       <Project>{32B7E80D-BEA7-4811-B82D-CC2533069F0A}</Project>
       <Name>VKE</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\..\vk.generator\VK\VK.csproj">
-      <Project>{F25D42B5-CE69-4B3B-A621-06908906739A}</Project>
-      <Name>VK</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />

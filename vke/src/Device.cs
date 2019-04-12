@@ -88,13 +88,14 @@ namespace VKE {
             }
 
             Utils.CheckResult (vkCreateDevice (phy.Handle, ref deviceCreateInfo, IntPtr.Zero, out dev));
-
             qInfos.Unpin ();
 			enabledFeatures.Unpin ();
 			foreach (List<float> fa in prioritiesLists) 
 				fa.Unpin ();
 
             deviceExtensions.Unpin ();
+
+			//Vk.LoadDeviceFunctionPointers (dev);
 
             foreach (Queue q in queues)
                 q.updateHandle ();

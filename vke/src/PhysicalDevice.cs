@@ -86,7 +86,6 @@ namespace VKE {
 
         public bool HasSwapChainSupport { get; private set; }
         public IntPtr Handle => phy;
-		public VkPhysicalDeviceLimits Limits => deviceProperties.limits;
 
         public PhysicalDevice (IntPtr vkPhy) {
             phy = vkPhy;
@@ -137,7 +136,7 @@ namespace VKE {
                             break;
                     }
                 }
-            }
+			}		
         }
 
 
