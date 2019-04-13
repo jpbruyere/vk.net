@@ -40,7 +40,7 @@ namespace VKE {
             UIntPtr location, int messageCode, IntPtr pLayerPrefix, IntPtr pMessage, IntPtr pUserData) {
             string prefix = "";
             switch (flags) {
-                case VkDebugReportFlagsEXT.None:
+                case 0:
                     prefix = "?";
                     break;
                 case VkDebugReportFlagsEXT.InformationEXT:

@@ -19,6 +19,8 @@ namespace ModelSample {
 		public override string[] EnabledExtensions =>  new string[] {"VK_KHR_swapchain","VK_EXT_debug_marker"};
 #endif
 		PipelineStatisticsQueryPool statPool;
+		TimestampQueryPool timestampQPool;
+
 		ulong[] results;
 
 		protected override void configureEnabledFeatures (ref VkPhysicalDeviceFeatures features) {
@@ -108,17 +110,25 @@ namespace ModelSample {
 					ctx.MoveTo (x, y);
 					ctx.ShowText (string.Format ($"{statPool.RequestedStats[i].ToString(),-30} :{results[i],12:0,0} "));
 				}
+				//y += dy;
+				//ctx.MoveTo (x, y);
+				//ctx.ShowText (string.Format ($"{"TimeStamp Start",-24} :{timeStamps[0],18:0,0} "));
+				//y += dy;
+				//ctx.MoveTo (x, y);
+				//ctx.ShowText (string.Format ($"{"TimeStamp End  ",-24} :{timeStamps[1],18:0,0} "));
+				y += dy;
+				ctx.MoveTo (x, y);
+				ctx.ShowText (string.Format ($"{"Elapsed microsecond",-20} :{timestampQPool.ElapsedMiliseconds:0.0000} "));
 			}
 		}
 
 		Program () : base () {
 			vkvgDev = new vkvg.Device (instance.Handle, phy.Handle, dev.VkDev.Handle, presentQueue.qFamIndex,
-				vkvg.SampleCount.Sample_8, presentQueue.index);
+				vkvg.SampleCount.Sample_4, presentQueue.index);
 					
 			init ();
-			//model = new Model (dev, presentQueue, cmdPool, "/mnt/devel/vkChess/data/chess.gltf");
-			//model = new Model (dev, presentQueue, cmdPool, "/mnt/devel/tmp/gltf-pbr-datasave/models/chess.gltf");
-			model = new Model (dev, presentQueue, cmdPool, "../data/models/DamagedHelmet/glTF/DamagedHelmet.gltf");
+			model = new Model (dev, presentQueue, cmdPool, "/mnt/devel/vkChess/data/chess.gltf");
+			//model = new Model (dev, presentQueue, cmdPool, "../data/models/DamagedHelmet/glTF/DamagedHelmet.gltf");
 			model.WriteMaterialsDescriptorSets (descLayoutTextures,
 				ShaderBinding.Color,
 				ShaderBinding.Normal,
@@ -193,6 +203,8 @@ namespace ModelSample {
 				VkQueryPipelineStatisticFlags.ClippingPrimitives |
 				VkQueryPipelineStatisticFlags.FragmentShaderInvocations);
 
+			timestampQPool = new TimestampQueryPool (dev);
+
 		}
 
 		void buildCommandBuffers () {
@@ -237,6 +249,8 @@ namespace ModelSample {
 #endif 
 			uiPipeline.Bind (cmd);
 
+			timestampQPool.Start (cmd);
+
 			vkvgImage.SetLayout (cmd, VkImageAspectFlags.Color, VkImageLayout.ColorAttachmentOptimal, VkImageLayout.ShaderReadOnlyOptimal,
 				VkPipelineStageFlags.ColorAttachmentOutput, VkPipelineStageFlags.FragmentShader);
 
@@ -244,6 +258,8 @@ namespace ModelSample {
 
 			vkvgImage.SetLayout (cmd, VkImageAspectFlags.Color, VkImageLayout.ShaderReadOnlyOptimal, VkImageLayout.ColorAttachmentOptimal,
 				VkPipelineStageFlags.FragmentShader, VkPipelineStageFlags.BottomOfPipe);
+
+			timestampQPool.End (cmd);
 
 			pipeline.RenderPass.End (cmd);
 #if DEBUG && DEBUG_MARKER
@@ -359,9 +375,9 @@ namespace ModelSample {
 			vkvgImage?.Dispose ();
 			vkvgSurf?.Dispose ();
 			vkvgSurf = new vkvg.Surface (vkvgDev, (int)swapChain.Width, (int)swapChain.Height);
-			vkvgImage = new Image (dev, new VkImage ((ulong)vkvgSurf.VkImage.ToInt64 ()), VkFormat.R8g8b8a8Unorm,
+			vkvgImage = new Image (dev, new VkImage ((ulong)vkvgSurf.VkImage.ToInt64 ()), VkFormat.B8g8r8a8Unorm,
 				VkImageUsageFlags.ColorAttachment, (uint)vkvgSurf.Width, (uint)vkvgSurf.Height);
-			vkvgImage.CreateView ();
+			vkvgImage.CreateView (VkImageViewType.ImageView2D, VkImageAspectFlags.Color);
 			vkvgImage.CreateSampler (VkFilter.Nearest,VkFilter.Nearest, VkSamplerMipmapMode.Nearest, VkSamplerAddressMode.ClampToBorder);
 
 			vkvgImage.Descriptor.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
@@ -408,6 +424,9 @@ namespace ModelSample {
 					uboMats.Dispose ();
 					vkvgSurf?.Dispose ();
 					vkvgDev.Dispose ();
+
+					timestampQPool.Dispose ();
+					statPool.Dispose ();
 				}
 			}
 

@@ -29,7 +29,8 @@ using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using VK;
-
+using static VK.Vk;
+	
 namespace VKE {
     public static class ExtensionMethods {
 		public static bool AreEquals (this byte[] b, byte[] other) {
@@ -87,43 +88,43 @@ namespace VKE {
 		public static void SetDebugMarkerName (this VkCommandBuffer obj, Device dev, string name) {
 			VkDebugMarkerObjectNameInfoEXT dmo = new VkDebugMarkerObjectNameInfoEXT (VkDebugReportObjectTypeEXT.CommandBufferEXT,
 				(ulong)obj.Handle.ToInt64 ()) { pObjectName = name.Pin () };
-			Utils.CheckResult (VulkanNative.vkDebugMarkerSetObjectNameEXT (dev.VkDev, ref dmo));
+			Utils.CheckResult (vkDebugMarkerSetObjectNameEXT (dev.VkDev, ref dmo));
 			name.Unpin ();
 		}
 		public static void SetDebugMarkerName (this VkImageView obj, Device dev, string name) {
 			VkDebugMarkerObjectNameInfoEXT dmo = new VkDebugMarkerObjectNameInfoEXT (VkDebugReportObjectTypeEXT.ImageViewEXT,
 				obj.Handle) { pObjectName = name.Pin () };
-			Utils.CheckResult (VulkanNative.vkDebugMarkerSetObjectNameEXT (dev.VkDev, ref dmo));
+			Utils.CheckResult (vkDebugMarkerSetObjectNameEXT (dev.VkDev, ref dmo));
 			name.Unpin ();
 		}
 		public static void SetDebugMarkerName (this VkSampler obj, Device dev, string name) {
 			VkDebugMarkerObjectNameInfoEXT dmo = new VkDebugMarkerObjectNameInfoEXT (VkDebugReportObjectTypeEXT.SamplerEXT,
 				obj.Handle) { pObjectName = name.Pin () };
-			Utils.CheckResult (VulkanNative.vkDebugMarkerSetObjectNameEXT (dev.VkDev, ref dmo));
+			Utils.CheckResult (vkDebugMarkerSetObjectNameEXT (dev.VkDev, ref dmo));
 			name.Unpin ();
 		}
 		public static void SetDebugMarkerName (this VkPipeline obj, Device dev, string name) {
 			VkDebugMarkerObjectNameInfoEXT dmo = new VkDebugMarkerObjectNameInfoEXT (VkDebugReportObjectTypeEXT.PipelineEXT,
 				obj.Handle) { pObjectName = name.Pin () };
-			Utils.CheckResult (VulkanNative.vkDebugMarkerSetObjectNameEXT (dev.VkDev, ref dmo));
+			Utils.CheckResult (vkDebugMarkerSetObjectNameEXT (dev.VkDev, ref dmo));
 			name.Unpin ();
 		}
 		public static void SetDebugMarkerName (this VkDescriptorSet obj, Device dev, string name) {
 			VkDebugMarkerObjectNameInfoEXT dmo = new VkDebugMarkerObjectNameInfoEXT (VkDebugReportObjectTypeEXT.DescriptorSetEXT,
 				obj.Handle) { pObjectName = name.Pin () };
-			Utils.CheckResult (VulkanNative.vkDebugMarkerSetObjectNameEXT (dev.VkDev, ref dmo));
+			Utils.CheckResult (vkDebugMarkerSetObjectNameEXT (dev.VkDev, ref dmo));
 			name.Unpin ();
 		}
 		public static void SetDebugMarkerName (this VkSemaphore obj, Device dev, string name) {
 			VkDebugMarkerObjectNameInfoEXT dmo = new VkDebugMarkerObjectNameInfoEXT (VkDebugReportObjectTypeEXT.SemaphoreEXT,
 				obj.Handle) { pObjectName = name.Pin () };
-			Utils.CheckResult (VulkanNative.vkDebugMarkerSetObjectNameEXT (dev.VkDev, ref dmo));
+			Utils.CheckResult (vkDebugMarkerSetObjectNameEXT (dev.VkDev, ref dmo));
 			name.Unpin ();
 		}
 		public static void SetDebugMarkerName (this VkFence obj, Device dev, string name) {
 			VkDebugMarkerObjectNameInfoEXT dmo = new VkDebugMarkerObjectNameInfoEXT (VkDebugReportObjectTypeEXT.FenceEXT,
 				obj.Handle) { pObjectName = name.Pin () };
-			Utils.CheckResult (VulkanNative.vkDebugMarkerSetObjectNameEXT (dev.VkDev, ref dmo));
+			Utils.CheckResult (vkDebugMarkerSetObjectNameEXT (dev.VkDev, ref dmo));
 			name.Unpin ();
 		}
 #endif

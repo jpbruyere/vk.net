@@ -1,0 +1,3 @@
+[submodule "crow"]
+	path = crow
+	url = https://github.com/jpbruyere/crow.git

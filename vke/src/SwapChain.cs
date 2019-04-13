@@ -91,7 +91,7 @@ namespace VKE {
             Create ();
         }
 
-        unsafe public void Create () {
+        public void Create () {
             dev.WaitIdle ();
 
             VkSurfaceCapabilitiesKHR capabilities = dev.phy.GetSurfaceCapabilities (presentQueue.Surface);

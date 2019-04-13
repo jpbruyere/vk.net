@@ -3,7 +3,7 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     
     <Copyright></Copyright>
-    <AssemblyVersion>0.1.1</AssemblyVersion>
+    <AssemblyVersion>0.1.2.2</AssemblyVersion>
     <Description>C# vulkan binding</Description>
     <Company></Company>
     <Product>VK</Product>
@@ -31,9 +31,25 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <DefineConstants>VK_VERSION_1_0;VK_VERSION_1_1;TRACE;DEBUG;NETSTANDARD;NETSTANDARD2_0</DefineConstants>
+    <CustomCommands>
+      <CustomCommands>
+        <Command>
+          <type>AfterBuild</type>
+          <command>mono /mnt/devel/gts/vk.net/vk.rewrite/bin/Debug/vk.rewrite.exe ${TargetFile}</command>
+        </Command>
+      </CustomCommands>
+    </CustomCommands>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <CustomCommands>
+      <CustomCommands>
+        <Command>
+          <type>AfterBuild</type>
+          <command>mono /mnt/devel/gts/vk.net/vk.rewrite/bin/Release/vk.rewrite.exe ${TargetFile}</command>
+        </Command>
+      </CustomCommands>
+    </CustomCommands>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\vk.generator\bin\**\*.cs">

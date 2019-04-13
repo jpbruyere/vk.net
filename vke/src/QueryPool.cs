@@ -44,10 +44,21 @@ namespace VKE {
 		}
 		#endregion
 
-		public void Write (CommandBuffer cmd) { 
-
+		public void Write (CommandBuffer cmd, uint query, VkPipelineStageFlags stageFlags = VkPipelineStageFlags.BottomOfPipe) {
+			vkCmdWriteTimestamp (cmd.Handle, stageFlags, handle, query);
 		}
-
+		public void Start (CommandBuffer cmd, VkPipelineStageFlags stageFlags = VkPipelineStageFlags.BottomOfPipe) {
+			vkCmdWriteTimestamp (cmd.Handle, stageFlags, handle, 0);
+		}
+		public void End (CommandBuffer cmd, VkPipelineStageFlags stageFlags = VkPipelineStageFlags.BottomOfPipe) {
+			vkCmdWriteTimestamp (cmd.Handle, stageFlags, handle, 1);
+		}
+		public float ElapsedMiliseconds {
+			get {
+				ulong[] res = GetResults ();
+				return (res[1] - res[0]) * Period / 1000000f;
+			}
+		}
 	}
 	public class PipelineStatisticsQueryPool : QueryPool {
 
@@ -129,9 +140,9 @@ namespace VKE {
 		}
 
 		public ulong[] GetResults () {
-			ulong[] results = new ulong[resultLength];
+			ulong[] results = new ulong[resultLength * createInfos.queryCount];
 			IntPtr ptr = results.Pin ();
-			vkGetQueryPoolResults (dev.VkDev, handle, 0, 1, (UIntPtr)(resultLength * sizeof (ulong)), ptr, sizeof (ulong), VkQueryResultFlags.QueryResult64);
+			vkGetQueryPoolResults (dev.VkDev, handle, 0, createInfos.queryCount, (UIntPtr)(resultLength * createInfos.queryCount* sizeof (ulong)), ptr, sizeof (ulong), VkQueryResultFlags.QueryResult64);
 			results.Unpin ();
 			return results;
 		}

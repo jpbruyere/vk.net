@@ -72,8 +72,13 @@ namespace VKE {
 
         public SubPass () {
         }
+		public SubPass (params VkImageLayout[] layouts) {
+			for (uint i = 0; i < layouts.Length; i++) 
+				AddColorReference (i, layouts[i]);
+		}
 
-        public void AddColorReference (uint attachment, VkImageLayout layout = VkImageLayout.DepthStencilAttachmentOptimal) {
+
+		public void AddColorReference (uint attachment, VkImageLayout layout = VkImageLayout.DepthStencilAttachmentOptimal) {
             AddColorReference (new VkAttachmentReference { attachment = attachment, layout = layout });
         }
         public void AddColorReference (params VkAttachmentReference[] refs) {

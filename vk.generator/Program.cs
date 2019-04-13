@@ -405,7 +405,7 @@ namespace vk.generator {
 					tw.WriteLine ($"/// <summary> {mb.comment} </summary>");
 
 				string typeStr;
-				if (mb.typedef.IndirectionLevel > 0)
+				if (mb.typedef.IndirectionLevel > 0 || mb.typedef.Name.StartsWith ("PFN_", StringComparison.Ordinal))
 					typeStr = "IntPtr";
 				else
 					typeStr = mb.typedef.CSName;
@@ -1450,7 +1450,7 @@ namespace vk.generator {
 			gen_structs ("Vk");
 			gen_commands ("Vk");
 			gen_handles ("Vk");
-			gen_funcptrs ("Vk");
+			//gen_funcptrs ("Vk");
 
 			gen_extensions ();
 		}

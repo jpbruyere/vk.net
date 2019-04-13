@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
-    <ProjectGuid>{1F18E74F-AEE8-481C-8FDF-89D81CBB30BE}</ProjectGuid>
+    <ProjectGuid>{1F18E74F-BCC9-481C-8FDF-89D81CBB30BE}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <RootNamespace>pbr</RootNamespace>
-    <AssemblyName>pbr</AssemblyName>
+    <RootNamespace>SachaWillemPbr</RootNamespace>
+    <AssemblyName>SachaWillemPbr</AssemblyName>
     <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
-    <OutputPath>$(SolutionDir)build\$(Configuration)\samples\pbr</OutputPath>
+    <OutputPath>$(SolutionDir)build\$(Configuration)\samples\SachaWillemPbr</OutputPath>
     <IntermediateOutputPath>$(SolutionDir)build\obj\$(Configuration)</IntermediateOutputPath>        
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -59,12 +59,22 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+    <None Include="ui\fps.crow">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\vke\VKE.csproj">
       <Project>{32B7E80D-BEA7-4811-B82D-CC2533069F0A}</Project>
       <Name>VKE</Name>
     </ProjectReference>
+    <ProjectReference Include="..\..\crow\Crow\Crow.csproj">
+      <Project>{C2980F9B-4798-4C05-99E2-E174810F7C7B}</Project>
+      <Name>Crow</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="ui\" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)spirv.targets" />    
