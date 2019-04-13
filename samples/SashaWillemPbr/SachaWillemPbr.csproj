@@ -59,9 +59,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
-    <None Include="ui\fps.crow">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\vke\VKE.csproj">
@@ -75,6 +72,11 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="ui\" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="ui\fps.crow">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)spirv.targets" />    

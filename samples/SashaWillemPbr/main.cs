@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using Glfw;
@@ -15,7 +16,7 @@ namespace PbrSample {
 				ValueChanged.Invoke(this, new Crow.ValueChangeEventArgs(MemberName, _value));
 		}
 		#endregion
-		Crow.Interface crow = new Crow.Interface ();
+		Crow.Interface crow;
 
 		static void Main (string[] args) {
 			using (Program vke = new Program ()) {
@@ -89,7 +90,7 @@ namespace PbrSample {
 		#region skybox
 		GPUBuffer vboSkybox;
 		Image cubemap;
-		string[] cubemapPathes = {
+		public List<string> cubemapPathes = new List<string>() {
 			"../data/textures/papermill.ktx",
 			"../data/textures/cubemap_yokohama_bc3_unorm.ktx",
 			"../data/textures/gcanyon_cube.ktx",
@@ -104,12 +105,12 @@ namespace PbrSample {
 			-1.0f, 1.0f,-1.0f,    0.0f, 0.0f,
 			-1.0f,-1.0f,-1.0f,    0.0f, 1.0f,
 
-			-1.0f,-1.0f,-1.0f,    1.0f, 1.0f,  // -Z side
-			 1.0f, 1.0f,-1.0f,    0.0f, 0.0f,
-			 1.0f,-1.0f,-1.0f,    0.0f, 1.0f,
-			-1.0f,-1.0f,-1.0f,    1.0f, 1.0f,
-			-1.0f, 1.0f,-1.0f,    1.0f, 0.0f,
-			 1.0f, 1.0f,-1.0f,    0.0f, 0.0f,
+			 1.0f, 1.0f,-1.0f,    1.0f, 0.0f,  // +X side
+			 1.0f, 1.0f, 1.0f,    0.0f, 0.0f,
+			 1.0f,-1.0f, 1.0f,    0.0f, 1.0f,
+			 1.0f,-1.0f, 1.0f,    0.0f, 1.0f,
+			 1.0f,-1.0f,-1.0f,    1.0f, 1.0f,
+			 1.0f, 1.0f,-1.0f,    1.0f, 0.0f,
 
 			-1.0f,-1.0f,-1.0f,    1.0f, 0.0f,  // -Y side
 			 1.0f,-1.0f,-1.0f,    1.0f, 1.0f,
@@ -125,12 +126,12 @@ namespace PbrSample {
 			 1.0f, 1.0f, 1.0f,    0.0f, 1.0f,
 			 1.0f, 1.0f,-1.0f,    1.0f, 1.0f,
 
-			 1.0f, 1.0f,-1.0f,    1.0f, 0.0f,  // +X side
-			 1.0f, 1.0f, 1.0f,    0.0f, 0.0f,
-			 1.0f,-1.0f, 1.0f,    0.0f, 1.0f,
-			 1.0f,-1.0f, 1.0f,    0.0f, 1.0f,
-			 1.0f,-1.0f,-1.0f,    1.0f, 1.0f,
-			 1.0f, 1.0f,-1.0f,    1.0f, 0.0f,
+			-1.0f,-1.0f,-1.0f,    1.0f, 1.0f,  // -Z side
+			 1.0f, 1.0f,-1.0f,    0.0f, 0.0f,
+			 1.0f,-1.0f,-1.0f,    0.0f, 1.0f,
+			-1.0f,-1.0f,-1.0f,    1.0f, 1.0f,
+			-1.0f, 1.0f,-1.0f,    1.0f, 0.0f,
+			 1.0f, 1.0f,-1.0f,    0.0f, 0.0f,
 
 			-1.0f, 1.0f, 1.0f,    0.0f, 0.0f,  // +Z side
 			-1.0f,-1.0f, 1.0f,    0.0f, 1.0f,
@@ -143,11 +144,28 @@ namespace PbrSample {
 
 		Camera Camera = new Camera (Utils.DegreesToRadians (60f), 1f);
 
+		vkvg.Device vkvgDev;
+
+		void createUIImage () { 
+			uiImage?.Dispose ();
+			uiImage = new Image (dev, new VkImage ((ulong)crow.surf.VkImage.ToInt64 ()), VkFormat.B8g8r8a8Unorm,
+				VkImageUsageFlags.Sampled, swapChain.Width, swapChain.Height);
+			uiImage.SetName ("uiImage");
+			uiImage.CreateView ();
+			uiImage.CreateSampler ();
+			uiImage.Descriptor.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
+		}
+
 		Program () : base () {
+			Camera.Type = Camera.CamType.FirstPerson;
+			vkvgDev = new vkvg.Device (instance.Handle, phy.Handle, dev.VkDev.Handle, presentQueue.qFamIndex,
+				vkvg.SampleCount.Sample_1, presentQueue.index);
+			crow = new Crow.Interface(vkvgDev, 800,600);
+
 			UpdateFrequency = 20;
 			vboSkybox = new GPUBuffer<float> (presentQueue, cmdPool, VkBufferUsageFlags.VertexBuffer, box_vertices);
 
-			cubemap = KTX.KTX.Load (presentQueue, cmdPool, cubemapPathes[1],
+			cubemap = KTX.KTX.Load (presentQueue, cmdPool, cubemapPathes[4],
 				VkImageUsageFlags.Sampled, VkMemoryPropertyFlags.DeviceLocal, true);
 			cubemap.CreateView (VkImageViewType.Cube, VkImageAspectFlags.Color, 6);
 			cubemap.CreateSampler ();
@@ -155,8 +173,8 @@ namespace PbrSample {
 
 			init ();
 
-			model = new Model (dev, presentQueue, cmdPool, "../data/models/DamagedHelmet/glTF/DamagedHelmet.gltf");
-			//model = new Model (dev, presentQueue, cmdPool, "../data/models/icosphere.gltf");
+			//model = new Model (dev, presentQueue, cmdPool, "../data/models/DamagedHelmet/glTF/DamagedHelmet.gltf");
+			model = new Model (dev, presentQueue, "../data/models/icosphere.gltf");
 			//model = new Model (dev, presentQueue, cmdPool, "../data/models/cube.gltf");
 			model.WriteMaterialsDescriptorSets (descLayoutTextures,
 				ShaderBinding.Color,
@@ -165,26 +183,11 @@ namespace PbrSample {
 				ShaderBinding.MetalRoughness,
 				ShaderBinding.Emissive);
 
-			//Camera.Model = Matrix4x4.CreateRotationX (Utils.DegreesToRadians (-90)) * Matrix4x4.CreateTranslation (5,-5, 5);
-			Camera.Model = Matrix4x4.CreateRotationX (Utils.DegreesToRadians (-90));
+			Camera.Model = Matrix4x4.CreateRotationX (Utils.DegreesToRadians (-90)) * Matrix4x4.CreateTranslation (5,-5, 5);
+			//Camera.Model = Matrix4x4.CreateRotationX (Utils.DegreesToRadians (-90));
 
-			//crow.LoadIMLFragment ("<Window Width='400' Height='400'><Widget Width='100' Height='100' MouseEnter='{Background=Red}' MouseLeave='{Background=White}'/></Window>");
+			//crow.Load ("#SachaWillemPbr.ui.fps.crow").DataSource = this;
 			crow.Load ("ui/fps.crow").DataSource = this;
-			//crow.LoadIMLFragment ("<Widget Background='Green' Width='400' Height='400'/>");
-		}
-
-		void createUIImage () {
-			uiImage?.Dispose ();
-			uiImage = new Image (dev, VkFormat.R8g8b8a8Unorm, VkImageUsageFlags.Sampled, VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent,
-				 swapChain.Width, swapChain.Height, VkImageType.Image2D, VkSampleCountFlags.SampleCount1, VkImageTiling.Linear);
-			uiImage.CreateView (VkImageViewType.ImageView2D, VkImageAspectFlags.Color, 1, 0, 1, 0,
-				VkComponentSwizzle.B, VkComponentSwizzle.G, VkComponentSwizzle.R, VkComponentSwizzle.A);
-			uiImage.CreateSampler ();
-			uiImage.Descriptor.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
-			uiImage.Map ();
-
-			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (dsMain, descLayoutMain.Bindings[5]);
-			uboUpdate.Write (dev, uiImage.Descriptor);
 		}
 
 		void init (VkSampleCountFlags samples = VkSampleCountFlags.SampleCount8) {
@@ -263,6 +266,8 @@ namespace PbrSample {
 			uboUpdate.Write (dev, dsSkybox, uboMats.Descriptor, cubemap.Descriptor);
 		}
 
+
+
 		#region command buffers
 		void buildCommandBuffers () {
 			for (int i = 0; i < swapChain.ImageCount; ++i) {
@@ -286,8 +291,8 @@ namespace PbrSample {
 			cmd.BindVertexBuffer (vboSkybox);
 			cmd.Draw (36);
 
-			drawModel (cmd);
-			//drawShadedModelArray (cmd);
+			//drawModel (cmd);
+			drawShadedModelArray (cmd);
 
 			uiPipeline.Bind (cmd);
 			cmd.Draw (3, 1, 0, 0);
@@ -353,15 +358,17 @@ namespace PbrSample {
 		}
 		public override void Update () {
 			NotifyValueChanged ("fps", fps);
-			crow.Update ();
-
-			uiImage.Update (crow.bmp, (ulong)crow.bmp.Length);
+			//crow.Update ();
 		}
 		#endregion
 
 		protected override void OnResize () {
 			crow.ProcessResize (new Crow.Rectangle (0,0,(int)swapChain.Width, (int)swapChain.Height));
+
 			createUIImage ();
+
+			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (dsMain, descLayoutMain.Bindings[5]);
+			uboUpdate.Write (dev, uiImage.Descriptor);
 
 			updateMatrices ();
 
@@ -385,6 +392,7 @@ namespace PbrSample {
 
 			buildCommandBuffers ();
 		}
+
 
 		#region Mouse and keyboard
 		protected override void onMouseMove (double xPos, double yPos) {
@@ -497,6 +505,8 @@ namespace PbrSample {
 					irradianceCube.Dispose ();
 					prefilterCube.Dispose ();
 					uiImage.Dispose ();
+
+					vkvgDev.Dispose ();
 
 					uboMats.Dispose ();
 				}
