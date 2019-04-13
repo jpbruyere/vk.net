@@ -59,6 +59,7 @@ namespace VKE {
 				return new string[] {Ext.D.VK_KHR_swapchain};
 			} 
 		}
+		public long UpdateFrequency = 200;
 
         public uint Width => width;
         public uint Height => height;
@@ -85,19 +86,19 @@ namespace VKE {
             initVulkan (vSync);
         }
 #if DEBUG
-		//DebugReport dbgRepport;
+		DebugReport dbgRepport;
 #endif
 		void initVulkan (bool vSync) {
             instance = new Instance ();
 
 #if DEBUG
-			//dbgRepport = new DebugReport (instance,
-			//	VkDebugReportFlagsEXT.ErrorEXT 
-			//	| VkDebugReportFlagsEXT.DebugEXT 
-			//	| VkDebugReportFlagsEXT.WarningEXT 
-			//	| VkDebugReportFlagsEXT.PerformanceWarningEXT 
-			//	//| VkDebugReportFlagsEXT.InformationEXT
-			//);
+			dbgRepport = new DebugReport (instance,
+				VkDebugReportFlagsEXT.ErrorEXT 
+				| VkDebugReportFlagsEXT.DebugEXT 
+				| VkDebugReportFlagsEXT.WarningEXT 
+				| VkDebugReportFlagsEXT.PerformanceWarningEXT 
+				//| VkDebugReportFlagsEXT.InformationEXT
+			);
 #endif
 
 			hSurf = instance.CreateSurface (hWin);
@@ -208,7 +209,7 @@ namespace VKE {
 
                 frameCount++;
 
-                if (frameChrono.ElapsedMilliseconds > 200) {
+                if (frameChrono.ElapsedMilliseconds > UpdateFrequency) {
                     frameChrono.Stop ();
 
                     fps = (uint)(1000.0 * frameCount  / frameChrono.ElapsedMilliseconds);

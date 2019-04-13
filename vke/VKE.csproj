@@ -16,7 +16,7 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <Optimize>false</Optimize>    
     <CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
-    <DefineConstants>DEBUG;_RENDERDOC;_DEBUG_MARKER</DefineConstants>
+    <DefineConstants>DEBUG;RENDERDOC;DEBUG_MARKER</DefineConstants>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <Optimize>true</Optimize>
@@ -31,18 +31,18 @@
       <HintPath>..\packages\System.Runtime.CompilerServices.Unsafe.4.6.0-preview3.19128.7\lib\netstandard2.0\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json">
-      <HintPath>..\packages\Newtonsoft.Json.10.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <HintPath>..\packages\Newtonsoft.Json.12.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="glTFLoader">
       <HintPath>..\packages\glTF2Loader.1.1.3-alpha\lib\net35\glTFLoader.dll</HintPath>
     </Reference>
     <Reference Include="VK">
-      <HintPath>..\packages\Vulkan.0.1.1-alpha\lib\netstandard2.0\VK.dll</HintPath>
+      <HintPath>..\packages\Vulkan.0.1.2.2-alpha\lib\netstandard2.0\VK.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>        
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="src\**\*.cs" Exclude="src\Renderer.cs;src\QueueFamily.cs;src/DebugReport.cs" />
+    <Compile Include="src\**\*.cs" Exclude="src\Renderer.cs;src\QueueFamily.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

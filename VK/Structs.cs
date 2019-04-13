@@ -33,6 +33,10 @@ namespace VK {
 		public VkClearColorValue color;
 		[FieldOffset (0)]
 		public VkClearDepthStencilValue depthStencil;
+
+		public VkClearValue (float r, float g, float b) {
+			color = new VkClearColorValue (r, g, b)
+		}
 	}
 
 	[StructLayout (LayoutKind.Explicit)]
@@ -190,13 +194,13 @@ namespace VK {
 		}
 	}
 	public partial struct VkDebugMarkerObjectNameInfoEXT {
-		//public VkDebugMarkerObjectNameInfoEXT (VkDebugReportObjectTypeEXT objectType, ulong handle) {
-		//	sType = VkStructureType.DebugMarkerObjectNameInfoEXT;
-		//	pNext = IntPtr.Zero;
-		//	this.objectType = objectType;
-		//	obj = handle;
-		//	pObjectName = IntPtr.Zero;
-		//}
+		public VkDebugMarkerObjectNameInfoEXT (VkDebugReportObjectTypeEXT objectType, ulong handle) {
+			sType = VkStructureType.DebugMarkerObjectNameInfoEXT;
+			pNext = IntPtr.Zero;
+			this.objectType = objectType;
+			_object = handle;
+			pObjectName = IntPtr.Zero;
+		}
 	}
 	public partial struct VkDescriptorPoolSize {
 		public VkDescriptorPoolSize (VkDescriptorType descriptorType, uint count = 1) {

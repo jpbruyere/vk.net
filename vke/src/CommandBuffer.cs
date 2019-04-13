@@ -42,7 +42,7 @@ namespace VKE {
             pool = _pool;
             handle = _buff;
         }
-		//TODO:unpin all pinned obj
+
         public void Submit (VkQueue queue, VkSemaphore wait = default(VkSemaphore), VkSemaphore signal = default (VkSemaphore), VkFence fence = default(VkFence)) {
             VkSubmitInfo submit_info = VkSubmitInfo.New();
 
@@ -64,9 +64,11 @@ namespace VKE {
 
             Utils.CheckResult (vkQueueSubmit (queue, 1, ref submit_info, fence));
 
+			if (signal != VkSemaphore.Null)
+				signal.Unpin ();
+			if (wait != VkSemaphore.Null)
+				wait.Unpin ();
 			handle.Unpin ();
-			signal.Unpin ();
-			wait.Unpin ();
 
 			Marshal.FreeHGlobal (dstStageMask);
         }
@@ -121,20 +123,26 @@ namespace VKE {
 
 #if DEBUG && DEBUG_MARKER
 		public void BeginRegion (string name, float r = 1f, float g = 0.1f, float b=0.1f, float a = 1f) {
-			VkDebugMarkerMarkerInfoEXT info = VkDebugMarkerMarkerInfoEXT.New;
+			VkDebugMarkerMarkerInfoEXT info = VkDebugMarkerMarkerInfoEXT.New();
 			info.pMarkerName = name.Pin ();
-			info.color_0 = r;
-			info.color_1 = g;
-			info.color_2 = b;
+			unsafe {
+				info.color[0] = r;
+				info.color[1] = g;
+				info.color[2] = b;
+				info.color[3] = a;
+			}
 			vkCmdDebugMarkerBeginEXT (Handle, ref info);
 			name.Unpin ();
 		}
 		public void InsertDebugMarker (string name, float r = 1f, float g = 0.1f, float b=0.1f, float a = 1f) {
-			VkDebugMarkerMarkerInfoEXT info = VkDebugMarkerMarkerInfoEXT.New;
+			VkDebugMarkerMarkerInfoEXT info = VkDebugMarkerMarkerInfoEXT.New();
 			info.pMarkerName = name.Pin ();
-			info.color_0 = r;
-			info.color_1 = g;
-			info.color_2 = b;
+			unsafe {
+				info.color[0] = r;
+				info.color[1] = g;
+				info.color[2] = b;
+				info.color[3] = a;
+			}
 			vkCmdDebugMarkerInsertEXT (Handle, ref info);
 			name.Unpin ();
 		}

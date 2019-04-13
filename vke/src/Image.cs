@@ -47,30 +47,7 @@ namespace VKE {
 			=> new VkDebugMarkerObjectNameInfoEXT(VkDebugReportObjectTypeEXT.ImageEXT, handle.Handle);
 #endif
 
-#region CTORS
-		/// <summary>
-		/// Import vkImage handle into a new Image class, handle will be preserve on destruction.
-		/// </summary>
-		public Image (Device device, VkImage vkHandle, VkFormat format, VkImageUsageFlags usage, uint width, uint height)
-        : base (device, VkMemoryPropertyFlags.DeviceLocal) {
-            info.imageType = VkImageType.Image2D;
-            info.format = format;
-            info.extent.width = width;
-            info.extent.height = height;
-            info.extent.depth = 1;
-            info.mipLevels = 1;
-            info.arrayLayers = 1;
-            info.samples = VkSampleCountFlags.SampleCount1;
-            info.tiling = VkImageTiling.Optimal;
-            info.usage = usage;
-
-            handle = vkHandle;
-            imported = true;
-
-			state = ActivableState.Activated;
-			references++;//increment ref because it is bound to swapchain
-        }
-
+		#region CTORS
         public Image (Device device, VkFormat format, VkImageUsageFlags usage, VkMemoryPropertyFlags _memoryPropertyFlags,
             uint width, uint height,
             VkImageType type = VkImageType.Image2D, VkSampleCountFlags samples = VkSampleCountFlags.SampleCount1,
@@ -94,9 +71,32 @@ namespace VKE {
 
             Activate ();//DONT OVERRIDE Activate in derived classes!!!!
         }
-#endregion
 
-#region bitmap loading
+		/// <summary>
+		/// Import vkImage handle into a new Image class, handle will be preserve on destruction.
+		/// </summary>
+		public Image (Device device, VkImage vkHandle, VkFormat format, VkImageUsageFlags usage, uint width, uint height)
+		: base (device, VkMemoryPropertyFlags.DeviceLocal) {
+			info.imageType = VkImageType.Image2D;
+			info.format = format;
+			info.extent.width = width;
+			info.extent.height = height;
+			info.extent.depth = 1;
+			info.mipLevels = 1;
+			info.arrayLayers = 1;
+			info.samples = VkSampleCountFlags.SampleCount1;
+			info.tiling = VkImageTiling.Optimal;
+			info.usage = usage;
+
+			handle = vkHandle;
+			imported = true;
+
+			state = ActivableState.Activated;
+			references++;//increment ref because it is bound to swapchain
+		}
+		#endregion
+
+		#region bitmap loading
 		/// <summary>
 		/// Load image from data pointed by IntPtr pointer containing full image file (jpg, png,...)
 		/// </summary>
@@ -281,19 +281,23 @@ namespace VKE {
             base.Activate ();
         }
 
-        public void CreateView (VkImageViewType type = VkImageViewType.ImageView2D, VkImageAspectFlags aspectFlags = VkImageAspectFlags.Color,
+		public void CreateView (VkImageViewType type = VkImageViewType.ImageView2D, VkImageAspectFlags aspectFlags = VkImageAspectFlags.Color,
 			uint layerCount = 1,
-            uint baseMipLevel = 0, uint levelCount = 1, uint baseArrayLayer = 0) {
+            uint baseMipLevel = 0, uint levelCount = 1, uint baseArrayLayer = 0,
+			VkComponentSwizzle r = VkComponentSwizzle.R,
+			VkComponentSwizzle g = VkComponentSwizzle.G,
+			VkComponentSwizzle b = VkComponentSwizzle.B,
+			VkComponentSwizzle a = VkComponentSwizzle.A) {
 
             VkImageView view = default(VkImageView);
             VkImageViewCreateInfo viewInfo = VkImageViewCreateInfo.New();
             viewInfo.image = handle;
             viewInfo.viewType = type;
             viewInfo.format = Format;
-            viewInfo.components.r = VkComponentSwizzle.R;
-            viewInfo.components.g = VkComponentSwizzle.G;
-            viewInfo.components.b = VkComponentSwizzle.B;
-            viewInfo.components.a = VkComponentSwizzle.A;
+            viewInfo.components.r = r;
+            viewInfo.components.g = g;
+            viewInfo.components.b = b;
+            viewInfo.components.a = a;
             viewInfo.subresourceRange.aspectMask = aspectFlags;
             viewInfo.subresourceRange.baseMipLevel = baseMipLevel;
             viewInfo.subresourceRange.levelCount = levelCount;
@@ -307,7 +311,13 @@ namespace VKE {
             Descriptor.imageView = view;
         }
 
-        public void CreateSampler (VkFilter minFilter = VkFilter.Linear, VkFilter magFilter = VkFilter.Linear,
+		public void CreateSampler (VkSamplerAddressMode addressMode, VkFilter minFilter = VkFilter.Linear,
+				VkFilter magFilter = VkFilter.Linear, VkSamplerMipmapMode mipmapMode = VkSamplerMipmapMode.Linear,
+				float maxAnisotropy = 1.0f, float minLod = 0.0f, float maxLod = -1f) {
+			CreateSampler (minFilter, magFilter, mipmapMode, addressMode, maxAnisotropy, minLod, maxLod);
+		}
+
+		public void CreateSampler (VkFilter minFilter = VkFilter.Linear, VkFilter magFilter = VkFilter.Linear,
                                VkSamplerMipmapMode mipmapMode = VkSamplerMipmapMode.Linear, VkSamplerAddressMode addressMode = VkSamplerAddressMode.Repeat,
             float maxAnisotropy = 1.0f, float minLod = 0.0f, float maxLod = -1f) {
             VkSampler sampler;

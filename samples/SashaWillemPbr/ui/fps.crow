@@ -1,0 +1,19 @@
+﻿<?xml version="1.0"?>
+<Window Caption="Showcase" Height="40%" Width="40%">
+	<VerticalStack Width="90%" Height="Fit" Spacing="2" >
+		<HorizontalStack Height="Fit">
+			<Label Text="Fps:" Width="60" Background="SteelBlue"/>
+			<Label Text="{fps}" />
+		</HorizontalStack>
+        <HorizontalStack Height="Fit">
+            <Label Text="Gamma:" Width="60" Background="SteelBlue" Margin="2"/>
+            <Slider Height="4" Value="{²Gamma}" Maximum="10.0" SmallIncrement="0.1" LargeIncrement="1.0"/>
+            <Label Text="{Gamma}" Width="40" TextAlignment="Right"/>
+        </HorizontalStack>
+        <HorizontalStack Height="Fit">
+            <Label Text="Exposure:" Width="60" Background="SteelBlue"/>
+            <Slider Height="4" Value="{²Exposure}" Maximum="10.0" SmallIncrement="0.1" LargeIncrement="1.0"/>
+            <Label Text="{Exposure}" Width="40" TextAlignment="Right"/>
+        </HorizontalStack>
+	</VerticalStack>
+</Window>

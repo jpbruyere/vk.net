@@ -55,7 +55,7 @@ namespace VKE {
 		}
 
 		public static PipelineConfig CreateDefault (VkPrimitiveTopology topology = VkPrimitiveTopology.TriangleList,
-			VkSampleCountFlags samples = VkSampleCountFlags.SampleCount1)
+			VkSampleCountFlags samples = VkSampleCountFlags.SampleCount1, bool depthTestEnabled = true)
 		{
 			PipelineConfig cfg = new PipelineConfig ();
 
@@ -78,15 +78,17 @@ namespace VKE {
             cfg.dynamicStates.Add (VkDynamicState.Viewport);
             cfg.dynamicStates.Add (VkDynamicState.Scissor);
 
-            cfg.depthStencilState.depthTestEnable = True;
-            cfg.depthStencilState.depthWriteEnable = True;
-            cfg.depthStencilState.depthCompareOp = VkCompareOp.LessOrEqual;
-            cfg.depthStencilState.depthBoundsTestEnable = False;
-            cfg.depthStencilState.back.failOp = VkStencilOp.Keep;
-            cfg.depthStencilState.back.passOp = VkStencilOp.Keep;
-            cfg.depthStencilState.back.compareOp = VkCompareOp.Always;
-            cfg.depthStencilState.stencilTestEnable = False;
-            cfg.depthStencilState.front = cfg.depthStencilState.back;
+			if (depthTestEnabled) {
+				cfg.depthStencilState.depthTestEnable = True;
+				cfg.depthStencilState.depthWriteEnable = True;
+				cfg.depthStencilState.depthCompareOp = VkCompareOp.LessOrEqual;
+				cfg.depthStencilState.depthBoundsTestEnable = False;
+				cfg.depthStencilState.back.failOp = VkStencilOp.Keep;
+				cfg.depthStencilState.back.passOp = VkStencilOp.Keep;
+				cfg.depthStencilState.back.compareOp = VkCompareOp.Always;
+				cfg.depthStencilState.stencilTestEnable = False;
+				cfg.depthStencilState.front = cfg.depthStencilState.back;
+			}
 
 			return cfg;
 		}
