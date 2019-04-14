@@ -249,6 +249,8 @@ namespace ModelSample {
 			pipeline.RenderPass.End (cmd);
 			cmd.EndRegion ();
 		}
+
+		/*
 		void recordCopyVkvgSurf (CommandBuffer cmd, VkImage srcImg, VkImage dstImg) {
 			Utils.setImageLayout (cmd.Handle, dstImg, VkImageAspectFlags.Color,
                     VkImageLayout.PresentSrcKHR, VkImageLayout.TransferDstOptimal,
@@ -272,7 +274,7 @@ namespace ModelSample {
 			Utils.setImageLayout (cmd.Handle, srcImg, VkImageAspectFlags.Color,
 			    VkImageLayout.TransferSrcOptimal, VkImageLayout.ColorAttachmentOptimal,
 			    VkPipelineStageFlags.Transfer, VkPipelineStageFlags.ColorAttachmentOutput);		 
-		}
+		}*/
 
 		void updateMatrices () {
 
@@ -288,8 +290,6 @@ namespace ModelSample {
 			updateMatrices ();
 			updateViewRequested = false;
 		}
-
-
 
 		protected override void onMouseMove (double xPos, double yPos) {
 			double diffX = lastMouseX - xPos;

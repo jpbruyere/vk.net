@@ -7,7 +7,7 @@ using VK;
 using VKE;
 
 namespace PbrSample {
-	class Program : VkWindow, Crow.IValueChange {	
+	class Program : VkWindow{	
 		static void Main (string[] args) {
 			using (Program vke = new Program ()) {
 				vke.Run ();
@@ -22,100 +22,16 @@ namespace PbrSample {
 
 		PBRPipeline pbrPipeline;
 
-		#region crow
-
-		#region IValueChange implementation
-		public event EventHandler<Crow.ValueChangeEventArgs> ValueChanged;
-		public virtual void NotifyValueChanged(string MemberName, object _value)
-		{
-			if (ValueChanged != null)
-				ValueChanged.Invoke(this, new Crow.ValueChangeEventArgs(MemberName, _value));
-		}
-		#endregion
-
-		public float Gamma {
-			get { return pbrPipeline.matrices.gamma; }
-			set {
-				if (value == pbrPipeline.matrices.gamma)
-					return;
-				pbrPipeline.matrices.gamma = value;
-				NotifyValueChanged ("Gamma", value);
-				updateViewRequested = true;
-			}
-		}
-		public float Exposure {
-			get { return pbrPipeline.matrices.exposure; }
-			set {
-				if (value == pbrPipeline.matrices.exposure)
-					return;
-				pbrPipeline.matrices.exposure = value;
-				NotifyValueChanged ("Exposure", value);
-				updateViewRequested = true;
-			}
-		}
-		Crow.Interface crow;
-		Pipeline uiPipeline;
-		Image uiImage;
-		vkvg.Device vkvgDev;
-
-		void initCrow () { 
-			vkvgDev = new vkvg.Device (instance.Handle, phy.Handle, dev.VkDev.Handle, presentQueue.qFamIndex,
-				vkvg.SampleCount.Sample_1, presentQueue.index);
-
-			crow = new Crow.Interface(vkvgDev, 800,600);
-		}
-		void createUIImage () { 
-			uiImage?.Dispose ();
-			uiImage = new Image (dev, new VkImage ((ulong)crow.surf.VkImage.ToInt64 ()), VkFormat.B8g8r8a8Unorm,
-				VkImageUsageFlags.Sampled, swapChain.Width, swapChain.Height);
-			uiImage.SetName ("uiImage");
-			uiImage.CreateView ();
-			uiImage.CreateSampler ();
-			uiImage.Descriptor.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
-		}
-		#endregion
-
 		Program () {
 			//UpdateFrequency = 20;
-			Camera.Model = Matrix4x4.CreateRotationX (Utils.DegreesToRadians (-90));
-
-			initCrow ();
-
-			init ();
-
-			crow.Load ("ui/fps.crow").DataSource = this;
-		}
-
-		DescriptorPool descriptorPool;
-		DescriptorSetLayout descLayoutMain;
-		DescriptorSet dsMain;
-
-		void init() {
+			Camera.Model = Matrix4x4.CreateRotationX (Utils.DegreesToRadians (-90)) * Matrix4x4.CreateRotationY (Utils.DegreesToRadians (180));
+			Camera.SetRotation (-0.1f,-0.4f);
+			Camera.SetPosition (0, 0, -3);
 
 			pbrPipeline = new PBRPipeline(presentQueue,
 				new RenderPass (dev, swapChain.ColorFormat, dev.GetSuitableDepthFormat (), samples));
-
-			descriptorPool = new DescriptorPool (dev, 1, new VkDescriptorPoolSize (VkDescriptorType.CombinedImageSampler));
-			descLayoutMain = new DescriptorSetLayout (dev,			
-				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler));
-			dsMain = descriptorPool.Allocate (descLayoutMain);
-
-			PipelineConfig cfg = PipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, samples);
-			cfg.RenderPass = pbrPipeline.RenderPass;
-			cfg.Layout = new PipelineLayout (dev, descLayoutMain);
-
-			cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/FullScreenQuad.vert.spv");
-			cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/simpletexture.frag.spv");
-			cfg.blendAttachments[0] = new VkPipelineColorBlendAttachmentState (true);
-
-			uiPipeline = new Pipeline (cfg);
-
-			createUIImage ();
 		}
 
-
-
-		#region command buffers
 		void buildCommandBuffers () {
 			for (int i = 0; i < swapChain.ImageCount; ++i) {
 				cmds[i]?.Free ();
@@ -135,14 +51,8 @@ namespace PbrSample {
 
 			pbrPipeline.RecordDraw (cmd);
 
-			uiPipeline.Bind (cmd);
-			cmd.BindDescriptorSet (uiPipeline.Layout, dsMain);
-			cmd.Draw (3, 1, 0, 0);
-
 			pbrPipeline.RenderPass.End (cmd);
 		}
-
-		#endregion
 
 		#region update
 		void updateMatrices () {
@@ -162,19 +72,10 @@ namespace PbrSample {
 			updateViewRequested = false;
 		}
 		public override void Update () {
-			NotifyValueChanged ("fps", fps);
-			crow.Update ();
 		}
 		#endregion
 
 		protected override void OnResize () {
-			crow.ProcessResize (new Crow.Rectangle (0,0,(int)swapChain.Width, (int)swapChain.Height));
-
-			createUIImage ();
-
-			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (dsMain, descLayoutMain.Bindings[0]);
-			uboUpdate.Write (dev, uiImage.Descriptor);
-
 			updateMatrices ();
 
 			if (frameBuffers != null)
@@ -201,9 +102,6 @@ namespace PbrSample {
 
 		#region Mouse and keyboard
 		protected override void onMouseMove (double xPos, double yPos) {
-			if (crow.ProcessMouseMove ((int)xPos, (int)yPos))
-				return;
-
 			double diffX = lastMouseX - xPos;
 			double diffY = lastMouseY - yPos;
 			if (MouseButton[0]) {
@@ -213,16 +111,6 @@ namespace PbrSample {
 			}
 
 			updateViewRequested = true;
-		}
-		protected override void onMouseButtonDown (MouseButton button) {
-			if (crow.ProcessMouseButtonDown ((Crow.MouseButton)button))
-				return;
-			base.onMouseButtonDown (button);
-		}
-		protected override void onMouseButtonUp (MouseButton button) {
-			if (crow.ProcessMouseButtonUp ((Crow.MouseButton)button))
-				return;
-			base.onMouseButtonUp (button);
 		}
 
 		protected override void onKeyDown (Key key, int scanCode, Modifier modifiers) {
@@ -298,24 +186,10 @@ namespace PbrSample {
 						frameBuffers[i]?.Dispose ();
 
 					pbrPipeline.Dispose ();
-
-					uiPipeline.Dispose ();
-					descLayoutMain.Dispose ();
-					descriptorPool.Dispose ();
-
-					uiImage.Dispose ();
-
-					crow.Dispose ();
-
-					vkvgDev.Dispose ();
-
-
 				}
 			}
 
 			base.Dispose (disposing);
 		}
-
-		
 	}
 }
