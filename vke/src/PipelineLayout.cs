@@ -79,8 +79,11 @@ namespace VKE {
 					info.pPushConstantRanges = PushConstantRanges.Pin();
 				}
 				Utils.CheckResult (vkCreatePipelineLayout (dev.VkDev, ref info, IntPtr.Zero, out handle));
-				dsls.Unpin ();
-				PushConstantRanges.Unpin ();
+
+				if (dsls.Length > 0)
+					dsls.Unpin ();
+				if (PushConstantRanges.Count > 0)
+					PushConstantRanges.Unpin ();
 			}
 			base.Activate ();
 		}
@@ -89,14 +92,21 @@ namespace VKE {
 			return string.Format ($"{base.ToString ()}[0x{handle.Handle.ToString("x")}]");
 		}
 
-#region IDisposable Support
+		#region IDisposable Support
 		protected override void Dispose (bool disposing) {
-			if (!disposing)
-				System.Diagnostics.Debug.WriteLine ("VKE Activable PipelineLayout disposed by finalizer");
-			if (state == ActivableState.Activated)
+			if (state == ActivableState.Activated) {
+				if (disposing) {
+					foreach (DescriptorSetLayout dsl in DescriptorSetLayouts) 
+						dsl.Dispose ();					
+				} else
+					System.Diagnostics.Debug.WriteLine ("VKE Activable PipelineLayout disposed by finalizer");
+
 				vkDestroyPipelineLayout (dev.VkDev, handle, IntPtr.Zero);
+			}else if (disposing)
+				System.Diagnostics.Debug.WriteLine ("Calling dispose on unactive PipelineLayout");
+
 			base.Dispose (disposing);
 		}
-#endregion
+		#endregion
 	}
 }

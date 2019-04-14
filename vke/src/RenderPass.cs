@@ -191,14 +191,21 @@ namespace VKE {
 			return string.Format ($"{base.ToString ()}[0x{handle.Handle.ToString("x")}]");
 		}
         
-#region IDisposable Support
+		#region IDisposable Support
 		protected override void Dispose (bool disposing) {
-			if (!disposing)
-				System.Diagnostics.Debug.WriteLine ("VKE Activable RenderPass disposed by finalizer");
-			if (state == ActivableState.Activated)
+			if (state == ActivableState.Activated) {
+				if (disposing) {
+					foreach (SubPass sp in subpasses)
+						sp.Dispose ();				
+				} else
+					System.Diagnostics.Debug.WriteLine ("VKE Activable RenderPass disposed by finalizer");
+
 				dev.DestroyRenderPass (handle);
+			}else if (disposing)
+				System.Diagnostics.Debug.WriteLine ("Calling dispose on unactive RenderPass");
+
 			base.Dispose (disposing);
 		}
-#endregion
+		#endregion
 	}
 }

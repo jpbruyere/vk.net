@@ -11,6 +11,14 @@ namespace PbrSample {
 	class EnvironmentCube : Pipeline {
 		DescriptorPool descriptorPool;
 		DescriptorSetLayout descLayoutMain;
+		public DescriptorSet dsSkybox;
+
+		GPUBuffer vboSkybox;
+
+		public Image cubemap { get; private set; }
+		public Image lutBrdf { get; private set; }
+		public Image irradianceCube { get; private set; }
+		public Image prefilterCube { get; private set; }
 
 		public EnvironmentCube (Queue staggingQ, RenderPass renderPass)
 		: base (renderPass, "EnvCube pipeline") {
@@ -66,15 +74,6 @@ namespace PbrSample {
 			cmd.BindVertexBuffer (vboSkybox);
 			cmd.Draw (36);
 		}
-
-		public DescriptorSet dsSkybox;
-
-		GPUBuffer vboSkybox;
-
-		public Image cubemap { get; private set; }
-		public Image lutBrdf { get; private set; }
-		public Image irradianceCube { get; private set; }
-		public Image prefilterCube { get; private set; }
 
 		#region skybox
 		public List<string> cubemapPathes = new List<string>() {
@@ -214,7 +213,6 @@ namespace PbrSample {
 			DescriptorSetWrites dsUpdate = new DescriptorSetWrites (dsLayout);
 			dsUpdate.Write (dev, dset, cubemap.Descriptor);
 
-
 			cfg.Layout = new PipelineLayout (dev, dsLayout);
 			cfg.Layout.AddPushConstants (
 				new VkPushConstantRange (VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment, (uint)Marshal.SizeOf<Matrix4x4> () + 8));
@@ -322,6 +320,11 @@ namespace PbrSample {
 				}
 			}
 			cmap.Descriptor.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
+
+			dsLayout.Dispose ();
+			imgFbOffscreen.Dispose ();
+			dsPool.Dispose ();
+
 			return cmap;
 		}
 
@@ -329,19 +332,23 @@ namespace PbrSample {
 			irradianceCube = generateCubeMap (staggingQ, cmdPool, CBTarget.IRRADIANCE);
 			prefilterCube = generateCubeMap (staggingQ, cmdPool, CBTarget.PREFILTEREDENV);
 		}
+
+		protected override void Dispose (bool disposing) {
+			vboSkybox.Dispose ();
+			cubemap.Dispose ();
+			lutBrdf.Dispose ();
+			irradianceCube.Dispose ();
+			prefilterCube.Dispose ();
+
+			descLayoutMain.Dispose ();
+			descriptorPool.Dispose ();
+
+			base.Dispose (disposing);
+		}
 	}
 
 
-	class PBRPipeline : Pipeline, Crow.IValueChange {
-
-		#region IValueChange implementation
-		public event EventHandler<Crow.ValueChangeEventArgs> ValueChanged;
-		public virtual void NotifyValueChanged (string MemberName, object _value) {
-			if (ValueChanged != null)
-				ValueChanged.Invoke (this, new Crow.ValueChangeEventArgs (MemberName, _value));
-		}
-		#endregion
-
+	class PBRPipeline : Pipeline {	
 		public struct Matrices {
 			public Matrix4x4 projection;
 			public Matrix4x4 view;
@@ -357,40 +364,15 @@ namespace PbrSample {
 			exposure = 2.0f,
 		};
 
-		public float Gamma {
-			get { return matrices.gamma; }
-			set {
-				if (value == matrices.gamma)
-					return;
-				matrices.gamma = value;
-				NotifyValueChanged ("Gamma", value);
-				//updateViewRequested = true;
-			}
-		}
-		public float Exposure {
-			get { return matrices.exposure; }
-			set {
-				if (value == matrices.exposure)
-					return;
-				matrices.exposure = value;
-				NotifyValueChanged ("Exposure", value);
-				//updateViewRequested = true;
-			}
-		}
-
 		public HostBuffer uboMats;
 
 		DescriptorPool descriptorPool;
 		DescriptorSetLayout descLayoutMain;
 		DescriptorSetLayout descLayoutTextures;
-
-
 		DescriptorSet dsMain;
 
 		Model model;
-
 		EnvironmentCube envCube;
-
 
 		public PBRPipeline (Queue staggingQ, RenderPass renderPass) :
 			base (renderPass, "pbr pipeline") {
@@ -458,7 +440,6 @@ namespace PbrSample {
 				ShaderBinding.Emissive);
 		}
 
-
 		public void RecordDraw (CommandBuffer cmd) {		
 			envCube.RecordDraw (cmd);
 			drawModel (cmd);
@@ -500,21 +481,23 @@ namespace PbrSample {
 
 
 		}
+
+		protected override void Dispose (bool disposing) {
+			model.Dispose ();
+			envCube.Dispose ();
+
+			descLayoutMain.Dispose ();
+			descLayoutTextures.Dispose ();
+			descriptorPool.Dispose ();
+
+			uboMats.Dispose ();
+
+			base.Dispose (disposing);
+		}
 	}
 
 
-	class Program : VkWindow, Crow.IValueChange {
-		#region IValueChange implementation
-		public event EventHandler<Crow.ValueChangeEventArgs> ValueChanged;
-		public virtual void NotifyValueChanged(string MemberName, object _value)
-		{
-			if (ValueChanged != null)
-				ValueChanged.Invoke(this, new Crow.ValueChangeEventArgs(MemberName, _value));
-		}
-		#endregion
-
-		Crow.Interface crow;
-
+	class Program : VkWindow, Crow.IValueChange {	
 		static void Main (string[] args) {
 			using (Program vke = new Program ()) {
 				vke.Run ();
@@ -533,10 +516,48 @@ namespace PbrSample {
 
 		PBRPipeline pbrPipeline;
 
+		#region crow
+
+		#region IValueChange implementation
+		public event EventHandler<Crow.ValueChangeEventArgs> ValueChanged;
+		public virtual void NotifyValueChanged(string MemberName, object _value)
+		{
+			if (ValueChanged != null)
+				ValueChanged.Invoke(this, new Crow.ValueChangeEventArgs(MemberName, _value));
+		}
+		#endregion
+
+		public float Gamma {
+			get { return pbrPipeline.matrices.gamma; }
+			set {
+				if (value == pbrPipeline.matrices.gamma)
+					return;
+				pbrPipeline.matrices.gamma = value;
+				NotifyValueChanged ("Gamma", value);
+				updateViewRequested = true;
+			}
+		}
+		public float Exposure {
+			get { return pbrPipeline.matrices.exposure; }
+			set {
+				if (value == pbrPipeline.matrices.exposure)
+					return;
+				pbrPipeline.matrices.exposure = value;
+				NotifyValueChanged ("Exposure", value);
+				updateViewRequested = true;
+			}
+		}
+		Crow.Interface crow;
 		Pipeline uiPipeline;
 		Image uiImage;
 		vkvg.Device vkvgDev;
 
+		void initCrow () { 
+			vkvgDev = new vkvg.Device (instance.Handle, phy.Handle, dev.VkDev.Handle, presentQueue.qFamIndex,
+				vkvg.SampleCount.Sample_1, presentQueue.index);
+
+			crow = new Crow.Interface(vkvgDev, 800,600);
+		}
 		void createUIImage () { 
 			uiImage?.Dispose ();
 			uiImage = new Image (dev, new VkImage ((ulong)crow.surf.VkImage.ToInt64 ()), VkFormat.B8g8r8a8Unorm,
@@ -546,22 +567,16 @@ namespace PbrSample {
 			uiImage.CreateSampler ();
 			uiImage.Descriptor.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
 		}
+		#endregion
 
 		Program () {
-
-			vkvgDev = new vkvg.Device (instance.Handle, phy.Handle, dev.VkDev.Handle, presentQueue.qFamIndex,
-				vkvg.SampleCount.Sample_1, presentQueue.index);
-
-			crow = new Crow.Interface(vkvgDev, 800,600);
-
 			UpdateFrequency = 20;
+			Camera.Model = Matrix4x4.CreateRotationX (Utils.DegreesToRadians (-90));
+
+			initCrow ();
 
 			init ();
 
-			//Camera.Model = Matrix4x4.CreateRotationX (Utils.DegreesToRadians (-90)) * Matrix4x4.CreateTranslation (5,-5, 5);
-			Camera.Model = Matrix4x4.CreateRotationX (Utils.DegreesToRadians (-90));
-
-			//crow.Load ("#SachaWillemPbr.ui.fps.crow").DataSource = this;
 			crow.Load ("ui/fps.crow").DataSource = this;
 		}
 
@@ -614,11 +629,9 @@ namespace PbrSample {
 
 			pbrPipeline.RecordDraw (cmd);
 
-			//drawShadedModelArray (cmd);
-			/*
 			uiPipeline.Bind (cmd);
 			cmd.BindDescriptorSet (uiPipeline.Layout, dsMain);
-			cmd.Draw (3, 1, 0, 0);*/
+			cmd.Draw (3, 1, 0, 0);
 
 			pbrPipeline.RenderPass.End (cmd);
 		}
@@ -627,7 +640,6 @@ namespace PbrSample {
 
 		#region update
 		void updateMatrices () {
-
 			Camera.AspectRatio = (float)swapChain.Width / swapChain.Height;
 
 			pbrPipeline.matrices.projection = Camera.Projection;
@@ -645,7 +657,7 @@ namespace PbrSample {
 		}
 		public override void Update () {
 			NotifyValueChanged ("fps", fps);
-			//crow.Update ();
+			crow.Update ();
 		}
 		#endregion
 
@@ -778,24 +790,20 @@ namespace PbrSample {
 					dev.WaitIdle ();
 					for (int i = 0; i < swapChain.ImageCount; ++i)
 						frameBuffers[i]?.Dispose ();
-					//model.Dispose ();
-					//vboSkybox.Dispose ();
-					//pipeline.Dispose ();
-					uiPipeline.Dispose ();
-					//skyboxPL.Dispose ();
-					descLayoutMain.Dispose ();
-					//descLayoutTextures.Dispose ();
-					descriptorPool.Dispose ();
-					//cubemap.Dispose ();
 
-					//lutBrdf.Dispose ();
-					//irradianceCube.Dispose ();
-					//prefilterCube.Dispose ();
+					pbrPipeline.Dispose ();
+
+					uiPipeline.Dispose ();
+					descLayoutMain.Dispose ();
+					descriptorPool.Dispose ();
+
 					uiImage.Dispose ();
+
+					crow.Dispose ();
 
 					vkvgDev.Dispose ();
 
-					//uboMats.Dispose ();
+
 				}
 			}
 

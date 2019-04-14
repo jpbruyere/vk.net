@@ -62,8 +62,7 @@ namespace VKE {
         #endregion
     }
 
-
-    public class SubPass : IDisposable {
+	public class SubPass : IDisposable {
         NativeList<VkAttachmentReference> colorRefs;
         NativeList<VkAttachmentReference> inputRefs;
         MarshaledObject<VkAttachmentReference> depthRef;

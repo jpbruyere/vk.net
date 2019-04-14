@@ -77,10 +77,12 @@ namespace VKE {
         public unsafe void Allocate (DescriptorSet descriptorSet) {
             VkDescriptorSetAllocateInfo allocInfo = VkDescriptorSetAllocateInfo.New();
             allocInfo.descriptorPool = handle;
-            allocInfo.descriptorSetCount = descriptorSet.descriptorSetLayouts.Count;
-            allocInfo.pSetLayouts = descriptorSet.descriptorSetLayouts.Data;
+            allocInfo.descriptorSetCount = (uint)descriptorSet.descriptorSetLayouts.Count;
+            allocInfo.pSetLayouts = descriptorSet.descriptorSetLayouts.Pin();
 
             Utils.CheckResult (vkAllocateDescriptorSets (dev.VkDev, ref allocInfo, out descriptorSet.handle));
+
+			descriptorSet.descriptorSetLayouts.Unpin ();
         }
         public void FreeDescriptorSet (params DescriptorSet[] descriptorSets) {
             if (descriptorSets.Length == 1) {

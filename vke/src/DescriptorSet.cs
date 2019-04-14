@@ -24,6 +24,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 using System;
+using System.Collections.Generic;
 using VK;
 using static VK.Vk;
 
@@ -31,7 +32,7 @@ namespace VKE {
     public class DescriptorSet {
         internal VkDescriptorSet handle;
         DescriptorPool pool;
-        internal NativeList<VkDescriptorSetLayout> descriptorSetLayouts = new NativeList<VkDescriptorSetLayout> ();
+        internal List<VkDescriptorSetLayout> descriptorSetLayouts = new List<VkDescriptorSetLayout> ();
 
         public DescriptorSet (DescriptorPool descriptorPool) {
             pool = descriptorPool;
@@ -41,22 +42,7 @@ namespace VKE {
 
             foreach (DescriptorSetLayout layout in layouts)
                 descriptorSetLayouts.Add (layout.handle);
-        }
-
-        public NativeList<VkWriteDescriptorSet> CreateWriteDescritprSet (params DescriptorSetLayout[] dsLayouts) {
-            NativeList<VkWriteDescriptorSet> wdss = new NativeList<VkWriteDescriptorSet> ();
-            foreach (DescriptorSetLayout dsl in dsLayouts) {
-                foreach (VkDescriptorSetLayoutBinding binding in dsl.Bindings) {
-                    VkWriteDescriptorSet wds = VkWriteDescriptorSet.New();
-                    wds.descriptorType = binding.descriptorType;
-                    wds.descriptorCount = binding.descriptorCount;
-                    wds.dstBinding = binding.binding;
-                    wds.dstSet = handle;
-                    wdss.Add (wds);
-                }
-            }
-            return wdss;
-        }
+        }        
 
 		public void Free () {
 			pool.FreeDescriptorSet (this);
