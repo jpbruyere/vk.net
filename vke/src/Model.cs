@@ -248,10 +248,8 @@ namespace VKE {
 					vbo = new GPUBuffer (dev, VkBufferUsageFlags.VertexBuffer | VkBufferUsageFlags.TransferDst, vertSize);
 					ibo = new GPUBuffer (dev, VkBufferUsageFlags.IndexBuffer | VkBufferUsageFlags.TransferDst, idxSize);
 
-					#if DEBUG && DEBUG_MARKER
 					vbo.SetName ("vbo gltf");
 					ibo.SetName ("ibo gltf");
-					#endif
 
 					Meshes = new List<Mesh> (ctx.LoadMeshes<Vertex> (VkIndexType.Uint16, vbo, 0, ibo, 0));
 					textures = new List<Image> (ctx.LoadImages ());
@@ -272,9 +270,7 @@ namespace VKE {
 			descriptorPool = new DescriptorPool (dev, (uint)materials.Count,
 				new VkDescriptorPoolSize (VkDescriptorType.CombinedImageSampler, (uint)(attachments.Length * materials.Count))
 			);
-#if DEBUG && DEBUG_MARKER
 			descriptorPool.SetName ("descPool gltfTextures");
-#endif
 			foreach (Material mat in materials) 
 				WriteMaterialDescriptorSet (mat, layout, attachments);
 		}
@@ -287,9 +283,7 @@ namespace VKE {
 		/// <param name="attachments">Layout Attachments meaning</param>
 		public void WriteMaterialDescriptorSet (Material mat, DescriptorSetLayout layout, params ShaderBinding[] attachments) {
 			mat.descriptorSet = descriptorPool.Allocate (layout);
-#if DEBUG && DEBUG_MARKER
 			mat.descriptorSet.handle.SetDebugMarkerName (dev, "descSet " + mat.Name);
-#endif
 			WriteMaterialDescriptorSet (mat, attachments);
 		}
 

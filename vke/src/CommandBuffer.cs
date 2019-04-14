@@ -121,8 +121,9 @@ namespace VKE {
 			data.Unpin ();
 		}
 
-#if DEBUG && DEBUG_MARKER
 		public void BeginRegion (string name, float r = 1f, float g = 0.1f, float b=0.1f, float a = 1f) {
+			if (!Device.DebugMarkersEnabled)
+				return;
 			VkDebugMarkerMarkerInfoEXT info = VkDebugMarkerMarkerInfoEXT.New();
 			info.pMarkerName = name.Pin ();
 			unsafe {
@@ -135,6 +136,8 @@ namespace VKE {
 			name.Unpin ();
 		}
 		public void InsertDebugMarker (string name, float r = 1f, float g = 0.1f, float b=0.1f, float a = 1f) {
+			if (!Device.DebugMarkersEnabled)
+				return;
 			VkDebugMarkerMarkerInfoEXT info = VkDebugMarkerMarkerInfoEXT.New();
 			info.pMarkerName = name.Pin ();
 			unsafe {
@@ -147,9 +150,9 @@ namespace VKE {
 			name.Unpin ();
 		}
 		public void EndRegion () {
-			vkCmdDebugMarkerEndEXT (Handle);
+			if (Device.DebugMarkersEnabled)
+				vkCmdDebugMarkerEndEXT (Handle);
 		}
-#endif
 
 		public void Free () {
             pool.FreeCommandBuffers (this);

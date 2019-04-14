@@ -34,11 +34,9 @@ namespace VKE {
         public readonly uint MaxSets;
 
         public List<VkDescriptorPoolSize> PoolSizes = new List<VkDescriptorPoolSize> ();
-
-#if DEBUG && DEBUG_MARKER
+        
 		protected override VkDebugMarkerObjectNameInfoEXT DebugMarkerInfo
 			=> new VkDebugMarkerObjectNameInfoEXT(VkDebugReportObjectTypeEXT.DescriptorPoolEXT, handle.Handle);
-#endif
 
 		#region CTORS
 		public DescriptorPool (Device device, uint maxSets = 1) : base (device) {            

@@ -34,10 +34,11 @@ namespace VKE {
     public abstract class VkWindow : IDisposable {
         static VkWindow currentWindow;
 
-#if DEBUG
-#endif
-
 		IntPtr hWin;
+
+#if DEBUG
+		DebugReport dbgRepport;
+#endif
 
         protected VkSurfaceKHR hSurf;
         protected Instance instance;
@@ -64,7 +65,7 @@ namespace VKE {
         public uint Width => width;
         public uint Height => height;
 
-        public VkWindow (string name = "VkWindow", uint _width = 1024, uint _height=768, bool vSync = false)
+        public VkWindow (bool debugMarkers = false, string name = "VkWindow", uint _width = 1024, uint _height=768, bool vSync = false)
         {
             currentWindow = this;
 
@@ -85,9 +86,7 @@ namespace VKE {
 
             initVulkan (vSync);
         }
-#if DEBUG
-		DebugReport dbgRepport;
-#endif
+
 		void initVulkan (bool vSync) {
             instance = new Instance ();
 
@@ -127,11 +126,9 @@ namespace VKE {
             for (int i = 0; i < swapChain.ImageCount; i++)
                 drawComplete[i] = dev.CreateSemaphore ();
 
-#if DEBUG && DEBUG_MARKER
 			cmdPool.SetName ("main CmdPool");
 			for (int i = 0; i < swapChain.ImageCount; i++)
 				drawComplete[i].SetDebugMarkerName (dev, "Semaphore DrawComplete" + i);
-#endif
         }
 
         protected virtual void configureEnabledFeatures (ref VkPhysicalDeviceFeatures features) {

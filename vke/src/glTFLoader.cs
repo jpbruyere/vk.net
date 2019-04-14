@@ -363,11 +363,9 @@ namespace VKE {
 				vkimg.CreateSampler ();
 				vkimg.Descriptor.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
 
-#if DEBUG && DEBUG_MARKER
-			vkimg.SetName (imgName);
-			vkimg.Descriptor.imageView.SetDebugMarkerName (dev, "imgView " + imgName);
-			vkimg.Descriptor.sampler.SetDebugMarkerName (dev, "sampler " + imgName);
-#endif
+				vkimg.SetName (imgName);
+				vkimg.Descriptor.imageView.SetDebugMarkerName (dev, "imgView " + imgName);
+				vkimg.Descriptor.sampler.SetDebugMarkerName (dev, "sampler " + imgName);
 
 				textures.Add (vkimg);
 			}

@@ -48,9 +48,7 @@ namespace VKE {
 
 			dev = RenderPass.dev;
 
-#if DEBUG && DEBUG_MARKER
 			handle.SetDebugMarkerName (dev, name);
-#endif
 		}
 		/// <summary>
 		/// Create a new Pipeline with supplied RenderPass

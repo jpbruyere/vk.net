@@ -40,12 +40,10 @@ namespace VKE {
         internal List<SubPass> subpasses = new List<SubPass> ();
         List<VkSubpassDependency> dependencies = new List<VkSubpassDependency> ();
 
-#if DEBUG && DEBUG_MARKER
 		protected override VkDebugMarkerObjectNameInfoEXT DebugMarkerInfo
 			=> new VkDebugMarkerObjectNameInfoEXT(VkDebugReportObjectTypeEXT.RenderPassEXT, handle.Handle);
-#endif
 
-#region CTORS
+		#region CTORS
 		public RenderPass (Device device) : base(device) { }
 
         /// <summary>
@@ -82,7 +80,7 @@ namespace VKE {
                 VkPipelineStageFlags.ColorAttachmentOutput, VkPipelineStageFlags.BottomOfPipe,
                 VkAccessFlags.ColorAttachmentRead | VkAccessFlags.ColorAttachmentWrite, VkAccessFlags.MemoryRead);
         }
-#endregion
+		#endregion
 
 		public override void Activate () {
 			if (state != ActivableState.Activated) {

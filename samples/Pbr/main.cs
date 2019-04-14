@@ -13,10 +13,6 @@ namespace PbrSample {
 			}
 		}
 
-#if DEBUG && DEBUG_MARKER
-		public override string[] EnabledExtensions => new string[] { "VK_KHR_swapchain", "VK_EXT_debug_marker" };
-#endif
-
 		public struct Matrices {
 			public Matrix4x4 projection;
 			public Matrix4x4 view;
@@ -114,7 +110,7 @@ namespace PbrSample {
 			init ();
 
 			//model = new Model (dev, presentQueue, cmdPool, "/mnt/devel/vkChess/data/chess.gltf");
-			model = new Model (dev, presentQueue, cmdPool, "../data/models/DamagedHelmet/glTF/DamagedHelmet.gltf");
+			model = new Model (presentQueue, "../data/models/DamagedHelmet/glTF/DamagedHelmet.gltf");
 			model.WriteMaterialsDescriptorSets (descLayoutTextures,
 				ShaderBinding.Color,
 				ShaderBinding.Normal,
