@@ -33,6 +33,8 @@ namespace VKE {
     public class RenderPass : Activable {
         internal VkRenderPass handle;        
 
+		public readonly VkSampleCountFlags Samples;
+
         internal List<VkAttachmentDescription> attachments = new List<VkAttachmentDescription> ();
         public List<VkClearValue> ClearValues = new List<VkClearValue> ();
         internal List<SubPass> subpasses = new List<SubPass> ();
@@ -51,6 +53,8 @@ namespace VKE {
         /// </summary>
         public RenderPass (Device device, VkFormat colorFormat, VkFormat depthFormat, VkSampleCountFlags samples = VkSampleCountFlags.SampleCount1)
             : this (device){
+
+			Samples = samples;
 
 			AddAttachment (colorFormat, (samples == VkSampleCountFlags.SampleCount1) ? VkImageLayout.PresentSrcKHR : VkImageLayout.ColorAttachmentOptimal, samples);
 			AddAttachment (depthFormat, VkImageLayout.DepthStencilAttachmentOptimal, samples);
