@@ -28,10 +28,19 @@ using System.IO;
 using System.Numerics;
 
 namespace VK {
-	public class VertexAttribute : Attribute {
-		public int size;
-		public VertexAttribute (int size)  {
-			this.size = size;
+	public enum VertexAttributeType {
+		Position,
+		Normal,
+		UVs,
+		Tangent,
+	}
+	public class VertexAttributeAttribute : Attribute {
+		public VkFormat Format;
+		public VertexAttributeType Type;
+
+		public VertexAttributeAttribute (VertexAttributeType type, VkFormat format)  {
+			Format = format;
+			Type = type;
 		}
 	}
 }
