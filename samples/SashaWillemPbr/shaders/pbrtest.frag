@@ -13,10 +13,9 @@ layout (binding = 0) uniform UBO
     float exposure;    
 } ubo;
 
-layout (set = 0, binding = 1) uniform samplerCube samplerCubemap;
-layout (set = 0, binding = 2) uniform sampler2D samplerBRDFLUT;
-layout (set = 0, binding = 3) uniform samplerCube samplerIrradiance;
-layout (set = 0, binding = 4) uniform samplerCube prefilteredMap;
+layout (set = 0, binding = 1) uniform sampler2D samplerBRDFLUT;
+layout (set = 0, binding = 2) uniform samplerCube samplerIrradiance;
+layout (set = 0, binding = 3) uniform samplerCube prefilteredMap;
 
 layout (set = 1, binding = 0) uniform sampler2D samplerColor;
 layout (set = 1, binding = 1) uniform sampler2D samplerNormal;
@@ -181,7 +180,7 @@ void main()
     vec3 Lo = specularContribution(L, V, N, F0, metallic, rough, base_color.rgb);
     
     vec2 brdf = texture(samplerBRDFLUT, vec2(max(dot(N, V), 0.0), rough)).rg;
-    vec3 reflection = prefilteredReflection(R, rough).rgb; //texture(samplerCubemap, R).rgb * (1.0-rough);    
+    vec3 reflection = prefilteredReflection(R, rough).rgb; 
     vec3 irradiance = texture(samplerIrradiance, N).rgb;
 
     // Diffuse based on irradiance

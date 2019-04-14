@@ -55,10 +55,10 @@ namespace VKE {
         Device dev;        
 
 		public int DefaultScene;
-        public List<Image>		textures = new List<Image> ();
-		public List<Material>	materials = new List<Material> ();
-		public List<Mesh>		Meshes = new List<Mesh> ();
-		public List<Scene>		Scenes;
+        public List<Image> textures;
+		public List<Material> materials;
+		public List<Mesh> Meshes;
+		public List<Scene> Scenes;
 
 		DescriptorPool descriptorPool;
         public GPUBuffer vbo;
@@ -234,9 +234,9 @@ namespace VKE {
 
 		VkIndexType indexType;
 
-		public Model (Device device, Queue transferQ, string path) {
-            dev = device;
-			using (CommandPool cmdPool = new CommandPool (device, transferQ.index)) {
+		public Model (Queue transferQ, string path) {
+            dev = transferQ.dev;
+			using (CommandPool cmdPool = new CommandPool (dev, transferQ.index)) {
 				using (glTFLoader ctx = new glTFLoader (path, transferQ, cmdPool)) {
 					ulong vertexCount, indexCount;
 

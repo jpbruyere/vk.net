@@ -31,30 +31,33 @@ using static VK.Vk;
 
 namespace VKE {
     public class Pipeline : IDisposable {
-		internal Device dev;
+		protected Device dev;
         internal VkPipeline handle;
 
 		public readonly RenderPass RenderPass;
-		public readonly PipelineLayout Layout;
+		protected PipelineLayout layout;
+		public PipelineLayout Layout => layout;
+
 		public readonly VkPipelineBindPoint BindPoint;
-		public readonly VkSampleCountFlags Samples;
+		public VkSampleCountFlags Samples => RenderPass.Samples;
 
 		#region CTORS
-		/// <summary>
-		/// Create a new Pipeline with supplied RenderPass
-		/// </summary>
-		public Pipeline (PipelineConfig cfg, string name = "pipeline")
-		{
-			BindPoint = cfg.bindPoint;
-			RenderPass = cfg.RenderPass;
-			Layout = cfg.Layout;
-			Samples = cfg.Samples;
+		protected Pipeline (RenderPass renderPass, string name = "custom pipeline") { 
+			BindPoint = VkPipelineBindPoint.Graphics;
+			RenderPass = renderPass;
 
 			dev = RenderPass.dev;
 
 #if DEBUG && DEBUG_MARKER
 			handle.SetDebugMarkerName (dev, name);
 #endif
+		}
+		/// <summary>
+		/// Create a new Pipeline with supplied RenderPass
+		/// </summary>
+		public Pipeline (PipelineConfig cfg, string name = "pipeline") : this (cfg.RenderPass, name)
+		{
+			layout = cfg.Layout;
 
 			init (cfg);
 		}
@@ -70,7 +73,7 @@ namespace VKE {
         //}
 		#endregion
 
-        void init (PipelineConfig cfg) {
+        protected void init (PipelineConfig cfg) {
 			Layout.Activate ();
 			RenderPass.Activate ();
 

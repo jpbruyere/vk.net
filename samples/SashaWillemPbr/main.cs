@@ -7,89 +7,76 @@ using VK;
 using VKE;
 
 namespace PbrSample {
-	class Program : VkWindow, Crow.IValueChange {
-		#region IValueChange implementation
-		public event EventHandler<Crow.ValueChangeEventArgs> ValueChanged;
-		public virtual void NotifyValueChanged(string MemberName, object _value)
-		{
-			if (ValueChanged != null)
-				ValueChanged.Invoke(this, new Crow.ValueChangeEventArgs(MemberName, _value));
-		}
-		#endregion
-		Crow.Interface crow;
 
-		static void Main (string[] args) {
-			using (Program vke = new Program ()) {
-				vke.Run ();
-			}
-		}
-
-#if DEBUG && DEBUG_MARKER
-		public override string[] EnabledExtensions => new string[] { "VK_KHR_swapchain", "VK_EXT_debug_marker" };
-#endif
-
-		public struct Matrices {
-			public Matrix4x4 projection;
-			public Matrix4x4 view;
-			public Matrix4x4 model;
-			public Vector4 lightPos;
-			public float gamma;
-			public float exposure;
-		}
-
-		Matrices matrices = new Matrices {
-			lightPos = new Vector4 (1.0f, 0.0f, 0.0f, 1.0f),
-			gamma = 1.0f,
-			exposure = 2.0f,
-		};
-
-		public float Gamma {
-			get { return matrices.gamma; }
-			set {
-				if (value == matrices.gamma)
-					return;
-				matrices.gamma = value;
-				NotifyValueChanged ("Gamma", value);
-				updateViewRequested = true;
-			}
-		}
-		public float Exposure {
-			get { return matrices.exposure; }
-			set {
-				if (value == matrices.exposure)
-					return;
-				matrices.exposure = value;
-				NotifyValueChanged ("Exposure", value);
-				updateViewRequested = true;
-			}
-		}
-
-		Framebuffer[] frameBuffers;
-
-		HostBuffer uboMats;
-
+	class EnvironmentCube : Pipeline {
 		DescriptorPool descriptorPool;
 		DescriptorSetLayout descLayoutMain;
-		DescriptorSetLayout descLayoutTextures;
 
-		DescriptorSet dsSkybox;
-		DescriptorSet dsMain;
+		public EnvironmentCube (Queue staggingQ, RenderPass renderPass)
+		: base (renderPass, "EnvCube pipeline") {
+			descriptorPool = new DescriptorPool (dev, 1,
+				new VkDescriptorPoolSize (VkDescriptorType.UniformBuffer, 1),
+				new VkDescriptorPoolSize (VkDescriptorType.CombinedImageSampler, 1)
+			);
 
-		Pipeline pipeline;
-		Pipeline skyboxPL;
+			descLayoutMain = new DescriptorSetLayout (dev,
+				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Vertex, VkDescriptorType.UniformBuffer),
+				new VkDescriptorSetLayoutBinding (1, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler));
 
-		Pipeline uiPipeline;
-		Image uiImage;
+			dsSkybox = descriptorPool.Allocate (descLayoutMain);
 
-		Image lutBrdf;
-		Image irradianceCube;
-		Image prefilterCube;
+			using (CommandPool cmdPool = new CommandPool (staggingQ.Dev, staggingQ.index)) {
 
-		Model model;
+				vboSkybox = new GPUBuffer<float> (staggingQ, cmdPool, VkBufferUsageFlags.VertexBuffer, box_vertices);
+
+				cubemap = KTX.KTX.Load (staggingQ, cmdPool, cubemapPathes[4],
+					VkImageUsageFlags.Sampled, VkMemoryPropertyFlags.DeviceLocal, true);
+				cubemap.CreateView (VkImageViewType.Cube, VkImageAspectFlags.Color, 6);
+				cubemap.CreateSampler ();
+				cubemap.SetName ("skybox Texture");
+
+				PipelineConfig cfg = PipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, renderPass.Samples);
+				cfg.RenderPass = renderPass;
+				cfg.Layout = new PipelineLayout (dev, descLayoutMain);
+				cfg.AddVertexBinding (0, 5 * sizeof (float));
+				cfg.SetVertexAttributes (0, VkFormat.R32g32b32Sfloat, VkFormat.R32g32Sfloat);
+				cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/skybox.vert.spv");
+				cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/skybox.frag.spv");
+				cfg.depthStencilState.depthTestEnable = false;
+				cfg.depthStencilState.depthWriteEnable = false;
+
+				layout = cfg.Layout;
+
+				init (cfg);
+
+				generateBRDFLUT (staggingQ, cmdPool);
+				generateCubemaps (staggingQ, cmdPool);
+			}
+		
+		}
+
+		public void WriteDesc (VkDescriptorBufferInfo matrixDesc) { 
+			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (descLayoutMain);
+			uboUpdate.Write (dev, dsSkybox, matrixDesc, cubemap.Descriptor);
+		}
+
+		public void RecordDraw (CommandBuffer cmd) {
+		 	Bind (cmd);
+			cmd.BindDescriptorSet (Layout, dsSkybox);
+			cmd.BindVertexBuffer (vboSkybox);
+			cmd.Draw (36);
+		}
+
+		public DescriptorSet dsSkybox;
+
+		GPUBuffer vboSkybox;
+
+		public Image cubemap { get; private set; }
+		public Image lutBrdf { get; private set; }
+		public Image irradianceCube { get; private set; }
+		public Image prefilterCube { get; private set; }
 
 		#region skybox
-		GPUBuffer vboSkybox;
-		Image cubemap;
 		public List<string> cubemapPathes = new List<string>() {
 			"../data/textures/papermill.ktx",
 			"../data/textures/cubemap_yokohama_bc3_unorm.ktx",
@@ -142,380 +129,7 @@ namespace PbrSample {
 		};
 		#endregion
 
-		Camera Camera = new Camera (Utils.DegreesToRadians (60f), 1f);
-
-		vkvg.Device vkvgDev;
-
-		void createUIImage () { 
-			uiImage?.Dispose ();
-			uiImage = new Image (dev, new VkImage ((ulong)crow.surf.VkImage.ToInt64 ()), VkFormat.B8g8r8a8Unorm,
-				VkImageUsageFlags.Sampled, swapChain.Width, swapChain.Height);
-			uiImage.SetName ("uiImage");
-			uiImage.CreateView ();
-			uiImage.CreateSampler ();
-			uiImage.Descriptor.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
-		}
-
-		Program () : base () {
-
-			vkvgDev = new vkvg.Device (instance.Handle, phy.Handle, dev.VkDev.Handle, presentQueue.qFamIndex,
-				vkvg.SampleCount.Sample_1, presentQueue.index);
-			crow = new Crow.Interface(vkvgDev, 800,600);
-
-			UpdateFrequency = 20;
-			vboSkybox = new GPUBuffer<float> (presentQueue, cmdPool, VkBufferUsageFlags.VertexBuffer, box_vertices);
-
-			cubemap = KTX.KTX.Load (presentQueue, cmdPool, cubemapPathes[4],
-				VkImageUsageFlags.Sampled, VkMemoryPropertyFlags.DeviceLocal, true);
-			cubemap.CreateView (VkImageViewType.Cube, VkImageAspectFlags.Color, 6);
-			cubemap.CreateSampler ();
-			cubemap.SetName ("skybox Texture");
-
-			init ();
-
-			model = new Model (dev, presentQueue, "../data/models/DamagedHelmet/glTF/DamagedHelmet.gltf");
-			//model = new Model (dev, presentQueue, "../data/models/icosphere.gltf");
-			//model = new Model (dev, presentQueue, cmdPool, "../data/models/cube.gltf");
-			model.WriteMaterialsDescriptorSets (descLayoutTextures,
-				ShaderBinding.Color,
-				ShaderBinding.Normal,
-				ShaderBinding.AmbientOcclusion,
-				ShaderBinding.MetalRoughness,
-				ShaderBinding.Emissive);
-
-			//Camera.Model = Matrix4x4.CreateRotationX (Utils.DegreesToRadians (-90)) * Matrix4x4.CreateTranslation (5,-5, 5);
-			Camera.Model = Matrix4x4.CreateRotationX (Utils.DegreesToRadians (-90));
-
-			//crow.Load ("#SachaWillemPbr.ui.fps.crow").DataSource = this;
-			crow.Load ("ui/fps.crow").DataSource = this;
-		}
-
-		void init (VkSampleCountFlags samples = VkSampleCountFlags.SampleCount8) {
-			descriptorPool = new DescriptorPool (dev, 2,
-				new VkDescriptorPoolSize (VkDescriptorType.UniformBuffer, 2),
-				new VkDescriptorPoolSize (VkDescriptorType.CombinedImageSampler, 10)
-			);
-
-			descLayoutMain = new DescriptorSetLayout (dev,
-				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment, VkDescriptorType.UniformBuffer),
-				new VkDescriptorSetLayoutBinding (1, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
-				new VkDescriptorSetLayoutBinding (2, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
-				new VkDescriptorSetLayoutBinding (3, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
-				new VkDescriptorSetLayoutBinding (4, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
-				new VkDescriptorSetLayoutBinding (5, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler));
-
-			descLayoutTextures = new DescriptorSetLayout (dev,
-				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
-				new VkDescriptorSetLayoutBinding (1, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
-				new VkDescriptorSetLayoutBinding (2, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
-				new VkDescriptorSetLayoutBinding (3, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
-				new VkDescriptorSetLayoutBinding (4, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler)
-			);
-
-			dsMain = descriptorPool.Allocate (descLayoutMain);
-			dsSkybox = descriptorPool.Allocate (descLayoutMain);
-
-			PipelineConfig cfg = PipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, samples);
-
-			cfg.Layout = new PipelineLayout (dev, descLayoutMain, descLayoutTextures);
-			cfg.Layout.AddPushConstants (
-				new VkPushConstantRange (VkShaderStageFlags.Vertex, (uint)Marshal.SizeOf<Matrix4x4> ()),
-				new VkPushConstantRange (VkShaderStageFlags.Fragment, (uint)Marshal.SizeOf<Model.PbrMaterial> (), 64)
-			);
-			cfg.RenderPass = new RenderPass (dev, swapChain.ColorFormat, dev.GetSuitableDepthFormat (), samples);
-			cfg.AddVertexBinding<Model.Vertex> (0);
-			cfg.SetVertexAttributes (0, VkFormat.R32g32b32Sfloat, VkFormat.R32g32b32Sfloat, VkFormat.R32g32Sfloat);
-
-			cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/pbrtest.vert.spv");
-			cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/pbrtest.frag.spv");
-
-			pipeline = new Pipeline (cfg);
-
-			#region skybox pipeline
-			cfg.ResetShadersAndVerticesInfos ();
-
-			cfg.AddVertexBinding (0, 5 * sizeof (float));
-			cfg.SetVertexAttributes (0, VkFormat.R32g32b32Sfloat, VkFormat.R32g32Sfloat);
-			cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/skybox.vert.spv");
-			cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/skybox.frag.spv");
-			cfg.depthStencilState.depthTestEnable = false;
-			cfg.depthStencilState.depthWriteEnable = false;
-
-			skyboxPL = new Pipeline (cfg);
-			#endregion
-
-			cfg.ResetShadersAndVerticesInfos ();
-			cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/FullScreenQuad.vert.spv");
-			cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/simpletexture.frag.spv");
-
-			cfg.blendAttachments[0] = new VkPipelineColorBlendAttachmentState (true);
-
-			uiPipeline = new Pipeline (cfg);
-
-			uboMats = new HostBuffer (dev, VkBufferUsageFlags.UniformBuffer, (ulong)Marshal.SizeOf<Matrices> () * 2);
-			uboMats.Map ();//permanent map
-
-			generateBRDFLUT ();
-			generateCubemaps ();
-
-			createUIImage ();
-
-			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (descLayoutMain);
-			uboUpdate.Write (dev, dsMain, uboMats.Descriptor, cubemap.Descriptor, lutBrdf.Descriptor, irradianceCube.Descriptor, prefilterCube.Descriptor, uiImage.Descriptor);
-			uboMats.Descriptor.offset = (ulong)Marshal.SizeOf<Matrices> ();
-			uboUpdate.Write (dev, dsSkybox, uboMats.Descriptor, cubemap.Descriptor);
-		}
-
-
-
-		#region command buffers
-		void buildCommandBuffers () {
-			for (int i = 0; i < swapChain.ImageCount; ++i) {
-				cmds[i]?.Free ();
-				cmds[i] = cmdPool.AllocateCommandBuffer ();
-				cmds[i].Start ();
-
-				recordDraw (cmds[i], frameBuffers[i]);
-
-				cmds[i].End ();
-			}
-		}
-		void recordDraw (CommandBuffer cmd, Framebuffer fb) {
-			pipeline.RenderPass.Begin (cmd, fb);
-
-			cmd.SetViewport (fb.Width, fb.Height);
-			cmd.SetScissor (fb.Width, fb.Height);
-
-			skyboxPL.Bind (cmd);
-			cmd.BindDescriptorSet (skyboxPL.Layout, dsSkybox);
-			cmd.BindVertexBuffer (vboSkybox);
-			cmd.Draw (36);
-
-			drawModel (cmd);
-			//drawShadedModelArray (cmd);
-
-			uiPipeline.Bind (cmd);
-			cmd.Draw (3, 1, 0, 0);
-
-			pipeline.RenderPass.End (cmd);
-		}
-		void drawModel (CommandBuffer cmd) {
-			pipeline.Bind (cmd);
-			cmd.BindDescriptorSet (pipeline.Layout, dsMain);
-			model.Bind (cmd);
-			model.DrawAll (cmd, pipeline.Layout);
-		}
-		void drawShadedModelArray (CommandBuffer cmd) {
-			pipeline.Bind (cmd);
-			cmd.BindDescriptorSet (pipeline.Layout, dsMain);
-			model.Bind (cmd);
-			model.DrawAll (cmd, pipeline.Layout);
-
-
-			Matrix4x4 modelMat = Matrix4x4.Identity;
-			Model.PbrMaterial material = new Model.PbrMaterial (1, 0, Model.AlphaMode.Opaque, 0.5f, ShaderBinding.None);
-			Model.Primitive p = model.Scenes[0].Root.Children[0].Mesh.Primitives[0];
-
-			for (int metalFact = 0; metalFact < 10; metalFact++) {
-
-				material.metallicFactor = (float)metalFact / 10;
-
-				for (int roughFact = 0; roughFact < 10; roughFact++) {
-
-					material.roughnessFactor = (float)roughFact / 10;
-
-					modelMat = Matrix4x4.CreateTranslation (-roughFact, metalFact, 0);
-				
-
-					cmd.PushConstant (pipeline.Layout, VkShaderStageFlags.Vertex, modelMat);
-					cmd.PushConstant (pipeline.Layout, VkShaderStageFlags.Fragment, material, (uint)Marshal.SizeOf<Matrix4x4> ());
-
-					cmd.DrawIndexed (p.indexCount, 1, p.indexBase, p.vertexBase, 0);
-				}
-			}
-
-
-		}
-		#endregion
-
-		#region update
-		void updateMatrices () {
-
-			Camera.AspectRatio = (float)swapChain.Width / swapChain.Height;
-
-			matrices.projection = Camera.Projection;
-			matrices.view = Camera.View;
-			matrices.model = Camera.Model;
-			uboMats.Update (matrices, (uint)Marshal.SizeOf<Matrices> ());
-			matrices.view *= Matrix4x4.CreateTranslation (-matrices.view.Translation);
-			matrices.model = Matrix4x4.Identity;
-			uboMats.Update (matrices, (uint)Marshal.SizeOf<Matrices> (), (uint)Marshal.SizeOf<Matrices> ());
-		}
-
-		public override void UpdateView () {
-			updateMatrices ();
-			updateViewRequested = false;
-		}
-		public override void Update () {
-			NotifyValueChanged ("fps", fps);
-			//crow.Update ();
-		}
-		#endregion
-
-		protected override void OnResize () {
-			crow.ProcessResize (new Crow.Rectangle (0,0,(int)swapChain.Width, (int)swapChain.Height));
-
-			createUIImage ();
-
-			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (dsMain, descLayoutMain.Bindings[5]);
-			uboUpdate.Write (dev, uiImage.Descriptor);
-
-			updateMatrices ();
-
-			if (frameBuffers != null)
-				for (int i = 0; i < swapChain.ImageCount; ++i)
-					frameBuffers[i]?.Dispose ();
-
-			frameBuffers = new Framebuffer[swapChain.ImageCount];
-
-			for (int i = 0; i < swapChain.ImageCount; ++i) {
-				frameBuffers[i] = new Framebuffer (pipeline.RenderPass, swapChain.Width, swapChain.Height,
-					(pipeline.Samples == VkSampleCountFlags.SampleCount1) ? new Image[] {
-						swapChain.images[i],
-						null
-					} : new Image[] {
-						null,
-						null,
-						swapChain.images[i]
-					});
-			}
-
-			buildCommandBuffers ();
-		}
-
-
-		#region Mouse and keyboard
-		protected override void onMouseMove (double xPos, double yPos) {
-			if (crow.ProcessMouseMove ((int)xPos, (int)yPos))
-				return;
-
-			double diffX = lastMouseX - xPos;
-			double diffY = lastMouseY - yPos;
-			if (MouseButton[0]) {
-				Camera.Rotate ((float)-diffX, (float)-diffY);
-			} else if (MouseButton[1]) {
-				Camera.Zoom ((float)diffY);
-			}
-
-			updateViewRequested = true;
-		}
-		protected override void onMouseButtonDown (MouseButton button) {
-			if (crow.ProcessMouseButtonDown ((Crow.MouseButton)button))
-				return;
-			base.onMouseButtonDown (button);
-		}
-		protected override void onMouseButtonUp (MouseButton button) {
-			if (crow.ProcessMouseButtonUp ((Crow.MouseButton)button))
-				return;
-			base.onMouseButtonUp (button);
-		}
-
-		protected override void onKeyDown (Key key, int scanCode, Modifier modifiers) {
-			switch (key) {
-				case Key.Up:
-					if (modifiers.HasFlag (Modifier.Shift))
-						matrices.lightPos += new Vector4 (0, 0, 1, 0);
-					else
-						Camera.Move (0, 0, 1);
-					break;
-				case Key.Down:
-					if (modifiers.HasFlag (Modifier.Shift))
-						matrices.lightPos += new Vector4 (0, 0, -1, 0);
-					else
-						Camera.Move (0, 0, -1);
-					break;
-				case Key.Left:
-					if (modifiers.HasFlag (Modifier.Shift))
-						matrices.lightPos += new Vector4 (1, 0, 0, 0);
-					else
-						Camera.Move (1, 0, 0);
-					break;
-				case Key.Right:
-					if (modifiers.HasFlag (Modifier.Shift))
-						matrices.lightPos += new Vector4 (-1, 0, 0, 0);
-					else
-						Camera.Move (-1, 0, 0);
-					break;
-				case Key.PageUp:
-					if (modifiers.HasFlag (Modifier.Shift))
-						matrices.lightPos += new Vector4 (0, 1, 0, 0);
-					else
-						Camera.Move (0, 1, 0);
-					break;
-				case Key.PageDown:
-					if (modifiers.HasFlag (Modifier.Shift))
-						matrices.lightPos += new Vector4 (0, -1, 0, 0);
-					else
-						Camera.Move (0, -1, 0);
-					break;
-				case Key.F1:
-					if (modifiers.HasFlag (Modifier.Shift))
-						matrices.exposure -= 0.3f;
-					else
-						matrices.exposure += 0.3f;
-					break;
-				case Key.F2:
-					if (modifiers.HasFlag (Modifier.Shift))
-						matrices.gamma -= 0.1f;
-					else
-						matrices.gamma += 0.1f;
-					break;
-				case Key.F3:
-					if (Camera.Type == Camera.CamType.FirstPerson)
-						Camera.Type = Camera.CamType.LookAt;
-					else
-						Camera.Type = Camera.CamType.FirstPerson;
-					Console.WriteLine ($"camera type = {Camera.Type}");
-					break;
-				default:
-					base.onKeyDown (key, scanCode, modifiers);
-					return;
-			}
-			updateViewRequested = true;
-		}
-		#endregion
-
-		protected override void Dispose (bool disposing) {
-			if (disposing) {
-				if (!isDisposed) {
-					dev.WaitIdle ();
-					for (int i = 0; i < swapChain.ImageCount; ++i)
-						frameBuffers[i]?.Dispose ();
-					model.Dispose ();
-					vboSkybox.Dispose ();
-					pipeline.Dispose ();
-					uiPipeline.Dispose ();
-					skyboxPL.Dispose ();
-					descLayoutMain.Dispose ();
-					descLayoutTextures.Dispose ();
-					descriptorPool.Dispose ();
-					cubemap.Dispose ();
-
-					lutBrdf.Dispose ();
-					irradianceCube.Dispose ();
-					prefilterCube.Dispose ();
-					uiImage.Dispose ();
-
-					vkvgDev.Dispose ();
-
-					uboMats.Dispose ();
-				}
-			}
-
-			base.Dispose (disposing);
-		}
-
-		void generateBRDFLUT () {
+		void generateBRDFLUT (Queue staggingQ, CommandPool cmdPool) {
 			const VkFormat format = VkFormat.R16g16Sfloat;
 			const int dim = 512;
 
@@ -548,8 +162,8 @@ namespace PbrSample {
 					pl.RenderPass.End (cmd);
 					cmd.End ();
 
-					presentQueue.Submit (cmd);
-					presentQueue.WaitIdle ();
+					staggingQ.Submit (cmd);
+					staggingQ.WaitIdle ();
 
 					cmd.Free ();
 				}
@@ -559,7 +173,7 @@ namespace PbrSample {
 
 		enum CBTarget { IRRADIANCE = 0, PREFILTEREDENV = 1 };
 
-		Image generateCubeMap (CBTarget target) {
+		Image generateCubeMap (Queue staggingQ, CommandPool cmdPool, CBTarget target) {
 			const float deltaPhi = (2.0f * (float)Math.PI) / 180.0f;
 			const float deltaTheta = (0.5f * (float)Math.PI) / 64.0f;
 
@@ -701,8 +315,8 @@ namespace PbrSample {
 
 					cmd.End ();
 
-					presentQueue.Submit (cmd);
-					presentQueue.WaitIdle ();
+					staggingQ.Submit (cmd);
+					staggingQ.WaitIdle ();
 
 					cmd.Free ();
 				}
@@ -711,9 +325,483 @@ namespace PbrSample {
 			return cmap;
 		}
 
-		void generateCubemaps () {
-			irradianceCube = generateCubeMap (CBTarget.IRRADIANCE);
-			prefilterCube = generateCubeMap (CBTarget.PREFILTEREDENV);
+		void generateCubemaps (Queue staggingQ, CommandPool cmdPool) {
+			irradianceCube = generateCubeMap (staggingQ, cmdPool, CBTarget.IRRADIANCE);
+			prefilterCube = generateCubeMap (staggingQ, cmdPool, CBTarget.PREFILTEREDENV);
 		}
+	}
+
+
+	class PBRPipeline : Pipeline, Crow.IValueChange {
+
+		#region IValueChange implementation
+		public event EventHandler<Crow.ValueChangeEventArgs> ValueChanged;
+		public virtual void NotifyValueChanged (string MemberName, object _value) {
+			if (ValueChanged != null)
+				ValueChanged.Invoke (this, new Crow.ValueChangeEventArgs (MemberName, _value));
+		}
+		#endregion
+
+		public struct Matrices {
+			public Matrix4x4 projection;
+			public Matrix4x4 view;
+			public Matrix4x4 model;
+			public Vector4 lightPos;
+			public float gamma;
+			public float exposure;
+		}
+
+		public Matrices matrices = new Matrices {
+			lightPos = new Vector4 (1.0f, 0.0f, 0.0f, 1.0f),
+			gamma = 1.0f,
+			exposure = 2.0f,
+		};
+
+		public float Gamma {
+			get { return matrices.gamma; }
+			set {
+				if (value == matrices.gamma)
+					return;
+				matrices.gamma = value;
+				NotifyValueChanged ("Gamma", value);
+				//updateViewRequested = true;
+			}
+		}
+		public float Exposure {
+			get { return matrices.exposure; }
+			set {
+				if (value == matrices.exposure)
+					return;
+				matrices.exposure = value;
+				NotifyValueChanged ("Exposure", value);
+				//updateViewRequested = true;
+			}
+		}
+
+		public HostBuffer uboMats;
+
+		DescriptorPool descriptorPool;
+		DescriptorSetLayout descLayoutMain;
+		DescriptorSetLayout descLayoutTextures;
+
+
+		DescriptorSet dsMain;
+
+		Model model;
+
+		EnvironmentCube envCube;
+
+
+		public PBRPipeline (Queue staggingQ, RenderPass renderPass) :
+			base (renderPass, "pbr pipeline") {
+
+			descriptorPool = new DescriptorPool (dev, 2,
+				new VkDescriptorPoolSize (VkDescriptorType.UniformBuffer, 2),
+				new VkDescriptorPoolSize (VkDescriptorType.CombinedImageSampler, 8)
+			);
+
+			descLayoutMain = new DescriptorSetLayout (dev,
+				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment, VkDescriptorType.UniformBuffer),
+				new VkDescriptorSetLayoutBinding (1, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
+				new VkDescriptorSetLayoutBinding (2, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
+				new VkDescriptorSetLayoutBinding (3, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler));
+
+			descLayoutTextures = new DescriptorSetLayout (dev,
+				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
+				new VkDescriptorSetLayoutBinding (1, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
+				new VkDescriptorSetLayoutBinding (2, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
+				new VkDescriptorSetLayoutBinding (3, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
+				new VkDescriptorSetLayoutBinding (4, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler)
+			);
+
+			dsMain = descriptorPool.Allocate (descLayoutMain);
+
+			PipelineConfig cfg = PipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, renderPass.Samples);
+
+			cfg.Layout = new PipelineLayout (dev, descLayoutMain, descLayoutTextures);
+			cfg.Layout.AddPushConstants (
+				new VkPushConstantRange (VkShaderStageFlags.Vertex, (uint)Marshal.SizeOf<Matrix4x4> ()),
+				new VkPushConstantRange (VkShaderStageFlags.Fragment, (uint)Marshal.SizeOf<Model.PbrMaterial> (), 64)
+			);
+			cfg.RenderPass = renderPass;
+			cfg.AddVertexBinding<Model.Vertex> (0);
+			cfg.SetVertexAttributes (0, VkFormat.R32g32b32Sfloat, VkFormat.R32g32b32Sfloat, VkFormat.R32g32Sfloat);
+
+			cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/pbrtest.vert.spv");
+			cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/pbrtest.frag.spv");
+
+			layout = cfg.Layout;
+
+			init (cfg);
+
+			envCube = new EnvironmentCube (staggingQ, RenderPass);
+
+			uboMats = new HostBuffer (dev, VkBufferUsageFlags.UniformBuffer, (ulong)Marshal.SizeOf<Matrices> () * 2);
+			uboMats.Map ();//permanent map
+
+			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (descLayoutMain);
+			uboUpdate.Write (dev, dsMain, uboMats.Descriptor,
+				envCube.lutBrdf.Descriptor,
+				envCube.irradianceCube.Descriptor,
+				envCube.prefilterCube.Descriptor);
+			uboMats.Descriptor.offset = (ulong)Marshal.SizeOf<Matrices> ();
+			envCube.WriteDesc (uboMats.Descriptor);
+
+			model = new Model (staggingQ, "../data/models/DamagedHelmet/glTF/DamagedHelmet.gltf");
+			//model = new Model (dev, presentQueue, "../data/models/icosphere.gltf");
+			//model = new Model (dev, presentQueue, cmdPool, "../data/models/cube.gltf");
+			model.WriteMaterialsDescriptorSets (descLayoutTextures,
+				ShaderBinding.Color,
+				ShaderBinding.Normal,
+				ShaderBinding.AmbientOcclusion,
+				ShaderBinding.MetalRoughness,
+				ShaderBinding.Emissive);
+		}
+
+
+		public void RecordDraw (CommandBuffer cmd) {		
+			envCube.RecordDraw (cmd);
+			drawModel (cmd);
+		}
+		void drawModel (CommandBuffer cmd) {
+			Bind (cmd);
+			cmd.BindDescriptorSet (Layout, dsMain);
+			model.Bind (cmd);
+			model.DrawAll (cmd, Layout);
+		}
+		void drawShadedModelArray (CommandBuffer cmd) {
+			Bind (cmd);
+			cmd.BindDescriptorSet (Layout, dsMain);
+			model.Bind (cmd);
+			model.DrawAll (cmd, Layout);
+
+
+			Matrix4x4 modelMat = Matrix4x4.Identity;
+			Model.PbrMaterial material = new Model.PbrMaterial (1, 0, Model.AlphaMode.Opaque, 0.5f, ShaderBinding.None);
+			Model.Primitive p = model.Scenes[0].Root.Children[0].Mesh.Primitives[0];
+
+			for (int metalFact = 0; metalFact < 10; metalFact++) {
+
+				material.metallicFactor = (float)metalFact / 10;
+
+				for (int roughFact = 0; roughFact < 10; roughFact++) {
+
+					material.roughnessFactor = (float)roughFact / 10;
+
+					modelMat = Matrix4x4.CreateTranslation (-roughFact, metalFact, 0);
+				
+
+					cmd.PushConstant (Layout, VkShaderStageFlags.Vertex, modelMat);
+					cmd.PushConstant (Layout, VkShaderStageFlags.Fragment, material, (uint)Marshal.SizeOf<Matrix4x4> ());
+
+					cmd.DrawIndexed (p.indexCount, 1, p.indexBase, p.vertexBase, 0);
+				}
+			}
+
+
+		}
+	}
+
+
+	class Program : VkWindow, Crow.IValueChange {
+		#region IValueChange implementation
+		public event EventHandler<Crow.ValueChangeEventArgs> ValueChanged;
+		public virtual void NotifyValueChanged(string MemberName, object _value)
+		{
+			if (ValueChanged != null)
+				ValueChanged.Invoke(this, new Crow.ValueChangeEventArgs(MemberName, _value));
+		}
+		#endregion
+
+		Crow.Interface crow;
+
+		static void Main (string[] args) {
+			using (Program vke = new Program ()) {
+				vke.Run ();
+			}
+		}
+
+#if DEBUG && DEBUG_MARKER
+		public override string[] EnabledExtensions => new string[] { "VK_KHR_swapchain", "VK_EXT_debug_marker" };
+#endif
+
+		VkSampleCountFlags samples = VkSampleCountFlags.SampleCount4;
+
+		Camera Camera = new Camera (Utils.DegreesToRadians (60f), 1f);
+
+		Framebuffer[] frameBuffers;
+
+		PBRPipeline pbrPipeline;
+
+		Pipeline uiPipeline;
+		Image uiImage;
+		vkvg.Device vkvgDev;
+
+		void createUIImage () { 
+			uiImage?.Dispose ();
+			uiImage = new Image (dev, new VkImage ((ulong)crow.surf.VkImage.ToInt64 ()), VkFormat.B8g8r8a8Unorm,
+				VkImageUsageFlags.Sampled, swapChain.Width, swapChain.Height);
+			uiImage.SetName ("uiImage");
+			uiImage.CreateView ();
+			uiImage.CreateSampler ();
+			uiImage.Descriptor.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
+		}
+
+		Program () {
+
+			vkvgDev = new vkvg.Device (instance.Handle, phy.Handle, dev.VkDev.Handle, presentQueue.qFamIndex,
+				vkvg.SampleCount.Sample_1, presentQueue.index);
+
+			crow = new Crow.Interface(vkvgDev, 800,600);
+
+			UpdateFrequency = 20;
+
+			init ();
+
+			//Camera.Model = Matrix4x4.CreateRotationX (Utils.DegreesToRadians (-90)) * Matrix4x4.CreateTranslation (5,-5, 5);
+			Camera.Model = Matrix4x4.CreateRotationX (Utils.DegreesToRadians (-90));
+
+			//crow.Load ("#SachaWillemPbr.ui.fps.crow").DataSource = this;
+			crow.Load ("ui/fps.crow").DataSource = this;
+		}
+
+		DescriptorPool descriptorPool;
+		DescriptorSetLayout descLayoutMain;
+		DescriptorSet dsMain;
+
+		void init() {
+
+			pbrPipeline = new PBRPipeline(presentQueue,
+				new RenderPass (dev, swapChain.ColorFormat, dev.GetSuitableDepthFormat (), samples));
+
+			descriptorPool = new DescriptorPool (dev, 1, new VkDescriptorPoolSize (VkDescriptorType.CombinedImageSampler));
+			descLayoutMain = new DescriptorSetLayout (dev,			
+				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler));
+			dsMain = descriptorPool.Allocate (descLayoutMain);
+
+			PipelineConfig cfg = PipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, samples);
+			cfg.RenderPass = pbrPipeline.RenderPass;
+			cfg.Layout = new PipelineLayout (dev, descLayoutMain);
+
+			cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/FullScreenQuad.vert.spv");
+			cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/simpletexture.frag.spv");
+			cfg.blendAttachments[0] = new VkPipelineColorBlendAttachmentState (true);
+
+			uiPipeline = new Pipeline (cfg);
+
+			createUIImage ();
+		}
+
+
+
+		#region command buffers
+		void buildCommandBuffers () {
+			for (int i = 0; i < swapChain.ImageCount; ++i) {
+				cmds[i]?.Free ();
+				cmds[i] = cmdPool.AllocateCommandBuffer ();
+				cmds[i].Start ();
+
+				recordDraw (cmds[i], frameBuffers[i]);
+
+				cmds[i].End ();
+			}
+		}
+		void recordDraw (CommandBuffer cmd, Framebuffer fb) {
+			pbrPipeline.RenderPass.Begin (cmd, fb);
+
+			cmd.SetViewport (fb.Width, fb.Height);
+			cmd.SetScissor (fb.Width, fb.Height);
+
+			pbrPipeline.RecordDraw (cmd);
+
+			//drawShadedModelArray (cmd);
+			/*
+			uiPipeline.Bind (cmd);
+			cmd.BindDescriptorSet (uiPipeline.Layout, dsMain);
+			cmd.Draw (3, 1, 0, 0);*/
+
+			pbrPipeline.RenderPass.End (cmd);
+		}
+
+		#endregion
+
+		#region update
+		void updateMatrices () {
+
+			Camera.AspectRatio = (float)swapChain.Width / swapChain.Height;
+
+			pbrPipeline.matrices.projection = Camera.Projection;
+			pbrPipeline.matrices.view = Camera.View;
+			pbrPipeline.matrices.model = Camera.Model;
+			pbrPipeline.uboMats.Update (pbrPipeline.matrices, (uint)Marshal.SizeOf<PBRPipeline.Matrices> ());
+			pbrPipeline.matrices.view *= Matrix4x4.CreateTranslation (-pbrPipeline.matrices.view.Translation);
+			pbrPipeline.matrices.model = Matrix4x4.Identity;
+			pbrPipeline.uboMats.Update (pbrPipeline.matrices, (uint)Marshal.SizeOf<PBRPipeline.Matrices> (), (uint)Marshal.SizeOf<PBRPipeline.Matrices> ());
+		}
+
+		public override void UpdateView () {
+			updateMatrices ();
+			updateViewRequested = false;
+		}
+		public override void Update () {
+			NotifyValueChanged ("fps", fps);
+			//crow.Update ();
+		}
+		#endregion
+
+		protected override void OnResize () {
+			crow.ProcessResize (new Crow.Rectangle (0,0,(int)swapChain.Width, (int)swapChain.Height));
+
+			createUIImage ();
+
+			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (dsMain, descLayoutMain.Bindings[0]);
+			uboUpdate.Write (dev, uiImage.Descriptor);
+
+			updateMatrices ();
+
+			if (frameBuffers != null)
+				for (int i = 0; i < swapChain.ImageCount; ++i)
+					frameBuffers[i]?.Dispose ();
+
+			frameBuffers = new Framebuffer[swapChain.ImageCount];
+
+			for (int i = 0; i < swapChain.ImageCount; ++i) {
+				frameBuffers[i] = new Framebuffer (pbrPipeline.RenderPass, swapChain.Width, swapChain.Height,
+					(pbrPipeline.RenderPass.Samples == VkSampleCountFlags.SampleCount1) ? new Image[] {
+						swapChain.images[i],
+						null
+					} : new Image[] {
+						null,
+						null,
+						swapChain.images[i]
+					});
+			}
+
+			buildCommandBuffers ();
+		}
+
+
+		#region Mouse and keyboard
+		protected override void onMouseMove (double xPos, double yPos) {
+			if (crow.ProcessMouseMove ((int)xPos, (int)yPos))
+				return;
+
+			double diffX = lastMouseX - xPos;
+			double diffY = lastMouseY - yPos;
+			if (MouseButton[0]) {
+				Camera.Rotate ((float)-diffX, (float)-diffY);
+			} else if (MouseButton[1]) {
+				Camera.Zoom ((float)diffY);
+			}
+
+			updateViewRequested = true;
+		}
+		protected override void onMouseButtonDown (MouseButton button) {
+			if (crow.ProcessMouseButtonDown ((Crow.MouseButton)button))
+				return;
+			base.onMouseButtonDown (button);
+		}
+		protected override void onMouseButtonUp (MouseButton button) {
+			if (crow.ProcessMouseButtonUp ((Crow.MouseButton)button))
+				return;
+			base.onMouseButtonUp (button);
+		}
+
+		protected override void onKeyDown (Key key, int scanCode, Modifier modifiers) {
+			switch (key) {
+				case Key.Up:
+					if (modifiers.HasFlag (Modifier.Shift))
+						pbrPipeline.matrices.lightPos += new Vector4 (0, 0, 1, 0);
+					else
+						Camera.Move (0, 0, 1);
+					break;
+				case Key.Down:
+					if (modifiers.HasFlag (Modifier.Shift))
+						pbrPipeline.matrices.lightPos += new Vector4 (0, 0, -1, 0);
+					else
+						Camera.Move (0, 0, -1);
+					break;
+				case Key.Left:
+					if (modifiers.HasFlag (Modifier.Shift))
+						pbrPipeline.matrices.lightPos += new Vector4 (1, 0, 0, 0);
+					else
+						Camera.Move (1, 0, 0);
+					break;
+				case Key.Right:
+					if (modifiers.HasFlag (Modifier.Shift))
+						pbrPipeline.matrices.lightPos += new Vector4 (-1, 0, 0, 0);
+					else
+						Camera.Move (-1, 0, 0);
+					break;
+				case Key.PageUp:
+					if (modifiers.HasFlag (Modifier.Shift))
+						pbrPipeline.matrices.lightPos += new Vector4 (0, 1, 0, 0);
+					else
+						Camera.Move (0, 1, 0);
+					break;
+				case Key.PageDown:
+					if (modifiers.HasFlag (Modifier.Shift))
+						pbrPipeline.matrices.lightPos += new Vector4 (0, -1, 0, 0);
+					else
+						Camera.Move (0, -1, 0);
+					break;
+				case Key.F1:
+					if (modifiers.HasFlag (Modifier.Shift))
+						pbrPipeline.matrices.exposure -= 0.3f;
+					else
+						pbrPipeline.matrices.exposure += 0.3f;
+					break;
+				case Key.F2:
+					if (modifiers.HasFlag (Modifier.Shift))
+						pbrPipeline.matrices.gamma -= 0.1f;
+					else
+						pbrPipeline.matrices.gamma += 0.1f;
+					break;
+				case Key.F3:
+					if (Camera.Type == Camera.CamType.FirstPerson)
+						Camera.Type = Camera.CamType.LookAt;
+					else
+						Camera.Type = Camera.CamType.FirstPerson;
+					Console.WriteLine ($"camera type = {Camera.Type}");
+					break;
+				default:
+					base.onKeyDown (key, scanCode, modifiers);
+					return;
+			}
+			updateViewRequested = true;
+		}
+		#endregion
+
+		protected override void Dispose (bool disposing) {
+			if (disposing) {
+				if (!isDisposed) {
+					dev.WaitIdle ();
+					for (int i = 0; i < swapChain.ImageCount; ++i)
+						frameBuffers[i]?.Dispose ();
+					//model.Dispose ();
+					//vboSkybox.Dispose ();
+					//pipeline.Dispose ();
+					uiPipeline.Dispose ();
+					//skyboxPL.Dispose ();
+					descLayoutMain.Dispose ();
+					//descLayoutTextures.Dispose ();
+					descriptorPool.Dispose ();
+					//cubemap.Dispose ();
+
+					//lutBrdf.Dispose ();
+					//irradianceCube.Dispose ();
+					//prefilterCube.Dispose ();
+					uiImage.Dispose ();
+
+					vkvgDev.Dispose ();
+
+					//uboMats.Dispose ();
+				}
+			}
+
+			base.Dispose (disposing);
+		}
+
+		
 	}
 }
