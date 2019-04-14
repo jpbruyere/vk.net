@@ -252,7 +252,7 @@ namespace VKE {
 				if (disposing) {
 					dev.Dispose ();
 #if DEBUG
-					//dbgRepport.Dispose ();
+					dbgRepport.Dispose ();
 #endif
 					instance.Dispose ();
 				} else
