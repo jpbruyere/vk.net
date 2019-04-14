@@ -1,12 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
-    <ProjectGuid>{1F18E74F-BCC9-481C-8FDF-89D81CBB30BE}</ProjectGuid>
+    <ProjectGuid>{1F18E74F-BCC9-481C-8888-89D81CBB30BE}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <RootNamespace>SachaWillemPbr</RootNamespace>
-    <AssemblyName>SachaWillemPbr</AssemblyName>
+    <AssemblyName>vkvgCrowTest</AssemblyName>
     <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
-    <OutputPath>$(SolutionDir)build\$(Configuration)\samples\SachaWillemPbr</OutputPath>
+    <OutputPath>$(SolutionDir)build\$(Configuration)\samples\vkvgCrowTest</OutputPath>
     <IntermediateOutputPath>$(SolutionDir)build\obj\$(Configuration)</IntermediateOutputPath>        
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">

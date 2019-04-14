@@ -12,8 +12,8 @@ namespace VKE {
 		float fov, aspectRatio, zNear = 0.1f, zFar = 256f, zoom = 1.0f;
 		float moveSpeed = 1, rotSpeed = 0.01f, zoomSpeed = 0.01f;
 
-		Vector3 rotation = new Vector3 (-1.5f, 2.7f, 0f);
-		Vector3 position = new Vector3 (0, 0, -2);
+		Vector3 rotation = Vector3.Zero;
+		Vector3 position = Vector3.Zero;
 		Matrix4x4 model = Matrix4x4.Identity;
 
 		public CamType Type;
@@ -45,6 +45,18 @@ namespace VKE {
 		public void Rotate (float x, float y, float z = 0) {
 			rotation.Y += rotSpeed * x;
 			rotation.X += rotSpeed * y;
+			Update ();
+		}
+		public void SetRotation (float x, float y, float z = 0) {
+			rotation.X = x;
+			rotation.Y = y;
+			rotation.Z = z;
+			Update ();
+		}
+		public void SetPosition (float x, float y, float z = 0) {
+			position.X = x;
+			position.Y = y;
+			position.Z = z;
 			Update ();
 		}
 		public void Move (float x, float y, float z = 0) {
