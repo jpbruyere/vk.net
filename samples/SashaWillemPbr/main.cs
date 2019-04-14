@@ -157,7 +157,7 @@ namespace PbrSample {
 		}
 
 		Program () : base () {
-			Camera.Type = Camera.CamType.FirstPerson;
+
 			vkvgDev = new vkvg.Device (instance.Handle, phy.Handle, dev.VkDev.Handle, presentQueue.qFamIndex,
 				vkvg.SampleCount.Sample_1, presentQueue.index);
 			crow = new Crow.Interface(vkvgDev, 800,600);
@@ -173,8 +173,8 @@ namespace PbrSample {
 
 			init ();
 
-			//model = new Model (dev, presentQueue, cmdPool, "../data/models/DamagedHelmet/glTF/DamagedHelmet.gltf");
-			model = new Model (dev, presentQueue, "../data/models/icosphere.gltf");
+			model = new Model (dev, presentQueue, "../data/models/DamagedHelmet/glTF/DamagedHelmet.gltf");
+			//model = new Model (dev, presentQueue, "../data/models/icosphere.gltf");
 			//model = new Model (dev, presentQueue, cmdPool, "../data/models/cube.gltf");
 			model.WriteMaterialsDescriptorSets (descLayoutTextures,
 				ShaderBinding.Color,
@@ -183,8 +183,8 @@ namespace PbrSample {
 				ShaderBinding.MetalRoughness,
 				ShaderBinding.Emissive);
 
-			Camera.Model = Matrix4x4.CreateRotationX (Utils.DegreesToRadians (-90)) * Matrix4x4.CreateTranslation (5,-5, 5);
-			//Camera.Model = Matrix4x4.CreateRotationX (Utils.DegreesToRadians (-90));
+			//Camera.Model = Matrix4x4.CreateRotationX (Utils.DegreesToRadians (-90)) * Matrix4x4.CreateTranslation (5,-5, 5);
+			Camera.Model = Matrix4x4.CreateRotationX (Utils.DegreesToRadians (-90));
 
 			//crow.Load ("#SachaWillemPbr.ui.fps.crow").DataSource = this;
 			crow.Load ("ui/fps.crow").DataSource = this;
@@ -291,8 +291,8 @@ namespace PbrSample {
 			cmd.BindVertexBuffer (vboSkybox);
 			cmd.Draw (36);
 
-			//drawModel (cmd);
-			drawShadedModelArray (cmd);
+			drawModel (cmd);
+			//drawShadedModelArray (cmd);
 
 			uiPipeline.Bind (cmd);
 			cmd.Draw (3, 1, 0, 0);
