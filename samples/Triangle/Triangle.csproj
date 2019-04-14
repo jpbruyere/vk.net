@@ -27,7 +27,7 @@
     <Reference Include="System.Numerics" />
     <Reference Include="System" />
     <Reference Include="VK">
-      <HintPath>..\..\packages\Vulkan.0.1.1-alpha\lib\netstandard2.0\VK.dll</HintPath>
+      <HintPath>..\..\packages\Vulkan.0.1.2.3-alpha\lib\netstandard2.0\VK.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>

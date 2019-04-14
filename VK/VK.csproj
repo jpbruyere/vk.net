@@ -3,7 +3,7 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     
     <Copyright></Copyright>
-    <AssemblyVersion>0.1.2.2</AssemblyVersion>
+    <AssemblyVersion>0.1.2.3</AssemblyVersion>
     <Description>C# vulkan binding</Description>
     <Company></Company>
     <Product>VK</Product>

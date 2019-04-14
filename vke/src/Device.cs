@@ -35,13 +35,16 @@ using static VK.Vk;
 namespace VKE {
     public class Device : IDisposable {	
         public readonly PhysicalDevice phy;
+		public readonly bool DebugMarkersEnabled;
+
         VkDevice dev;
         public VkDevice VkDev => dev;
 
         internal List<Queue> queues = new List<Queue> ();
 
-        public Device (PhysicalDevice _phy) {
+        public Device (PhysicalDevice _phy, bool enableDebugMarkers = false) {
             phy = _phy;
+			DebugMarkersEnabled = enableDebugMarkers;
         }
 
         public void Activate (VkPhysicalDeviceFeatures enabledFeatures, params string[] extensions) {
@@ -74,6 +77,9 @@ namespace VKE {
             }            
 
             List<IntPtr> deviceExtensions = new List<IntPtr> ();
+			if (DebugMarkersEnabled && !extensions.Contains("VK_EXT_debug_marker")) 
+				deviceExtensions.Add (new FixedUtf8String ("VK_EXT_debug_marker"));
+
             for (int i = 0; i < extensions.Length; i++) 
                 deviceExtensions.Add (new FixedUtf8String(extensions[i]));            
 				            
@@ -81,7 +87,7 @@ namespace VKE {
             deviceCreateInfo.queueCreateInfoCount = (uint)qInfos.Count;
             deviceCreateInfo.pQueueCreateInfos = qInfos.Pin();
             deviceCreateInfo.pEnabledFeatures = enabledFeatures.Pin ();
-
+            
             if (deviceExtensions.Count > 0) {
                 deviceCreateInfo.enabledExtensionCount = (uint)deviceExtensions.Count;
                 deviceCreateInfo.ppEnabledExtensionNames = deviceExtensions.Pin();

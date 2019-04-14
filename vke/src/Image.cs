@@ -42,10 +42,8 @@ namespace VKE {
         public VkFormat Format => info.format;
 		public VkImage Handle => handle;
 
-#if DEBUG && DEBUG_MARKER
 		protected override VkDebugMarkerObjectNameInfoEXT DebugMarkerInfo
 			=> new VkDebugMarkerObjectNameInfoEXT(VkDebugReportObjectTypeEXT.ImageEXT, handle.Handle);
-#endif
 
 		#region CTORS
         public Image (Device device, VkFormat format, VkImageUsageFlags usage, VkMemoryPropertyFlags _memoryPropertyFlags,

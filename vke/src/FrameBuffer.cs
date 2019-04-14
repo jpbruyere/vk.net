@@ -43,12 +43,10 @@ namespace VKE {
         public uint Height => createInfo.height;
         public uint Layers => createInfo.layers;
 
-#if DEBUG && DEBUG_MARKER
 		protected override VkDebugMarkerObjectNameInfoEXT DebugMarkerInfo 
 			=> new VkDebugMarkerObjectNameInfoEXT(VkDebugReportObjectTypeEXT.FramebufferEXT, handle.Handle);
-#endif
 
-#region CTORS
+		#region CTORS
 		public Framebuffer (RenderPass _renderPass, uint _width, uint _height, uint _layers = 1) : base(_renderPass.dev) {
             renderPass = _renderPass;
             createInfo.width = _width;
@@ -83,7 +81,7 @@ namespace VKE {
 			}
             Activate ();
 		}
-#endregion
+		#endregion
 
 		public override void Activate () {
 			if (state != ActivableState.Activated) {

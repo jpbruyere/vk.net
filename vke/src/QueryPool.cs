@@ -126,10 +126,8 @@ namespace VKE {
 
 		#endregion
 
-#if DEBUG && DEBUG_MARKER
 		protected override VkDebugMarkerObjectNameInfoEXT DebugMarkerInfo
 			=> new VkDebugMarkerObjectNameInfoEXT(VkDebugReportObjectTypeEXT.QueryPoolEXT, handle.Handle);
-#endif
 
 		public override void Activate () {
 			if (state != ActivableState.Activated) {

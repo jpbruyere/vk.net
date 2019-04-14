@@ -36,9 +36,7 @@ namespace VKE {
 		protected ActivableState state;
 		protected string name;
 
-#if DEBUG && DEBUG_MARKER
 		protected abstract VkDebugMarkerObjectNameInfoEXT DebugMarkerInfo { get; }
-#endif
 
 		public Device dev { get; private set; }
 
@@ -56,28 +54,27 @@ namespace VKE {
 		public void SetName (string name) {
 			this.name = name;
 
-#if DEBUG && DEBUG_MARKER
+			if (!dev.DebugMarkersEnabled)
+				return;
+
 			VkDebugMarkerObjectNameInfoEXT dmo = DebugMarkerInfo;
 			dmo.pObjectName = name.Pin();
 			Utils.CheckResult (vkDebugMarkerSetObjectNameEXT (dev.VkDev, ref dmo));
 			name.Unpin ();			
-#endif
 		}
 		public virtual void Activate () {
 			if (state == ActivableState.Disposed) 
 				GC.ReRegisterForFinalize (this);
 			state = ActivableState.Activated;
 			references++;
-#if DEBUG && DEBUG_MARKER
 			SetName (this.name);
-#endif
 		}
 
 		public override string ToString () {
 			return name;
 		}
 
-#region IDisposable Support
+		#region IDisposable Support
 		protected virtual void Dispose (bool disposing) {
 			state = ActivableState.Disposed;
 		}
@@ -93,6 +90,6 @@ namespace VKE {
 			Dispose (true);
 			GC.SuppressFinalize(this);
 		}
-#endregion
+		#endregion
 	}
 }

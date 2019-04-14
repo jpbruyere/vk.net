@@ -64,7 +64,8 @@ namespace VKE {
         public IntPtr Handle {
             get { return inst.Handle; }
         }
-        unsafe void init () {        
+
+        void init () {        
             NativeList<IntPtr> instanceExtensions = new NativeList<IntPtr> ();
 			NativeList<IntPtr> enabledLayerNames = new NativeList<IntPtr> ();
 

@@ -35,7 +35,8 @@ namespace VK {
 		public VkClearDepthStencilValue depthStencil;
 
 		public VkClearValue (float r, float g, float b) {
-			color = new VkClearColorValue (r, g, b)
+			depthStencil = default (VkClearDepthStencilValue);
+			color = new VkClearColorValue (r, g, b);
 		}
 	}
 

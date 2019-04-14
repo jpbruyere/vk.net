@@ -15,9 +15,6 @@ namespace ModelSample {
 			}
 		}
 
-#if DEBUG && DEBUG_MARKER
-		public override string[] EnabledExtensions =>  new string[] {"VK_KHR_swapchain","VK_EXT_debug_marker"};
-#endif
 		PipelineStatisticsQueryPool statPool;
 		TimestampQueryPool timestampQPool;
 
@@ -127,8 +124,8 @@ namespace ModelSample {
 				vkvg.SampleCount.Sample_4, presentQueue.index);
 					
 			init ();
-			model = new Model (dev, presentQueue, cmdPool, "/mnt/devel/vkChess/data/chess.gltf");
-			//model = new Model (dev, presentQueue, cmdPool, "../data/models/DamagedHelmet/glTF/DamagedHelmet.gltf");
+			//model = new Model (presentQueue, "/mnt/devel/vkChess/data/chess.gltf");
+			model = new Model (presentQueue, "../data/models/DamagedHelmet/glTF/DamagedHelmet.gltf");
 			model.WriteMaterialsDescriptorSets (descLayoutTextures,
 				ShaderBinding.Color,
 				ShaderBinding.Normal,
@@ -189,12 +186,10 @@ namespace ModelSample {
 			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (dsMats, descLayoutMatrix.Bindings[0]);				
 			uboUpdate.Write (dev, uboMats.Descriptor);
 
-#if DEBUG && DEBUG_MARKER
 			cfg.Layout.SetName ("Main Pipeline layout");
 			uboMats.SetName ("uboMats");
 			descriptorPool.SetName ("main pool");
 			descLayoutTextures.SetName ("descLayoutTextures");
-#endif
 
 			statPool = new PipelineStatisticsQueryPool (dev,
 				VkQueryPipelineStatisticFlags.InputAssemblyVertices |
@@ -215,24 +210,16 @@ namespace ModelSample {
 				cmds[i].Start ();
 
 				statPool.Begin (cmds[i]);
-#if DEBUG && DEBUG_MARKER
 				cmds[i].BeginRegion ("draw" + i, 0.5f, 1f, 0f);
 				cmds[i].Handle.SetDebugMarkerName (dev, "cmd Draw" + i); 
-#endif
-
 				recordDraw (cmds[i], frameBuffers[i]);
-
-#if DEBUG && DEBUG_MARKER
 				cmds[i].EndRegion ();
-#endif
 				statPool.End (cmds[i]);			
 				cmds[i].End ();
 			}
 		} 
 		void recordDraw (CommandBuffer cmd, Framebuffer fb) {
-#if DEBUG && DEBUG_MARKER
 			cmd.BeginRegion ("models", 0.5f, 1f, 0f);
-#endif 
 			pipeline.RenderPass.Begin (cmd, fb);
 
 			cmd.SetViewport (fb.Width, fb.Height);
@@ -243,10 +230,8 @@ namespace ModelSample {
 			model.Bind (cmd);
 			model.DrawAll (cmd, pipeline.Layout);
 
-#if DEBUG && DEBUG_MARKER
 			cmd.EndRegion ();
 			cmd.BeginRegion ("vkvg", 0.5f, 1f, 0f);
-#endif 
 			uiPipeline.Bind (cmd);
 
 			timestampQPool.Start (cmd);
@@ -262,9 +247,7 @@ namespace ModelSample {
 			timestampQPool.End (cmd);
 
 			pipeline.RenderPass.End (cmd);
-#if DEBUG && DEBUG_MARKER
 			cmd.EndRegion ();
-#endif
 		}
 		void recordCopyVkvgSurf (CommandBuffer cmd, VkImage srcImg, VkImage dstImg) {
 			Utils.setImageLayout (cmd.Handle, dstImg, VkImageAspectFlags.Color,
