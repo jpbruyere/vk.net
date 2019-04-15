@@ -65,8 +65,8 @@ namespace VKE {
 					VkImageUsageFlags usage = 0;
 					VkImageAspectFlags aspectFlags = 0;
 
-					checkLayoutRequirements (ad.initialLayout, ref usage, ref aspectFlags);
-					checkLayoutRequirements (ad.finalLayout, ref usage, ref aspectFlags);
+					Utils.QueryLayoutRequirements (ad.initialLayout, ref usage, ref aspectFlags);
+					Utils.QueryLayoutRequirements (ad.finalLayout, ref usage, ref aspectFlags);
 					foreach (SubPass sp in renderPass.subpasses) {
 						//TODO:check subpass usage
 					}
@@ -96,39 +96,6 @@ namespace VKE {
 			base.Activate ();
         }
 
-		void checkLayoutRequirements (VkImageLayout layout, ref VkImageUsageFlags usage, ref VkImageAspectFlags aspectFlags) {
-			switch (layout) {
-				case VkImageLayout.ColorAttachmentOptimal:
-				case VkImageLayout.PresentSrcKHR:
-				case VkImageLayout.SharedPresentKHR:
-					aspectFlags |= VkImageAspectFlags.Color;
-					usage |= VkImageUsageFlags.ColorAttachment;
-					break;
-				case VkImageLayout.DepthStencilAttachmentOptimal:
-					aspectFlags |= VkImageAspectFlags.Depth | VkImageAspectFlags.Stencil;
-					usage |= VkImageUsageFlags.DepthStencilAttachment;
-					break;
-				case VkImageLayout.DepthStencilReadOnlyOptimal:
-					aspectFlags |= VkImageAspectFlags.Depth | VkImageAspectFlags.Stencil;
-					usage |= VkImageUsageFlags.Sampled;
-					break;
-				case VkImageLayout.ShaderReadOnlyOptimal:
-					aspectFlags |= VkImageAspectFlags.Color;
-					usage |= VkImageUsageFlags.Sampled;
-					break;
-				case VkImageLayout.TransferSrcOptimal:
-					usage |= VkImageUsageFlags.TransferSrc;
-					break;
-				case VkImageLayout.TransferDstOptimal:
-					usage |= VkImageUsageFlags.TransferDst;
-					break;
-				case VkImageLayout.DepthReadOnlyStencilAttachmentOptimalKHR:
-				case VkImageLayout.DepthAttachmentStencilReadOnlyOptimalKHR:
-					aspectFlags |= VkImageAspectFlags.Depth | VkImageAspectFlags.Stencil;
-					usage |= VkImageUsageFlags.Sampled | VkImageUsageFlags.DepthStencilAttachment;
-					break;
-			}
-		}
 
 		public override string ToString () {
 			return string.Format ($"{base.ToString ()}[0x{handle.Handle.ToString("x")}]");

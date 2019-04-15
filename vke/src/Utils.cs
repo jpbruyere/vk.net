@@ -227,5 +227,44 @@ namespace VK {
                 0, IntPtr.Zero,
                 1, ref imageMemoryBarrier);
         }
+		public static void QueryLayoutRequirements (VkImageLayout layout, ref VkImageUsageFlags usage, ref VkImageAspectFlags aspectFlags) {
+			switch (layout) {
+				case VkImageLayout.ColorAttachmentOptimal:
+				case VkImageLayout.PresentSrcKHR:
+				case VkImageLayout.SharedPresentKHR:
+					aspectFlags |= VkImageAspectFlags.Color;
+					if (usage.HasFlag (VkImageUsageFlags.Sampled))
+						usage |= VkImageUsageFlags.InputAttachment;
+					usage |= VkImageUsageFlags.ColorAttachment;
+					break;
+				case VkImageLayout.DepthStencilAttachmentOptimal:
+					aspectFlags |= VkImageAspectFlags.Depth | VkImageAspectFlags.Stencil;
+					usage |= VkImageUsageFlags.DepthStencilAttachment;
+					break;
+				case VkImageLayout.DepthStencilReadOnlyOptimal:
+					aspectFlags |= VkImageAspectFlags.Depth | VkImageAspectFlags.Stencil;
+					if (usage.HasFlag (VkImageUsageFlags.ColorAttachment))
+						usage |= VkImageUsageFlags.InputAttachment;
+					else
+						usage |= VkImageUsageFlags.Sampled;
+					break;
+				case VkImageLayout.ShaderReadOnlyOptimal:
+					aspectFlags |= VkImageAspectFlags.Color;
+					usage |= VkImageUsageFlags.Sampled;
+					break;
+				case VkImageLayout.TransferSrcOptimal:
+					usage |= VkImageUsageFlags.TransferSrc;
+					break;
+				case VkImageLayout.TransferDstOptimal:
+					usage |= VkImageUsageFlags.TransferDst;
+					break;
+				case VkImageLayout.DepthReadOnlyStencilAttachmentOptimalKHR:
+				case VkImageLayout.DepthAttachmentStencilReadOnlyOptimalKHR:
+					aspectFlags |= VkImageAspectFlags.Depth | VkImageAspectFlags.Stencil;
+					usage |= VkImageUsageFlags.Sampled | VkImageUsageFlags.DepthStencilAttachment;
+					break;
+			}
+		}
+
     }
 }

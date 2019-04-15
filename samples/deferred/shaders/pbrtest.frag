@@ -13,10 +13,10 @@ layout (binding = 0) uniform UBO
     float exposure;    
 } ubo;
 
-layout (input_attachment_index = 0, set = 1, binding = 0) uniform subpassInput samplerColorRough;
-layout (input_attachment_index = 1, set = 1, binding = 1) uniform subpassInput samplerEmitMetal;
-layout (input_attachment_index = 2, set = 1, binding = 2) uniform subpassInput samplerN;
-layout (input_attachment_index = 3, set = 1, binding = 3) uniform subpassInput samplerPos;
+layout (input_attachment_index = 0, set = 2, binding = 0) uniform subpassInput samplerColorRough;
+layout (input_attachment_index = 1, set = 2, binding = 1) uniform subpassInput samplerEmitMetal;
+layout (input_attachment_index = 2, set = 2, binding = 2) uniform subpassInput samplerN;
+layout (input_attachment_index = 3, set = 2, binding = 3) uniform subpassInput samplerPos;
 
 layout (set = 0, binding = 1) uniform sampler2D samplerBRDFLUT;
 layout (set = 0, binding = 2) uniform samplerCube samplerIrradiance;

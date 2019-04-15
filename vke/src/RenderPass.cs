@@ -46,6 +46,35 @@ namespace VKE {
 		#region CTORS
 		public RenderPass (Device device) : base(device) { }
 
+		/// <summary>
+		/// Create renderpass with a single color attachment and a resolve one if needed
+		/// </summary>
+		public RenderPass (Device device, VkFormat colorFormat, VkSampleCountFlags samples = VkSampleCountFlags.SampleCount1)
+			: this (device) { 
+			Samples = samples;
+
+			AddAttachment (colorFormat, (samples == VkSampleCountFlags.SampleCount1) ? VkImageLayout.PresentSrcKHR : VkImageLayout.ColorAttachmentOptimal, samples);
+            ClearValues.Add (new VkClearValue { color = new VkClearColorValue (0.0f, 0.0f, 0.0f) });
+
+			SubPass subpass0 = new SubPass ();
+			subpass0.AddColorReference (0, VkImageLayout.ColorAttachmentOptimal);
+
+			if (samples != VkSampleCountFlags.SampleCount1) {
+				AddAttachment (colorFormat, VkImageLayout.PresentSrcKHR, VkSampleCountFlags.SampleCount1);
+				ClearValues.Add (new VkClearValue { color = new VkClearColorValue (0.0f, 0.0f, 0.0f) });
+				subpass0.AddResolveReference (1, VkImageLayout.ColorAttachmentOptimal);
+			}
+
+            AddSubpass (subpass0);
+
+            AddDependency (Vk.SubpassExternal, 0,
+                VkPipelineStageFlags.BottomOfPipe, VkPipelineStageFlags.ColorAttachmentOutput,
+                VkAccessFlags.MemoryRead, VkAccessFlags.ColorAttachmentRead | VkAccessFlags.ColorAttachmentWrite);
+            AddDependency (0, Vk.SubpassExternal,
+                VkPipelineStageFlags.ColorAttachmentOutput, VkPipelineStageFlags.BottomOfPipe,
+                VkAccessFlags.ColorAttachmentRead | VkAccessFlags.ColorAttachmentWrite, VkAccessFlags.MemoryRead);
+
+		}
         /// <summary>
         /// Create default renderpass with one color and one depth attachments
         /// </summary>
