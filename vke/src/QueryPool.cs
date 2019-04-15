@@ -121,7 +121,7 @@ namespace VKE {
         {
 			createInfos = VkQueryPoolCreateInfo.New (queryType, statisticFlags, count);
 
-			Activate ();
+			//Activate ();
         }
 
 		#endregion

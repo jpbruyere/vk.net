@@ -53,6 +53,8 @@ namespace VKE {
         protected bool updateViewRequested = true;
 		protected double lastMouseX, lastMouseY;
 
+		protected Camera camera = new Camera (Utils.DegreesToRadians (60f), 1f);
+
         uint width, height;
 
 		public virtual string[] EnabledExtensions {
@@ -156,12 +158,54 @@ namespace VKE {
 
         protected bool[] MouseButton => buttons;
 
-        protected virtual void onMouseMove (double xPos, double yPos) { }
+        protected virtual void onMouseMove (double xPos, double yPos) { 
+			double diffX = lastMouseX - xPos;
+			double diffY = lastMouseY - yPos;
+			if (MouseButton[0]) {
+				camera.Rotate ((float)-diffX,(float)diffY);
+			} else if (MouseButton[1]) {
+				camera.Zoom ((float)diffY);
+			}
+
+			updateViewRequested = true;
+        }
         protected virtual void onMouseButtonDown (Glfw.MouseButton button) { }
         protected virtual void onMouseButtonUp (Glfw.MouseButton button) { }
 		protected virtual void onKeyDown (Key key, int scanCode, Modifier modifiers) { 
-            if (key == Key.F4 && modifiers == Modifier.Alt || key == Key.Escape)
-                Glfw3.SetWindowShouldClose (currentWindow.hWin, 1);
+			switch (key) {
+				case Key.F4:
+					if (modifiers == Modifier.Alt)
+						Glfw3.SetWindowShouldClose (currentWindow.hWin, 1);
+					break;
+				case Key.Escape:
+					Glfw3.SetWindowShouldClose (currentWindow.hWin, 1);
+					break;
+				case Key.Up:
+					camera.Move (0, 0, 1);
+					break;
+				case Key.Down:
+					camera.Move (0, 0, -1);
+					break;
+				case Key.Left:
+					camera.Move (1, 0, 0);
+					break;
+				case Key.Right:
+					camera.Move (-1, 0, 0);
+					break;
+				case Key.PageUp:
+					camera.Move (0, 1, 0);
+					break;
+				case Key.PageDown:
+					camera.Move (0, -1, 0);
+					break;
+				case Key.F3:
+					if (camera.Type == Camera.CamType.FirstPerson)
+						camera.Type = Camera.CamType.LookAt;
+					else
+						camera.Type = Camera.CamType.FirstPerson;
+					break;
+			}
+			updateViewRequested = true;
 		}
 		protected virtual void onKeyUp (Key key, int scanCode, Modifier modifiers) { }
 

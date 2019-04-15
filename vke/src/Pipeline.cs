@@ -106,6 +106,7 @@ namespace VKE {
 			info.pDynamicState 			= dynStatesInfo.Pin ();
 			info.stageCount 			= (uint)cfg.shaders.Count;
 			info.pStages 				= shaderStages.Pin ();
+			info.subpass 				= cfg.SubpassIndex;
 
 			Utils.CheckResult (vkCreateGraphicsPipelines (dev.VkDev, VkPipelineCache.Null, 1, ref info, IntPtr.Zero, out handle));
 

@@ -19,10 +19,86 @@ namespace PbrSample {
 		Camera Camera = new Camera (Utils.DegreesToRadians (60f), 1f);
 
 		Framebuffer[] frameBuffers;
-
 		PBRPipeline pbrPipeline;
 
+		PipelineStatisticsQueryPool statPool;
+		TimestampQueryPool timestampQPool;
+		ulong[] results;
+
+		protected override void configureEnabledFeatures (ref VkPhysicalDeviceFeatures features) {
+			base.configureEnabledFeatures (ref features);
+			features.pipelineStatisticsQuery = true;
+		}
+
+		vkvg.Device vkvgDev;
+        vkvg.Surface vkvgSurf;
+		Image vkvgImage;
+
+        void vkvgDraw () {
+
+            using (vkvg.Context ctx = new vkvg.Context (vkvgSurf)) {
+				ctx.Operator = vkvg.Operator.Clear;
+				ctx.Paint ();
+				ctx.Operator = vkvg.Operator.Over;
+
+				ctx.LineWidth = 1;
+				ctx.SetSource (0.1, 0.1, 0.1, 0.6);
+				ctx.Rectangle (5.5, 5.5, 320, 250);
+				ctx.FillPreserve ();
+				ctx.Flush ();
+				ctx.SetSource (0.8, 0.8, 0.8);
+				ctx.Stroke ();
+
+				ctx.FontFace = "mono";
+				ctx.FontSize = 8;
+				int x = 16;
+				int y = 40, dy = 16;
+				ctx.MoveTo (x, y);
+				ctx.ShowText (string.Format ($"fps:     {fps,5} "));
+				ctx.MoveTo (x + 200, y - 0.5);
+				ctx.Rectangle (x + 200, y - 8.5, 0.1 * fps, 10);
+				ctx.SetSource (0.1, 0.9, 0.1);
+				ctx.Fill ();
+				ctx.SetSource (0.8, 0.8, 0.8);
+				y += dy;
+				ctx.MoveTo (x, y);
+				ctx.ShowText (string.Format ($"Exposure:{pbrPipeline.matrices.exposure,5} "));
+				y += dy;
+				ctx.MoveTo (x, y);
+				ctx.ShowText (string.Format ($"Gamma:   {pbrPipeline.matrices.gamma,5} "));
+				if (results == null)
+					return;
+
+				y += dy*2;
+				ctx.MoveTo (x, y);
+				ctx.ShowText ("Pipeline Statistics");
+				ctx.MoveTo (x-2, 2.5+y);
+				ctx.LineTo (x+160, 2.5+y);
+				ctx.Stroke ();
+				y += 4;
+				x += 20;
+
+				for (int i = 0; i < statPool.RequestedStats.Length; i++) {
+					y += dy;
+					ctx.MoveTo (x, y);
+					ctx.ShowText (string.Format ($"{statPool.RequestedStats[i].ToString(),-30} :{results[i],12:0,0} "));
+				}
+				//y += dy;
+				//ctx.MoveTo (x, y);
+				//ctx.ShowText (string.Format ($"{"TimeStamp Start",-24} :{timeStamps[0],18:0,0} "));
+				//y += dy;
+				//ctx.MoveTo (x, y);
+				//ctx.ShowText (string.Format ($"{"TimeStamp End  ",-24} :{timeStamps[1],18:0,0} "));
+				y += dy;
+				ctx.MoveTo (x, y);
+				ctx.ShowText (string.Format ($"{"Elapsed microsecond",-20} :{timestampQPool.ElapsedMiliseconds:0.0000} "));
+			}
+		}
+
 		Program () {
+			vkvgDev = new vkvg.Device (instance.Handle, phy.Handle, dev.VkDev.Handle, presentQueue.qFamIndex,
+				vkvg.SampleCount.Sample_4, presentQueue.index);
+
 			//UpdateFrequency = 20;
 			Camera.Model = Matrix4x4.CreateRotationX (Utils.DegreesToRadians (-90)) * Matrix4x4.CreateRotationY (Utils.DegreesToRadians (180));
 			Camera.SetRotation (-0.1f,-0.4f);
@@ -30,6 +106,39 @@ namespace PbrSample {
 
 			pbrPipeline = new PBRPipeline(presentQueue,
 				new RenderPass (dev, swapChain.ColorFormat, dev.GetSuitableDepthFormat (), samples));
+
+			initUIPipeline ();
+
+			statPool = new PipelineStatisticsQueryPool (dev,
+				VkQueryPipelineStatisticFlags.InputAssemblyVertices |
+				VkQueryPipelineStatisticFlags.InputAssemblyPrimitives |
+				VkQueryPipelineStatisticFlags.ClippingInvocations |
+				VkQueryPipelineStatisticFlags.ClippingPrimitives |
+				VkQueryPipelineStatisticFlags.FragmentShaderInvocations);
+
+			timestampQPool = new TimestampQueryPool (dev);
+		}
+
+		DescriptorPool descriptorPool;
+		DescriptorSetLayout descLayoutMain;
+		DescriptorSet dsMain;
+		Pipeline uiPipeline;
+
+		void initUIPipeline () { 
+			descriptorPool = new DescriptorPool (dev, 1, new VkDescriptorPoolSize (VkDescriptorType.CombinedImageSampler));
+			descLayoutMain = new DescriptorSetLayout (dev,			
+				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler));
+			dsMain = descriptorPool.Allocate (descLayoutMain);
+
+			PipelineConfig cfg = PipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, samples);
+			cfg.RenderPass = pbrPipeline.RenderPass;
+			cfg.Layout = new PipelineLayout (dev, descLayoutMain);
+			cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/FullScreenQuad.vert.spv");
+			cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/simpletexture.frag.spv");
+			cfg.blendAttachments[0] = new VkPipelineColorBlendAttachmentState (true);
+
+			uiPipeline = new Pipeline (cfg);
+
 		}
 
 		void buildCommandBuffers () {
@@ -38,7 +147,11 @@ namespace PbrSample {
 				cmds[i] = cmdPool.AllocateCommandBuffer ();
 				cmds[i].Start ();
 
+				statPool.Begin (cmds[i]);
+
 				recordDraw (cmds[i], frameBuffers[i]);
+
+				statPool.End (cmds[i]);
 
 				cmds[i].End ();
 			}
@@ -50,6 +163,17 @@ namespace PbrSample {
 			cmd.SetScissor (fb.Width, fb.Height);
 
 			pbrPipeline.RecordDraw (cmd);
+
+			uiPipeline.Bind (cmd);
+			cmd.BindDescriptorSet (uiPipeline.Layout, dsMain);
+
+			vkvgImage.SetLayout (cmd, VkImageAspectFlags.Color, VkImageLayout.ColorAttachmentOptimal, VkImageLayout.ShaderReadOnlyOptimal,
+				VkPipelineStageFlags.ColorAttachmentOutput, VkPipelineStageFlags.FragmentShader);
+
+			cmd.Draw (3, 1, 0, 0);
+
+			vkvgImage.SetLayout (cmd, VkImageAspectFlags.Color, VkImageLayout.ShaderReadOnlyOptimal, VkImageLayout.ColorAttachmentOptimal,
+				VkPipelineStageFlags.FragmentShader, VkPipelineStageFlags.BottomOfPipe);
 
 			pbrPipeline.RenderPass.End (cmd);
 		}
@@ -72,10 +196,24 @@ namespace PbrSample {
 			updateViewRequested = false;
 		}
 		public override void Update () {
+			results = statPool.GetResults ();
+			vkvgDraw ();
 		}
 		#endregion
 
 		protected override void OnResize () {
+			vkvgImage?.Dispose ();
+			vkvgSurf?.Dispose ();
+			vkvgSurf = new vkvg.Surface (vkvgDev, (int)swapChain.Width, (int)swapChain.Height);
+			vkvgImage = new Image (dev, new VkImage ((ulong)vkvgSurf.VkImage.ToInt64 ()), VkFormat.B8g8r8a8Unorm,
+				VkImageUsageFlags.ColorAttachment, (uint)vkvgSurf.Width, (uint)vkvgSurf.Height);
+			vkvgImage.CreateView (VkImageViewType.ImageView2D, VkImageAspectFlags.Color);
+			vkvgImage.CreateSampler (VkFilter.Nearest,VkFilter.Nearest, VkSamplerMipmapMode.Nearest, VkSamplerAddressMode.ClampToBorder);
+
+			vkvgImage.Descriptor.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
+			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (dsMain, descLayoutMain);				
+			uboUpdate.Write (dev, vkvgImage.Descriptor);
+
 			updateMatrices ();
 
 			if (frameBuffers != null)
@@ -186,6 +324,17 @@ namespace PbrSample {
 						frameBuffers[i]?.Dispose ();
 
 					pbrPipeline.Dispose ();
+
+					uiPipeline.Dispose ();
+					descLayoutMain.Dispose ();
+					descriptorPool.Dispose ();
+
+					vkvgImage?.Dispose ();
+					vkvgSurf?.Dispose ();
+					vkvgDev.Dispose ();
+
+					timestampQPool?.Dispose ();
+					statPool?.Dispose ();
 				}
 			}
 

@@ -38,11 +38,12 @@ void main()
     mat4 mod = ubo.modelMatrix * pc.model;
     vec4 pos = mod * vec4(inPos.xyz, 1.0);
     
-    //outN = normalize(transpose(inverse(mat3(mod))) * inNormal);    
-    outN = normalize(mat3(mod)* inNormal);    
+    outN = normalize(transpose(inverse(mat3(mod))) * inNormal);    
+    //outN = normalize(mat3(mod)* inNormal);    
     
     mat4 viewInv = inverse(ubo.viewMatrix);
-    outV = -(ubo.viewMatrix * pos).xyz;//normalize(vec3(viewInv * vec4(0.0, 0.0, 0.0, 1.0) - pos));
+    //outV = -(ubo.viewMatrix * pos).xyz;
+    outV = normalize(vec3(viewInv * vec4(0.0, 0.0, 0.0, 1.0) - pos));
     outWorldPos = pos.xyz;   
 	gl_Position = ubo.projectionMatrix * ubo.viewMatrix * pos;
 }
