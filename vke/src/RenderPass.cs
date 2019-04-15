@@ -76,7 +76,7 @@ namespace VKE {
             AddDependency (Vk.SubpassExternal, 0,
                 VkPipelineStageFlags.BottomOfPipe, VkPipelineStageFlags.ColorAttachmentOutput,
                 VkAccessFlags.MemoryRead, VkAccessFlags.ColorAttachmentRead | VkAccessFlags.ColorAttachmentWrite);
-            AddDependency (0, 1,
+            AddDependency (0, Vk.SubpassExternal,
                 VkPipelineStageFlags.ColorAttachmentOutput, VkPipelineStageFlags.BottomOfPipe,
                 VkAccessFlags.ColorAttachmentRead | VkAccessFlags.ColorAttachmentWrite, VkAccessFlags.MemoryRead);
         }
@@ -145,7 +145,7 @@ namespace VKE {
             VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask,
             VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask,
             VkDependencyFlags dependencyFlags = VkDependencyFlags.ByRegion) {
-            VkSubpassDependency dep = new VkSubpassDependency {
+            dependencies.Add (new VkSubpassDependency {
                 srcSubpass = srcSubpass,
                 dstSubpass = dstSubpass,
                 srcStageMask = srcStageMask,
@@ -153,10 +153,10 @@ namespace VKE {
                 srcAccessMask = srcAccessMask,
                 dstAccessMask = dstAccessMask,
                 dependencyFlags = dependencyFlags
-            };
+            });
         }
-        public void AddSubpass (SubPass subPass) {
-            subpasses.Add (subPass);
+        public void AddSubpass (params SubPass[] subPass) {
+            subpasses.AddRange (subPass);
         }
         /// <summary>
         /// Begin Render pass with framebuffer extent dimensions
@@ -167,7 +167,7 @@ namespace VKE {
         /// <summary>
         /// Begin Render pass with custom render area
         /// </summary>
-        public unsafe void Begin (CommandBuffer cmd, Framebuffer frameBuffer, uint width, uint height) {
+        public void Begin (CommandBuffer cmd, Framebuffer frameBuffer, uint width, uint height) {
 
             VkRenderPassBeginInfo info = VkRenderPassBeginInfo.New();
             info.renderPass = handle;
@@ -181,6 +181,12 @@ namespace VKE {
 
 			ClearValues.Unpin ();
         }
+		/// <summary>
+		/// Switch to next subpass
+		/// </summary>
+		public void BeginSubPass (CommandBuffer cmd, VkSubpassContents subpassContents = VkSubpassContents.Inline) {
+			vkCmdNextSubpass (cmd.Handle, subpassContents);
+		}
         public void End (CommandBuffer cmd) {
             vkCmdEndRenderPass (cmd.Handle);
         }

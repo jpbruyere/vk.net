@@ -209,5 +209,11 @@ namespace VK {
 			descriptorCount = count;
 		}
 	}
+    public unsafe partial struct VkAttachmentReference {
+		public VkAttachmentReference (uint attachment, VkImageLayout layout) {
+			this.attachment = attachment;
+			this.layout = layout;
+		}
+    }
 }
 

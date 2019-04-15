@@ -31,6 +31,7 @@ using static VK.Vk;
 
 namespace VKE {
     public class PipelineConfig {
+		public uint SubpassIndex;
         public PipelineLayout Layout;
 		public RenderPass RenderPass;
 

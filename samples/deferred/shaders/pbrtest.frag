@@ -13,41 +13,20 @@ layout (binding = 0) uniform UBO
     float exposure;    
 } ubo;
 
-layout (set = 1, binding = 0) uniform sampler2D samplerColor;
-layout (set = 1, binding = 1) uniform sampler2D samplerNormal;
-layout (set = 1, binding = 2) uniform sampler2D samplerOcclusion;
-layout (set = 1, binding = 3) uniform sampler2D samplerMetalRoughness;
-layout (set = 1, binding = 4) uniform sampler2D samplerEmissive;
+layout (input_attachment_index = 0, set = 1, binding = 0) uniform subpassInput samplerColorRough;
+layout (input_attachment_index = 1, set = 1, binding = 1) uniform subpassInput samplerEmitMetal;
+layout (input_attachment_index = 2, set = 1, binding = 2) uniform subpassInput samplerN;
+layout (input_attachment_index = 3, set = 1, binding = 3) uniform subpassInput samplerPos;
+
+layout (set = 0, binding = 1) uniform sampler2D samplerBRDFLUT;
+layout (set = 0, binding = 2) uniform samplerCube samplerIrradiance;
+layout (set = 0, binding = 3) uniform samplerCube prefilteredMap;
 
 layout (location = 0) in vec2 inUV;
-layout (location = 1) in vec3 inN;
-layout (location = 2) in vec3 inV;
-layout (location = 3) in vec3 inWorldPos;
 
 layout (location = 0) out vec4 outFragColor;
 
-layout(push_constant) uniform PushConsts {
-    layout(offset = 64)
-    vec4 baseColorFactor;
-    vec4 emissiveFactor;
-    uint availableAttachments;
-    uint alphaMode;
-    float alphaCutoff;
-    float metallicFactor;
-    float roughnessFactor;
-} pc;
-
-const uint MAP_COLOR = 0x1;
-const uint MAP_NORMAL = 0x2;
-const uint MAP_AO = 0x4;
-const uint MAP_METAL = 0x8;
-const uint MAP_ROUGHNESS = 0x16;
-const uint MAP_METALROUGHNESS = 0x32;
-const uint MAP_EMISSIVE = 0x64;
-
 const float PI = 3.141592653589793;
-
-vec3 light = vec3(1.0,.0,1.0);
 
 // From http://filmicgames.com/archives/75
 vec3 Uncharted2Tonemap(vec3 x)
@@ -118,69 +97,53 @@ vec3 specularContribution(vec3 L, vec3 V, vec3 N, vec3 F0, float metallic, float
     return color;
 }
 
-// See http://www.thetenthplanet.de/archives/1180
-vec3 perturbNormal(vec3 inNormal, vec3 tangentNormal)
+
+vec3 prefilteredReflection(vec3 R, float roughness)
 {
-    
-
-    vec3 q1 = dFdx(inWorldPos);
-    vec3 q2 = dFdy(inWorldPos);
-    vec2 st1 = dFdx(inUV);
-    vec2 st2 = dFdy(inUV);
-
-    vec3 N = normalize(inNormal);
-    vec3 T = normalize(q1 * st2.t - q2 * st1.t);
-    vec3 B = -normalize(cross(N, T));
-    mat3 TBN = mat3(T, B, N);
-
-    return normalize(TBN * tangentNormal);
+    const float MAX_REFLECTION_LOD = 9.0; // todo: param/const
+    float lod = roughness * MAX_REFLECTION_LOD;
+    float lodf = floor(lod);
+    float lodc = ceil(lod);
+    vec3 a = textureLod(prefilteredMap, R, lodf).rgb;
+    vec3 b = textureLod(prefilteredMap, R, lodc).rgb;
+    return mix(a, b, lod - lodf);
 }
+
 void main() 
 {
-    vec3 emit = vec3(0);
-    vec4 base_color = pc.baseColorFactor;
-    float rough = pc.roughnessFactor;
-    float metallic = pc.metallicFactor;
+    vec3 emit       = subpassLoad (samplerEmitMetal).rgb;    
+    vec4 base_color = vec4(subpassLoad(samplerColorRough).rgb, 1);    
+    float rough     = subpassLoad(samplerColorRough).a;
+    float metallic  = subpassLoad(samplerEmitMetal).a;        
     
-    if ((pc.availableAttachments & MAP_COLOR) == MAP_COLOR)
-        base_color *= texture(samplerColor, inUV);    
-    if ((pc.availableAttachments & MAP_METALROUGHNESS) == MAP_METALROUGHNESS) {
-        rough *= clamp(texture(samplerMetalRoughness, inUV).g, 0.04, 1.0);
-        metallic *= texture(samplerMetalRoughness, inUV).b;
-    }    
-    if ((pc.availableAttachments & MAP_EMISSIVE) == MAP_EMISSIVE)   
-        emit = pc.emissiveFactor.rgb * texture(samplerEmissive, inUV).rgb;
-    
-    
-    vec3 N = ((pc.availableAttachments & MAP_NORMAL) == MAP_NORMAL) ?
-        perturbNormal(inN, texture(samplerNormal, inUV).xyz * 2.0 - 1.0) :
-        normalize(inN);    
-    vec3 V = normalize(inV);
+    vec3 N = subpassLoad(samplerN).rgb;
+    vec3 V = subpassLoad(samplerPos).rgb;
     vec3 R = -normalize(reflect(V, N));
     
     vec3 F0 = vec3(0.04);
     F0 = mix(F0, base_color.rgb, metallic);
     float alpha = pow(rough, 2.0);
 
-    vec3 L = normalize(light);
+    vec3 L = normalize(ubo.lightPos.xyz);
     vec3 Lo = specularContribution(L, V, N, F0, metallic, rough, base_color.rgb);
     
-    vec3 reflection = vec3(rough);// prefilteredReflection(R, rough).rgb;
-    vec3 irradiance = vec3(0.8);//texture(samplerIrradiance, N).rgb;
+    vec2 brdf = texture(samplerBRDFLUT, vec2(max(dot(N, V), 0.0), rough)).rg;
+    vec3 reflection = prefilteredReflection(R, rough).rgb; 
+    vec3 irradiance = texture(samplerIrradiance, N).rgb;
 
     // Diffuse based on irradiance
-    vec3 diffuse = irradiance * base_color.rgb;
+    vec3 diffuse = base_color.rgb;// * irradiance;
 
     vec3 F = F_SchlickR(max(dot(N, V), 0.0), F0, rough);
         
-    vec3 specular = reflection * F;//(F * brdf.x + brdf.y);
+    vec3 specular = reflection * (F * brdf.x + brdf.y);
 
     // Ambient part
     vec3 kD = 1.0 - F;
     kD *= 1.0 - metallic;
     
-    float ao = ((pc.availableAttachments & MAP_AO) == MAP_AO) ? texture(samplerOcclusion, inUV).r : 1.0f;
-    vec3 ambient = (kD * diffuse + specular) * ao;
+    //float ao = ((pc.availableAttachments & MAP_AO) == MAP_AO) ? texture(samplerOcclusion, inUV).r : 1.0f;
+    vec3 ambient = (kD * diffuse + specular);// * ao;
     vec3 color = ambient + Lo;
 
     // Tone mapping
@@ -189,5 +152,5 @@ void main()
     // Gamma correction
     color = pow(color, vec3(1.0f / ubo.gamma)) + emit;
 
-    outFragColor = vec4(color , base_color.a);
+    outFragColor = vec4(color, base_color.a);
 }

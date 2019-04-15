@@ -28,7 +28,7 @@
     <Datas Include="..\data\**\*.*">      
       <Link>data\%(RecursiveDir)%(Filename)%(Extension)</Link>
     </Datas>
-    <Compile Include="main.cs" />
+    <Compile Include="*.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="System.Numerics" />
@@ -56,7 +56,7 @@
       <HintPath>..\..\packages\vkvg.net.0.2.0\lib\netstandard2.0\vkvg.net.dll</HintPath>
     </Reference>
     <Reference Include="VK">
-      <HintPath>..\..\packages\Vulkan.0.1.2.3-alpha\lib\netstandard2.0\VK.dll</HintPath>
+      <HintPath>..\..\packages\Vulkan.0.1.2.4-alpha\lib\netstandard2.0\VK.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
