@@ -118,7 +118,7 @@ namespace VKE {
             }
         }
 
-        public unsafe VkSubpassDescription SubpassDescription {
+        public VkSubpassDescription SubpassDescription {
             get {
                 VkSubpassDescription subpassDescription = new VkSubpassDescription ();
                 subpassDescription.pipelineBindPoint = VkPipelineBindPoint.Graphics;
@@ -144,8 +144,19 @@ namespace VKE {
             }        
         }
 
-        #region IDisposable Support
-        protected virtual void Dispose (bool disposing) {
+		/*public void GetAttachmentUsage (uint frameBufferAttachmentIndex, ref VkImageUsageFlags usage, ref VkImageAspectFlags aspect) {
+			for (int i = 0; i < colorRefs.Count; i++) {
+				if (colorRefs[i].attachment == frameBufferAttachmentIndex)
+					Utils.QueryLayoutRequirements (colorRefs[i].layout, ref usage, ref aspect);
+			}
+			for (int i = 0; i < inputRefs.Count; i++) {
+				if (colorRefs[i].attachment == frameBufferAttachmentIndex)
+					Utils.QueryLayoutRequirements (colorRefs[i].layout, ref usage, ref aspect);
+			}
+		}*/
+
+		#region IDisposable Support
+		protected virtual void Dispose (bool disposing) {
             if (disposing) {
                 colorRefs?.Dispose ();
                 inputRefs?.Dispose ();

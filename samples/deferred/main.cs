@@ -16,8 +16,6 @@ namespace PbrSample {
 
 		VkSampleCountFlags samples = VkSampleCountFlags.SampleCount1;
 
-		Camera Camera = new Camera (Utils.DegreesToRadians (60f), 1f);
-
 		public struct Matrices {
 			public Matrix4x4 projection;
 			public Matrix4x4 view;
@@ -33,22 +31,27 @@ namespace PbrSample {
 			exposure = 2.0f,
 		};
 
+#if DEBUG
 		PipelineStatisticsQueryPool statPool;
 		TimestampQueryPool timestampQPool;
 		ulong[] results;
+#endif
 
 		protected override void configureEnabledFeatures (ref VkPhysicalDeviceFeatures features) {
 			base.configureEnabledFeatures (ref features);
+#if DEBUG
 			features.pipelineStatisticsQuery = true;
+#endif
 		}
 
 		Program () {
-			Camera.Model = Matrix4x4.CreateRotationX (Utils.DegreesToRadians (-90)) * Matrix4x4.CreateRotationY (Utils.DegreesToRadians (180));
-			Camera.SetRotation (-0.1f,-0.4f);
-			Camera.SetPosition (0, 0, -3);
+			camera.Model = Matrix4x4.CreateRotationX (Utils.DegreesToRadians (-90)) * Matrix4x4.CreateRotationY (Utils.DegreesToRadians (180));
+			camera.SetRotation (-0.1f,-0.4f);
+			camera.SetPosition (0, 0, -3);
 
 			init ();
 
+#if DEBUG
 			statPool = new PipelineStatisticsQueryPool (dev,
 				VkQueryPipelineStatisticFlags.InputAssemblyVertices |
 				VkQueryPipelineStatisticFlags.InputAssemblyPrimitives |
@@ -57,6 +60,7 @@ namespace PbrSample {
 				VkQueryPipelineStatisticFlags.FragmentShaderInvocations);
 
 			timestampQPool = new TimestampQueryPool (dev);
+#endif
 		}
 
 		Framebuffer[] frameBuffers;
@@ -146,7 +150,7 @@ namespace PbrSample {
 			dsGBuff = descriptorPool.Allocate (descLayoutGBuff);
 
 			PipelineConfig cfg = PipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, samples);
-			cfg.Layout = new PipelineLayout (dev, descLayoutMain, descLayoutModelTextures);
+			cfg.Layout = new PipelineLayout (dev, descLayoutMain, descLayoutModelTextures, descLayoutGBuff);
 			cfg.Layout.AddPushConstants (
 				new VkPushConstantRange (VkShaderStageFlags.Vertex, (uint)Marshal.SizeOf<Matrix4x4> ()),
 				new VkPushConstantRange (VkShaderStageFlags.Fragment, (uint)Marshal.SizeOf<Model.PbrMaterial> (), 64)
@@ -162,10 +166,11 @@ namespace PbrSample {
 			cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/GBuffPbr.frag.spv");
 
 			gBuffPipeline = new Pipeline (cfg);
-
+			cfg.blendAttachments.Clear ();
+			cfg.blendAttachments.Add (new VkPipelineColorBlendAttachmentState (false));
 			cfg.ResetShadersAndVerticesInfos ();
 			cfg.SubpassIndex = 1;
-			cfg.Layout = new PipelineLayout (dev, descLayoutMain, descLayoutGBuff);
+			cfg.Layout = gBuffPipeline.Layout;
 			cfg.depthStencilState.depthTestEnable = false;
 			cfg.depthStencilState.depthWriteEnable = false;
 			cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/FullScreenQuad.vert.spv");
@@ -186,6 +191,8 @@ namespace PbrSample {
 			envCube.WriteDesc (uboMats.Descriptor);
 
 			model = new Model (presentQueue, "../data/models/DamagedHelmet/glTF/DamagedHelmet.gltf");
+			//model = new Model (presentQueue, "../data/models/chess.gltf");
+			//model = new Model (presentQueue, "../data/models/Sponza/glTF/Sponza.gltf");
 			//model = new Model (dev, presentQueue, "../data/models/icosphere.gltf");
 			//model = new Model (dev, presentQueue, cmdPool, "../data/models/cube.gltf");
 			model.WriteMaterialsDescriptorSets (descLayoutModelTextures,
@@ -203,11 +210,13 @@ namespace PbrSample {
 				cmds[i] = cmdPool.AllocateCommandBuffer ();
 				cmds[i].Start ();
 
+#if DEBUG
 				statPool.Begin (cmds[i]);
-
 				recordDraw (cmds[i], frameBuffers[i]);
-
 				statPool.End (cmds[i]);
+#else
+				recordDraw (cmds[i], frameBuffers[i]);
+#endif
 
 				cmds[i].End ();
 			}
@@ -225,8 +234,7 @@ namespace PbrSample {
 
 			renderPass.BeginSubPass (cmd);
 
-			cmd.BindDescriptorSet (composePipeline.Layout, dsMain);
-			cmd.BindDescriptorSet (composePipeline.Layout, dsGBuff, 1);
+			cmd.BindDescriptorSet (composePipeline.Layout, dsGBuff, 2);
 			composePipeline.Bind (cmd);
 
 			cmd.Draw (3, 1, 0, 0);
@@ -234,13 +242,13 @@ namespace PbrSample {
 			renderPass.End (cmd);
 		}
 
-		#region update
+#region update
 		void updateMatrices () {
-			Camera.AspectRatio = (float)swapChain.Width / swapChain.Height;
+			camera.AspectRatio = (float)swapChain.Width / swapChain.Height;
 
-			matrices.projection = Camera.Projection;
-			matrices.view = Camera.View;
-			matrices.model = Camera.Model;
+			matrices.projection = camera.Projection;
+			matrices.view = camera.View;
+			matrices.model = camera.Model;
 			uboMats.Update (matrices, (uint)Marshal.SizeOf<Matrices> ());
 			matrices.view *= Matrix4x4.CreateTranslation (-matrices.view.Translation);
 			matrices.model = Matrix4x4.Identity;
@@ -252,10 +260,11 @@ namespace PbrSample {
 			updateViewRequested = false;
 		}
 		public override void Update () {
+#if DEBUG
 			results = statPool.GetResults ();
-
+#endif
 		}
-		#endregion
+#endregion
 
 
 
@@ -284,7 +293,11 @@ namespace PbrSample {
 										gbEmitMetal.Descriptor,
 										gbN.Descriptor,
 										gbPos.Descriptor);
-			}
+			gbColorRough.SetName ("GBuffColorRough");
+			gbEmitMetal.SetName ("GBuffEmitMetal");
+			gbN.SetName ("GBuffN");
+			gbPos.SetName ("GBuffPos");
+		}
 
 		protected override void OnResize () {
 			updateMatrices ();
@@ -299,16 +312,7 @@ namespace PbrSample {
 
 			for (int i = 0; i < swapChain.ImageCount; ++i) {
 				frameBuffers[i] = new Framebuffer (renderPass, swapChain.Width, swapChain.Height, new Image[] {
-						swapChain.images[i], null, gbColorRough, gbEmitMetal, gbN, gbPos});
-				//frameBuffers[i] = new Framebuffer (renderPass, swapChain.Width, swapChain.Height,
-					//(renderPass.Samples == VkSampleCountFlags.SampleCount1) ? new Image[] {
-					//	swapChain.images[i],
-					//	null
-					//} : new Image[] {
-					//	null,
-					//	null,
-					//	swapChain.images[i]
-					//});
+					swapChain.images[i], null, gbColorRough, gbEmitMetal, gbN, gbPos});
 			}
 
 			buildCommandBuffers ();
@@ -316,56 +320,8 @@ namespace PbrSample {
 
 
 		#region Mouse and keyboard
-		protected override void onMouseMove (double xPos, double yPos) {
-			double diffX = lastMouseX - xPos;
-			double diffY = lastMouseY - yPos;
-			if (MouseButton[0]) {
-				Camera.Rotate ((float)-diffX, (float)-diffY);
-			} else if (MouseButton[1]) {
-				Camera.Zoom ((float)diffY);
-			}
-
-			updateViewRequested = true;
-		}
-
 		protected override void onKeyDown (Key key, int scanCode, Modifier modifiers) {
 			switch (key) {
-				case Key.Up:
-					if (modifiers.HasFlag (Modifier.Shift))
-						matrices.lightPos += new Vector4 (0, 0, 1, 0);
-					else
-						Camera.Move (0, 0, 1);
-					break;
-				case Key.Down:
-					if (modifiers.HasFlag (Modifier.Shift))
-						matrices.lightPos += new Vector4 (0, 0, -1, 0);
-					else
-						Camera.Move (0, 0, -1);
-					break;
-				case Key.Left:
-					if (modifiers.HasFlag (Modifier.Shift))
-						matrices.lightPos += new Vector4 (1, 0, 0, 0);
-					else
-						Camera.Move (1, 0, 0);
-					break;
-				case Key.Right:
-					if (modifiers.HasFlag (Modifier.Shift))
-						matrices.lightPos += new Vector4 (-1, 0, 0, 0);
-					else
-						Camera.Move (-1, 0, 0);
-					break;
-				case Key.PageUp:
-					if (modifiers.HasFlag (Modifier.Shift))
-						matrices.lightPos += new Vector4 (0, 1, 0, 0);
-					else
-						Camera.Move (0, 1, 0);
-					break;
-				case Key.PageDown:
-					if (modifiers.HasFlag (Modifier.Shift))
-						matrices.lightPos += new Vector4 (0, -1, 0, 0);
-					else
-						Camera.Move (0, -1, 0);
-					break;
 				case Key.F1:
 					if (modifiers.HasFlag (Modifier.Shift))
 						matrices.exposure -= 0.3f;
@@ -379,11 +335,11 @@ namespace PbrSample {
 						matrices.gamma += 0.1f;
 					break;
 				case Key.F3:
-					if (Camera.Type == Camera.CamType.FirstPerson)
-						Camera.Type = Camera.CamType.LookAt;
+					if (camera.Type == Camera.CamType.FirstPerson)
+						camera.Type = Camera.CamType.LookAt;
 					else
-						Camera.Type = Camera.CamType.FirstPerson;
-					Console.WriteLine ($"camera type = {Camera.Type}");
+						camera.Type = Camera.CamType.FirstPerson;
+					Console.WriteLine ($"camera type = {camera.Type}");
 					break;
 				default:
 					base.onKeyDown (key, scanCode, modifiers);
@@ -391,7 +347,7 @@ namespace PbrSample {
 			}
 			updateViewRequested = true;
 		}
-		#endregion
+#endregion
 
 		protected override void Dispose (bool disposing) {
 			if (disposing) {
@@ -408,9 +364,10 @@ namespace PbrSample {
 					descLayoutGBuff.Dispose ();
 
 					descriptorPool.Dispose ();
-
+#if DEBUG
 					timestampQPool?.Dispose ();
 					statPool?.Dispose ();
+#endif
 				}
 			}
 

@@ -67,7 +67,7 @@ namespace VKE {
 				GC.ReRegisterForFinalize (this);
 			state = ActivableState.Activated;
 			references++;
-			SetName (this.name);
+			SetName (name);
 		}
 
 		public override string ToString () {
