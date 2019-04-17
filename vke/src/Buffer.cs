@@ -60,7 +60,10 @@ namespace VKE {
         }
     }
     public class HostBuffer<T> : HostBuffer {
-        public HostBuffer (Device device, VkBufferUsageFlags usage, IList<T> data)
+		public HostBuffer (Device device, VkBufferUsageFlags usage, uint arrayElementCount)
+			: base (device, usage, (ulong)(Marshal.SizeOf<T> () * arrayElementCount)) {
+		}
+		public HostBuffer (Device device, VkBufferUsageFlags usage, IList<T> data)
             : base (device, usage, (ulong)(Marshal.SizeOf<T> () * data.Count)) {
             Map ();
             Update (data, createInfo.size);

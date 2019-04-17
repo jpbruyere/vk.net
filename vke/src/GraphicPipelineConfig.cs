@@ -30,7 +30,7 @@ using VK;
 using static VK.Vk;
 
 namespace VKE {
-    public class PipelineConfig {
+    public class GraphicPipelineConfig {
 		public uint SubpassIndex;
         public PipelineLayout Layout;
 		public RenderPass RenderPass;
@@ -51,14 +51,14 @@ namespace VKE {
 			get { return multisampleState.rasterizationSamples; }
 		}
 
-		public PipelineConfig () {
+		public GraphicPipelineConfig () {
 
 		}
 
-		public static PipelineConfig CreateDefault (VkPrimitiveTopology topology = VkPrimitiveTopology.TriangleList,
+		public static GraphicPipelineConfig CreateDefault (VkPrimitiveTopology topology = VkPrimitiveTopology.TriangleList,
 			VkSampleCountFlags samples = VkSampleCountFlags.SampleCount1, bool depthTestEnabled = true)
 		{
-			PipelineConfig cfg = new PipelineConfig ();
+			GraphicPipelineConfig cfg = new GraphicPipelineConfig ();
 
 			cfg.inputAssemblyState.topology = topology;
             cfg.multisampleState.rasterizationSamples = samples;

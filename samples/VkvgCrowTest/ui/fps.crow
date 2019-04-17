@@ -1,8 +1,8 @@
 ﻿<?xml version="1.0"?>
-<VerticalStack Left="10" Top="100" Width="30%" Height="Fit" Spacing="2" Background="0.3,0.3,0.3,0.9" Margin="20">
+<VerticalStack Left="10" Top="100" Width="30%" Height="Fit" Spacing="2" Background="0.8,0.3,0.3,0.5" Margin="20">
     <HorizontalStack Height="Fit">
     	<Label Text="Fps:" Width="80" Background="SteelBlue"/>
-    	<Label Text="{fps}" />
+        <Label Text="{fps}" Background="0.8,0.3,0.3,0.5" Margin="20"/>	
     </HorizontalStack>
     <HorizontalStack Height="Fit">
         <Label Text="Gamma:" Width="80" Background="SteelBlue"/>
@@ -14,7 +14,6 @@
         <Slider Height="20" Value="{²Exposure}" Maximum="10.0" SmallIncrement="0.1" LargeIncrement="1.0"/>
         <Label Text="{Exposure}" Width="40" TextAlignment="Right"/>
     </HorizontalStack>
-<!--        <ComboBox Data="{cubemapPathes}"/>-->
 </VerticalStack>
 <!--<Window Caption="Showcase" Height="30%" Width="20%" Top="10" Left="10">-->
 <!--</Window>-->

@@ -53,7 +53,8 @@ namespace VKE {
 			: this (device) { 
 			Samples = samples;
 
-			AddAttachment (colorFormat, (samples == VkSampleCountFlags.SampleCount1) ? VkImageLayout.PresentSrcKHR : VkImageLayout.ColorAttachmentOptimal, samples);
+			AddAttachment (colorFormat, (samples == VkSampleCountFlags.SampleCount1) ? VkImageLayout.PresentSrcKHR : VkImageLayout.ColorAttachmentOptimal, samples,
+				VkAttachmentLoadOp.Load, VkAttachmentStoreOp.Store, VkImageLayout.ColorAttachmentOptimal);
             ClearValues.Add (new VkClearValue { color = new VkClearColorValue (0.0f, 0.0f, 0.0f) });
 
 			SubPass subpass0 = new SubPass ();

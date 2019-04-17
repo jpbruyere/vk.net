@@ -64,6 +64,11 @@ namespace VKE {
 
             return new CommandBuffer (dev.VkDev, this, buff);
         }
+		public CommandBuffer AllocateAndStart (VkCommandBufferUsageFlags usage = 0, VkCommandBufferLevel level = VkCommandBufferLevel.Primary) {
+			CommandBuffer cmd = AllocateCommandBuffer (level);
+			cmd.Start (usage);
+			return cmd;
+		}
         public void FreeCommandBuffers (params CommandBuffer[] cmds) {
             if (cmds.Length == 1) {
                 VkCommandBuffer hnd = cmds[0].Handle;

@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 using VK;
 
 namespace VKE {
-	class PBRPipeline : Pipeline {	
+	class PBRPipeline : GraphicPipeline {	
 		public struct Matrices {
 			public Matrix4x4 projection;
 			public Matrix4x4 view;
@@ -54,7 +54,7 @@ namespace VKE {
 
 			dsMain = descriptorPool.Allocate (descLayoutMain);
 
-			PipelineConfig cfg = PipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, renderPass.Samples);
+			GraphicPipelineConfig cfg = GraphicPipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, renderPass.Samples);
 
 			cfg.Layout = new PipelineLayout (dev, descLayoutMain, descLayoutTextures);
 			cfg.Layout.AddPushConstants (

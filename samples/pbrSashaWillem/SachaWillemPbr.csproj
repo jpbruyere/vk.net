@@ -2,8 +2,7 @@
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <ProjectGuid>{1F18E74F-BCC9-481C-8FDF-89D81CBB30BE}</ProjectGuid>
-    <OutputType>Exe</OutputType>
-    <RootNamespace>SachaWillemPbr</RootNamespace>
+    <OutputType>Exe</OutputType>    
     <AssemblyName>SachaWillemPbr</AssemblyName>
     <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
     <OutputPath>$(SolutionDir)build\$(Configuration)\samples\SachaWillemPbr</OutputPath>
@@ -13,7 +12,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <DefineConstants>DEBUG;DEBUG_MARKER</DefineConstants>
+    <DefineConstants>DEBUG</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -68,7 +67,7 @@
       <HintPath>..\..\packages\System.Memory.4.5.2\lib\netstandard2.0\System.Memory.dll</HintPath>
     </Reference>
     <Reference Include="VK">
-      <HintPath>..\..\packages\Vulkan.0.1.2.2-alpha\lib\netstandard2.0\VK.dll</HintPath>
+      <HintPath>..\..\packages\Vulkan.0.1.2.5-alpha\lib\netstandard2.0\VK.dll</HintPath>
     </Reference>
     <Reference Include="vkvg.net">
       <HintPath>..\..\packages\vkvg.net.0.2.1-beta\lib\netstandard2.0\vkvg.net.dll</HintPath>

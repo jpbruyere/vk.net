@@ -31,6 +31,7 @@ using static VK.Vk;
 namespace VKE {
     public class DescriptorSet {
         internal VkDescriptorSet handle;
+		public VkDescriptorSet Handle => handle;
         DescriptorPool pool;
         internal List<VkDescriptorSetLayout> descriptorSetLayouts = new List<VkDescriptorSetLayout> ();
 

@@ -16,10 +16,7 @@ namespace PbrSample {
 
 		VkSampleCountFlags samples = VkSampleCountFlags.SampleCount4;
 
-		Camera Camera = new Camera (Utils.DegreesToRadians (60f), 1f);
-
 		Framebuffer[] frameBuffers;
-
 		PBRPipeline pbrPipeline;
 
 		#region crow
@@ -54,7 +51,7 @@ namespace PbrSample {
 			}
 		}
 		Crow.Interface crow;
-		Pipeline uiPipeline;
+		GraphicPipeline uiPipeline;
 		Image uiImage;
 		vkvg.Device vkvgDev;
 
@@ -77,9 +74,9 @@ namespace PbrSample {
 
 		Program () {
 			//UpdateFrequency = 20;
-			Camera.Model = Matrix4x4.CreateRotationX (Utils.DegreesToRadians (-90)) * Matrix4x4.CreateRotationY (Utils.DegreesToRadians (180));
-			Camera.SetRotation (-0.1f,-0.4f);
-			Camera.SetPosition (0, 0, -3);
+			camera.Model = Matrix4x4.CreateRotationX (Utils.DegreesToRadians (-90)) * Matrix4x4.CreateRotationY (Utils.DegreesToRadians (180));
+			camera.SetRotation (-0.1f,-0.4f);
+			camera.SetPosition (0, 0, -3);
 
 			initCrow ();
 
@@ -102,7 +99,7 @@ namespace PbrSample {
 				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler));
 			dsMain = descriptorPool.Allocate (descLayoutMain);
 
-			PipelineConfig cfg = PipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, samples);
+			GraphicPipelineConfig cfg = GraphicPipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, samples);
 			cfg.RenderPass = pbrPipeline.RenderPass;
 			cfg.Layout = new PipelineLayout (dev, descLayoutMain);
 
@@ -110,7 +107,7 @@ namespace PbrSample {
 			cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/simpletexture.frag.spv");
 			cfg.blendAttachments[0] = new VkPipelineColorBlendAttachmentState (true);
 
-			uiPipeline = new Pipeline (cfg);
+			uiPipeline = new GraphicPipeline (cfg);
 
 			createUIImage ();
 		}
@@ -148,11 +145,11 @@ namespace PbrSample {
 
 		#region update
 		void updateMatrices () {
-			Camera.AspectRatio = (float)swapChain.Width / swapChain.Height;
+			camera.AspectRatio = (float)swapChain.Width / swapChain.Height;
 
-			pbrPipeline.matrices.projection = Camera.Projection;
-			pbrPipeline.matrices.view = Camera.View;
-			pbrPipeline.matrices.model = Camera.Model;
+			pbrPipeline.matrices.projection = camera.Projection;
+			pbrPipeline.matrices.view = camera.View;
+			pbrPipeline.matrices.model = camera.Model;
 			pbrPipeline.uboMats.Update (pbrPipeline.matrices, (uint)Marshal.SizeOf<PBRPipeline.Matrices> ());
 			pbrPipeline.matrices.view *= Matrix4x4.CreateTranslation (-pbrPipeline.matrices.view.Translation);
 			pbrPipeline.matrices.model = Matrix4x4.Identity;
@@ -209,9 +206,9 @@ namespace PbrSample {
 			double diffX = lastMouseX - xPos;
 			double diffY = lastMouseY - yPos;
 			if (MouseButton[0]) {
-				Camera.Rotate ((float)-diffX, (float)-diffY);
+				camera.Rotate ((float)-diffX, (float)-diffY);
 			} else if (MouseButton[1]) {
-				Camera.Zoom ((float)diffY);
+				camera.Zoom ((float)diffY);
 			}
 
 			updateViewRequested = true;
@@ -233,37 +230,37 @@ namespace PbrSample {
 					if (modifiers.HasFlag (Modifier.Shift))
 						pbrPipeline.matrices.lightPos += new Vector4 (0, 0, 1, 0);
 					else
-						Camera.Move (0, 0, 1);
+						camera.Move (0, 0, 1);
 					break;
 				case Key.Down:
 					if (modifiers.HasFlag (Modifier.Shift))
 						pbrPipeline.matrices.lightPos += new Vector4 (0, 0, -1, 0);
 					else
-						Camera.Move (0, 0, -1);
+						camera.Move (0, 0, -1);
 					break;
 				case Key.Left:
 					if (modifiers.HasFlag (Modifier.Shift))
 						pbrPipeline.matrices.lightPos += new Vector4 (1, 0, 0, 0);
 					else
-						Camera.Move (1, 0, 0);
+						camera.Move (1, 0, 0);
 					break;
 				case Key.Right:
 					if (modifiers.HasFlag (Modifier.Shift))
 						pbrPipeline.matrices.lightPos += new Vector4 (-1, 0, 0, 0);
 					else
-						Camera.Move (-1, 0, 0);
+						camera.Move (-1, 0, 0);
 					break;
 				case Key.PageUp:
 					if (modifiers.HasFlag (Modifier.Shift))
 						pbrPipeline.matrices.lightPos += new Vector4 (0, 1, 0, 0);
 					else
-						Camera.Move (0, 1, 0);
+						camera.Move (0, 1, 0);
 					break;
 				case Key.PageDown:
 					if (modifiers.HasFlag (Modifier.Shift))
 						pbrPipeline.matrices.lightPos += new Vector4 (0, -1, 0, 0);
 					else
-						Camera.Move (0, -1, 0);
+						camera.Move (0, -1, 0);
 					break;
 				case Key.F1:
 					if (modifiers.HasFlag (Modifier.Shift))
@@ -278,11 +275,11 @@ namespace PbrSample {
 						pbrPipeline.matrices.gamma += 0.1f;
 					break;
 				case Key.F3:
-					if (Camera.Type == Camera.CamType.FirstPerson)
-						Camera.Type = Camera.CamType.LookAt;
+					if (camera.Type == Camera.CamType.FirstPerson)
+						camera.Type = Camera.CamType.LookAt;
 					else
-						Camera.Type = Camera.CamType.FirstPerson;
-					Console.WriteLine ($"camera type = {Camera.Type}");
+						camera.Type = Camera.CamType.FirstPerson;
+					Console.WriteLine ($"camera type = {camera.Type}");
 					break;
 				default:
 					base.onKeyDown (key, scanCode, modifiers);

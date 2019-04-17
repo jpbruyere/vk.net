@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
-    <ProjectGuid>{1F18E74F-AEE8-481C-8FDF-89D81CBB30BE}</ProjectGuid>
-    <OutputType>Exe</OutputType>    
-    <AssemblyName>pbr</AssemblyName>
+    <ProjectGuid>{1F05E74F-AEE8-481C-8FDF-456654CC30BE}</ProjectGuid>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>vkvg_tests</AssemblyName>
     <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
-    <OutputPath>$(SolutionDir)build\$(Configuration)\samples\pbr</OutputPath>
+    <OutputPath>$(SolutionDir)build\$(Configuration)\samples\vkvg_tests</OutputPath>
     <IntermediateOutputPath>$(SolutionDir)build\obj\$(Configuration)</IntermediateOutputPath>        
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -24,10 +24,11 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
-    <GLSLShader Include="shaders\**\*.frag;shaders\**\*.vert;shaders\**\*.comp" />
     <Datas Include="..\data\**\*.*">      
       <Link>data\%(RecursiveDir)%(Filename)%(Extension)</Link>
     </Datas>
+    <GLSLShader Include="shaders\simpletexture.frag" />
+    <GLSLShader Include="shaders\FullScreenQuad.vert" />
     <Compile Include="main.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -54,6 +55,9 @@
     </Reference>
     <Reference Include="VK">
       <HintPath>..\..\packages\Vulkan.0.1.2.5-alpha\lib\netstandard2.0\VK.dll</HintPath>
+    </Reference>
+    <Reference Include="vkvg.net">
+      <HintPath>..\..\packages\vkvg.net.0.2.1-beta\lib\netstandard2.0\vkvg.net.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>

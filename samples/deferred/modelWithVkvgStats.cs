@@ -5,9 +5,8 @@ using Glfw;
 using VKE;
 using VK;
 using static VKE.Camera;
-using Buffer = VKE.Buffer;
 
-namespace ModelSample2 {
+namespace modelWithVkvgStats {
 	class Program : VkWindow {
 
 		PipelineStatisticsQueryPool statPool;
@@ -41,8 +40,8 @@ namespace ModelSample2 {
 		DescriptorSetLayout descLayoutTextures;
 		DescriptorSet dsMats;
 
-		Pipeline pipeline;
-		Pipeline uiPipeline;
+		GraphicPipeline pipeline;
+		GraphicPipeline uiPipeline;
 		Framebuffer[] frameBuffers;
 
 		Model model;
@@ -100,12 +99,7 @@ namespace ModelSample2 {
 					ctx.MoveTo (x, y);
 					ctx.ShowText (string.Format ($"{statPool.RequestedStats[i].ToString(),-30} :{results[i],12:0,0} "));
 				}
-				//y += dy;
-				//ctx.MoveTo (x, y);
-				//ctx.ShowText (string.Format ($"{"TimeStamp Start",-24} :{timeStamps[0],18:0,0} "));
-				//y += dy;
-				//ctx.MoveTo (x, y);
-				//ctx.ShowText (string.Format ($"{"TimeStamp End  ",-24} :{timeStamps[1],18:0,0} "));
+
 				y += dy;
 				ctx.MoveTo (x, y);
 				ctx.ShowText (string.Format ($"{"Elapsed microsecond",-20} :{timestampQPool.ElapsedMiliseconds:0.0000} "));
@@ -153,7 +147,7 @@ namespace ModelSample2 {
 
 			dsMats = descriptorPool.Allocate (descLayoutMatrix);
 
-			PipelineConfig cfg = PipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, samples);
+			GraphicPipelineConfig cfg = GraphicPipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, samples);
 
 			cfg.Layout = new PipelineLayout (dev, descLayoutMatrix, descLayoutTextures);
 			cfg.Layout.AddPushConstants (
@@ -168,7 +162,7 @@ namespace ModelSample2 {
 			cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/pbrtest.vert.spv");
 			cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/pbrtest.frag.spv");
 
-			pipeline = new Pipeline (cfg);
+			pipeline = new GraphicPipeline (cfg);
 
 			cfg.ResetShadersAndVerticesInfos ();
 			cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/FullScreenQuad.vert.spv");
@@ -176,7 +170,7 @@ namespace ModelSample2 {
 
 			cfg.blendAttachments[0] = new VkPipelineColorBlendAttachmentState (true);
 
-			uiPipeline = new Pipeline (cfg);
+			uiPipeline = new GraphicPipeline (cfg);
 
 			uboMats = new HostBuffer (dev, VkBufferUsageFlags.UniformBuffer, (ulong)Marshal.SizeOf<Matrices>());
 			uboMats.Map ();//permanent map
@@ -350,6 +344,7 @@ namespace ModelSample2 {
 					descriptorPool.Dispose ();
 
 					uboMats.Dispose ();
+
 					vkvgSurf?.Dispose ();
 					vkvgDev.Dispose ();
 

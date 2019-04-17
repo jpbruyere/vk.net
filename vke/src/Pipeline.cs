@@ -30,117 +30,34 @@ using VK;
 using static VK.Vk;
 
 namespace VKE {
-    public class Pipeline : IDisposable {
-		protected Device dev;
-        internal VkPipeline handle;
-
-		public readonly RenderPass RenderPass;
+    public abstract class Pipeline : IDisposable {
+		protected Device dev;        
+        protected VkPipeline handle;
 		protected PipelineLayout layout;
+
+		public Device Dev => dev;
+		public VkPipeline Handle => handle;
 		public PipelineLayout Layout => layout;
 
-		public readonly VkPipelineBindPoint BindPoint;
-		public VkSampleCountFlags Samples => RenderPass.Samples;
+		protected readonly VkPipelineBindPoint bindPoint;
 
 		#region CTORS
-		protected Pipeline (RenderPass renderPass, string name = "custom pipeline") { 
-			BindPoint = VkPipelineBindPoint.Graphics;
-			RenderPass = renderPass;
-
-			dev = RenderPass.dev;
-
-			handle.SetDebugMarkerName (dev, name);
+		protected Pipeline (Device dev, string name = "custom pipeline") {
+			this.dev = dev;
 		}
-		/// <summary>
-		/// Create a new Pipeline with supplied RenderPass
-		/// </summary>
-		public Pipeline (PipelineConfig cfg, string name = "pipeline") : this (cfg.RenderPass, name)
-		{
-			layout = cfg.Layout;
-
-			init (cfg);
-		}
-
-		/// <summary>
-		/// Create a new pipeline and the default renderpass for it
-		/// </summary>
-		//public Pipeline (Device dev, VkFormat colorFormat, VkFormat depthFormat, 
-		//	VkPrimitiveTopology topology = VkPrimitiveTopology.TriangleList,
-		//	VkSampleCountFlags samples = VkSampleCountFlags.SampleCount1)
-		//	: this (dev, , topology,samples)
-		//{
-        //}
 		#endregion
 
-        protected void init (PipelineConfig cfg) {
-			Layout.Activate ();
-			RenderPass.Activate ();
-
-			List<VkPipelineShaderStageCreateInfo> shaderStages = new List<VkPipelineShaderStageCreateInfo> ();
-			foreach (ShaderInfo shader in cfg.shaders)
-				shaderStages.Add (shader.GetStageCreateInfo(dev));
-
-			VkPipelineColorBlendStateCreateInfo colorBlendInfo = VkPipelineColorBlendStateCreateInfo.New();
-			colorBlendInfo.attachmentCount = (uint)cfg.blendAttachments.Count;
-			colorBlendInfo.pAttachments = cfg.blendAttachments.Pin ();
-
-			VkPipelineDynamicStateCreateInfo dynStatesInfo = VkPipelineDynamicStateCreateInfo.New();
-			dynStatesInfo.dynamicStateCount = (uint)cfg.dynamicStates.Count;
-			dynStatesInfo.pDynamicStates = cfg.dynamicStates.Pin ();
-
-			VkPipelineVertexInputStateCreateInfo vertInputInfo = VkPipelineVertexInputStateCreateInfo.New();
-			vertInputInfo.vertexBindingDescriptionCount = (uint)cfg.vertexBindings.Count;
-			vertInputInfo.pVertexBindingDescriptions = cfg.vertexBindings.Pin ();
-			vertInputInfo.vertexAttributeDescriptionCount = (uint)cfg.vertexAttributes.Count;
-			vertInputInfo.pVertexAttributeDescriptions = cfg.vertexAttributes.Pin ();
-
-			VkGraphicsPipelineCreateInfo info = VkGraphicsPipelineCreateInfo.New();
-			info.renderPass 			= RenderPass.handle;
-			info.layout					= Layout.handle;
-			info.pVertexInputState 		= vertInputInfo.Pin ();
-			info.pInputAssemblyState 	= cfg.inputAssemblyState.Pin ();
-			info.pRasterizationState 	= cfg.rasterizationState.Pin ();
-			info.pColorBlendState 		= colorBlendInfo.Pin ();
-			info.pMultisampleState 		= cfg.multisampleState.Pin ();
-			info.pViewportState 		= cfg.viewportState.Pin ();
-			info.pDepthStencilState 	= cfg.depthStencilState.Pin ();
-			info.pDynamicState 			= dynStatesInfo.Pin ();
-			info.stageCount 			= (uint)cfg.shaders.Count;
-			info.pStages 				= shaderStages.Pin ();
-			info.subpass 				= cfg.SubpassIndex;
-
-			Utils.CheckResult (vkCreateGraphicsPipelines (dev.VkDev, VkPipelineCache.Null, 1, ref info, IntPtr.Zero, out handle));
-
-			for (int i = 0; i < cfg.shaders.Count; i++)
-				dev.DestroyShaderModule (shaderStages[i].module);
-
-			vertInputInfo.Unpin ();
-			cfg.inputAssemblyState.Unpin ();
-			cfg.rasterizationState.Unpin ();
-			colorBlendInfo.Unpin ();
-			cfg.multisampleState.Unpin ();
-			cfg.viewportState.Unpin ();
-			cfg.depthStencilState.Unpin ();
-			dynStatesInfo.Unpin ();
-			shaderStages.Unpin ();
-
-			cfg.vertexAttributes.Unpin ();
-			cfg.vertexBindings.Unpin ();
-			cfg.dynamicStates.Unpin ();
-			cfg.blendAttachments.Unpin ();
-		}
-
-		public void Bind (CommandBuffer cmd) {
-            vkCmdBindPipeline (cmd.Handle, BindPoint, handle);
-        }
+		public abstract void Bind (CommandBuffer cmd);
+		public abstract void BindDescriptorSet (CommandBuffer cmd, DescriptorSet dset, uint firstSet = 0);
+		        
 
 		#region IDisposable Support
-		private bool isDisposed = false; // Pour détecter les appels redondants
+		protected bool isDisposed;
 
 		protected virtual void Dispose (bool disposing) {
 			if (!isDisposed) {
 				if (disposing) {
-					RenderPass.Dispose ();
-					Layout.Dispose ();
+					layout.Dispose ();
 				}else
 					System.Diagnostics.Debug.WriteLine ("Pipeline disposed by finalizer.");
 
