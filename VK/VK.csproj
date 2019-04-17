@@ -3,7 +3,7 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     
     <Copyright></Copyright>
-    <AssemblyVersion>0.1.2.4</AssemblyVersion>
+    <AssemblyVersion>0.1.2.5</AssemblyVersion>
     <Description>C# vulkan binding</Description>
     <Company></Company>
     <Product>VK</Product>
@@ -26,6 +26,7 @@
         </Command>
       </CustomCommands>
     </CustomCommands>        
+    <SynchReleaseVersion>false</SynchReleaseVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">

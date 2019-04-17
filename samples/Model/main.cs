@@ -37,7 +37,7 @@ namespace ModelSample {
 		DescriptorSetLayout descLayoutTextures;
 		DescriptorSet dsMats;
 
-		Pipeline pipeline;
+		GraphicPipeline pipeline;
 		Framebuffer[] frameBuffers;
 
 		Model model;
@@ -74,7 +74,7 @@ namespace ModelSample {
 
 			dsMats = descriptorPool.Allocate (descLayoutMatrix);
 
-			PipelineConfig cfg = PipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, samples);
+			GraphicPipelineConfig cfg = GraphicPipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, samples);
 
 			cfg.Layout = new PipelineLayout (dev, descLayoutMatrix, descLayoutTextures);
 			cfg.Layout.AddPushConstants (
@@ -89,7 +89,7 @@ namespace ModelSample {
 			cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/pbrtest.vert.spv");
 			cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/pbrtest.frag.spv");
 
-			pipeline = new Pipeline (cfg);
+			pipeline = new GraphicPipeline (cfg);
 
 			uboMats = new HostBuffer (dev, VkBufferUsageFlags.UniformBuffer, (ulong)Marshal.SizeOf<Matrices>());
 			uboMats.Map ();//permanent map

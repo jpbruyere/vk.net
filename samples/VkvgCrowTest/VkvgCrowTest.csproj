@@ -53,7 +53,7 @@
       <HintPath>..\..\packages\System.Memory.4.5.2\lib\netstandard2.0\System.Memory.dll</HintPath>
     </Reference>
     <Reference Include="VK">
-      <HintPath>..\..\packages\Vulkan.0.1.2.2-alpha\lib\netstandard2.0\VK.dll</HintPath>
+      <HintPath>..\..\packages\Vulkan.0.1.2.5-alpha\lib\netstandard2.0\VK.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>

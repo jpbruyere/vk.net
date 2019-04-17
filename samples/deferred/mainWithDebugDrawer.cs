@@ -5,7 +5,7 @@ using Glfw;
 using VK;
 using VKE;
 
-namespace deferred {
+namespace deferredDebug {
 	class Program : VkWindow{	
 		static void Main (string[] args) {
 			using (Program vke = new Program ()) {
@@ -25,17 +25,41 @@ namespace deferred {
 		}
 
 		public Matrices matrices = new Matrices {
-			lightPos = new Vector4 (1.0f, 0.0f, 0.0f, 1.0f),
+			lightPos = new Vector4 (1.0f, 0, 0, 1.0f),
 			gamma = 1.0f,
 			exposure = 2.0f,
 		};
 
-		Program () {
+#if DEBUG
+		PipelineStatisticsQueryPool statPool;
+		TimestampQueryPool timestampQPool;
+		ulong[] results;
+#endif
+
+		protected override void configureEnabledFeatures (ref VkPhysicalDeviceFeatures features) {
+			base.configureEnabledFeatures (ref features);
+#if DEBUG
+			features.pipelineStatisticsQuery = true;
+#endif
+		}
+
+		Program () : base(true) {
 			camera.Model = Matrix4x4.CreateRotationX (Utils.DegreesToRadians (-90)) * Matrix4x4.CreateRotationY (Utils.DegreesToRadians (180));
 			camera.SetRotation (-0.1f,-0.4f);
 			camera.SetPosition (0, 0, -3);
 
 			init ();
+
+#if DEBUG
+			statPool = new PipelineStatisticsQueryPool (dev,
+				VkQueryPipelineStatisticFlags.InputAssemblyVertices |
+				VkQueryPipelineStatisticFlags.InputAssemblyPrimitives |
+				VkQueryPipelineStatisticFlags.ClippingInvocations |
+				VkQueryPipelineStatisticFlags.ClippingPrimitives |
+				VkQueryPipelineStatisticFlags.FragmentShaderInvocations);
+
+			timestampQPool = new TimestampQueryPool (dev);
+#endif
 		}
 
 		Framebuffer[] frameBuffers;
@@ -54,9 +78,12 @@ namespace deferred {
 		Model model;
 		EnvironmentCube envCube;
 
+		DebugDrawPipeline debugDraw;
+		Framebuffer[] debugFB;
+
 		void init () {
 			renderPass = new RenderPass (dev);
-			renderPass.AddAttachment (swapChain.ColorFormat, VkImageLayout.PresentSrcKHR, VkSampleCountFlags.SampleCount1);
+			renderPass.AddAttachment (swapChain.ColorFormat, VkImageLayout.ColorAttachmentOptimal, VkSampleCountFlags.SampleCount1);
 			renderPass.AddAttachment (dev.GetSuitableDepthFormat(), VkImageLayout.DepthStencilAttachmentOptimal, samples);
 			renderPass.AddAttachment (VkFormat.R8g8b8a8Unorm, VkImageLayout.ColorAttachmentOptimal);
 			renderPass.AddAttachment (VkFormat.R8g8b8a8Unorm, VkImageLayout.ColorAttachmentOptimal);
@@ -164,6 +191,14 @@ namespace deferred {
 				envCube.prefilterCube.Descriptor);
 			uboMats.Descriptor.offset = (ulong)Marshal.SizeOf<Matrices> ();
 			envCube.WriteDesc (uboMats.Descriptor);
+#if DEBUG
+			debugDraw = new DebugDrawPipeline (dev, descLayoutMain, swapChain.ColorFormat);
+			debugDraw.AddLine (Vector3.Zero, new Vector3(matrices.lightPos.X,matrices.lightPos.Y,matrices.lightPos.Z)*3, 1, 1, 1);
+			debugDraw.AddLine (Vector3.Zero, Vector3.UnitX, 1, 0, 0);
+			debugDraw.AddLine (Vector3.Zero, Vector3.UnitY, 0, 1, 0);
+			debugDraw.AddLine (Vector3.Zero, Vector3.UnitZ, 0, 0, 1);
+#endif
+
 
 			model = new Model (presentQueue, "../data/models/DamagedHelmet/glTF/DamagedHelmet.gltf");
 			//model = new Model (presentQueue, "../data/models/chess.gltf");
@@ -175,16 +210,24 @@ namespace deferred {
 				ShaderBinding.Normal,
 				ShaderBinding.AmbientOcclusion,
 				ShaderBinding.MetalRoughness,
-				ShaderBinding.Emissive);
-
+				ShaderBinding.Emissive);				
 		}
 
 		void buildCommandBuffers () {
 			for (int i = 0; i < swapChain.ImageCount; ++i) {
 				cmds[i]?.Free ();
-				cmds[i] = cmdPool.AllocateAndStart ();
+				cmds[i] = cmdPool.AllocateCommandBuffer ();
+				cmds[i].Start ();
 
+#if DEBUG
+				statPool.Begin (cmds[i]);
 				recordDraw (cmds[i], frameBuffers[i]);
+				statPool.End (cmds[i]);
+
+				debugDraw.RecordDraw (cmds[i], debugFB[i], camera);
+#else
+				recordDraw (cmds[i], frameBuffers[i]);
+#endif
 
 				cmds[i].End ();
 			}
@@ -227,6 +270,11 @@ namespace deferred {
 			updateMatrices ();
 			updateViewRequested = false;
 		}
+		public override void Update () {
+#if DEBUG
+			results = statPool.GetResults ();
+#endif
+		}
 #endregion
 
 
@@ -268,14 +316,25 @@ namespace deferred {
 			if (frameBuffers != null)
 				for (int i = 0; i < swapChain.ImageCount; ++i)
 					frameBuffers[i]?.Dispose ();
+#if DEBUG
+			if (debugFB != null)
+				for (int i = 0; i < swapChain.ImageCount; ++i)
+					debugFB[i]?.Dispose ();
+#endif
 
 			createGBuff ();
 
 			frameBuffers = new Framebuffer[swapChain.ImageCount];
+			debugFB = new Framebuffer[swapChain.ImageCount];
 
 			for (int i = 0; i < swapChain.ImageCount; ++i) {
 				frameBuffers[i] = new Framebuffer (renderPass, swapChain.Width, swapChain.Height, new Image[] {
 					swapChain.images[i], null, gbColorRough, gbEmitMetal, gbN, gbPos});
+#if DEBUG
+				debugFB[i] = new Framebuffer (debugDraw.RenderPass, swapChain.Width, swapChain.Height,(debugDraw.Samples == VkSampleCountFlags.SampleCount1)
+					? new Image[] { swapChain.images[i] } : new Image[] { null, swapChain.images[i] });
+				debugFB[i].SetName ("main FB " + i);
+#endif
 			}
 
 			buildCommandBuffers ();
@@ -336,6 +395,11 @@ namespace deferred {
 					envCube.Dispose ();
 
 					descriptorPool.Dispose ();
+#if DEBUG
+					debugDraw.Dispose ();
+					timestampQPool?.Dispose ();
+					statPool?.Dispose ();
+#endif
 				}
 			}
 

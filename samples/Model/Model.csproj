@@ -26,10 +26,10 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="*.cs" />
-    <GLSLShader Include="shaders\**\*.frag;shaders\**\*.vert" />                
     <Datas Include="..\data\**\*.*">      
       <Link>data\%(RecursiveDir)%(Filename)%(Extension)</Link>
     </Datas>
+    <GLSLShader Include="shaders\**\*.frag;shaders\**\*.vert;shaders\**\*.comp" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="System.Numerics" />
@@ -54,7 +54,7 @@
       <HintPath>..\..\packages\System.Memory.4.5.2\lib\netstandard2.0\System.Memory.dll</HintPath>
     </Reference>
     <Reference Include="VK">
-      <HintPath>..\..\packages\Vulkan.0.1.2.3-alpha\lib\netstandard2.0\VK.dll</HintPath>
+      <HintPath>..\..\packages\Vulkan.0.1.2.5-alpha\lib\netstandard2.0\VK.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>

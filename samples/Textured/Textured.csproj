@@ -3,9 +3,9 @@
   <PropertyGroup>
     <ProjectGuid>{96A2E0B8-91AE-4EB9-A435-185D01E24067}</ProjectGuid>
     <OutputType>Exe</OutputType>
+    <AssemblyName>textured</AssemblyName>
     <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
-    <RootNamespace>Triangle</RootNamespace>
-    <OutputPath>$(SolutionDir)build\$(Configuration)\samples\Textured</OutputPath>
+    <OutputPath>$(SolutionDir)build\$(Configuration)\samples\textured</OutputPath>
     <IntermediateOutputPath>$(SolutionDir)build\obj\$(Configuration)</IntermediateOutputPath>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -28,7 +28,7 @@
   <ItemGroup>
     <Reference Include="System.Numerics" />
     <Reference Include="VK">
-      <HintPath>..\..\packages\Vulkan.0.1.2.3-alpha\lib\netstandard2.0\VK.dll</HintPath>
+      <HintPath>..\..\packages\Vulkan.0.1.2.5-alpha\lib\netstandard2.0\VK.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>

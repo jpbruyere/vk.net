@@ -32,6 +32,7 @@ using static VK.Vk;
 namespace VKE {
 	public sealed class PipelineLayout : Activable {
         internal VkPipelineLayout handle;
+		public VkPipelineLayout Handle => handle;
 
 		public List<DescriptorSetLayout> DescriptorSetLayouts = new List<DescriptorSetLayout> ();
 		public List<VkPushConstantRange> PushConstantRanges = new List<VkPushConstantRange> ();

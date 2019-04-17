@@ -1,11 +1,9 @@
-﻿using System;
-using System.Numerics;
+﻿using System.Numerics;
 using System.Runtime.InteropServices;
 using Glfw;
-using VKE;
 using VK;
+using VKE;
 using static VKE.Camera;
-using Buffer = VKE.Buffer;
 
 namespace ModelSample {
 	class Program : VkWindow {
@@ -46,8 +44,8 @@ namespace ModelSample {
 		DescriptorSetLayout descLayoutTextures;
 		DescriptorSet dsMats;
 
-		Pipeline pipeline;
-		Pipeline uiPipeline;
+		GraphicPipeline pipeline;
+		GraphicPipeline uiPipeline;
 		Framebuffer[] frameBuffers;
 
 		Model model;
@@ -107,12 +105,7 @@ namespace ModelSample {
 					ctx.MoveTo (x, y);
 					ctx.ShowText (string.Format ($"{statPool.RequestedStats[i].ToString(),-30} :{results[i],12:0,0} "));
 				}
-				//y += dy;
-				//ctx.MoveTo (x, y);
-				//ctx.ShowText (string.Format ($"{"TimeStamp Start",-24} :{timeStamps[0],18:0,0} "));
-				//y += dy;
-				//ctx.MoveTo (x, y);
-				//ctx.ShowText (string.Format ($"{"TimeStamp End  ",-24} :{timeStamps[1],18:0,0} "));
+
 				y += dy;
 				ctx.MoveTo (x, y);
 				ctx.ShowText (string.Format ($"{"Elapsed microsecond",-20} :{timestampQPool.ElapsedMiliseconds:0.0000} "));
@@ -155,7 +148,7 @@ namespace ModelSample {
 
 			dsMats = descriptorPool.Allocate (descLayoutMatrix);
 
-			PipelineConfig cfg = PipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, samples);
+			GraphicPipelineConfig cfg = GraphicPipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, samples);
 
 			cfg.Layout = new PipelineLayout (dev, descLayoutMatrix, descLayoutTextures);
 			cfg.Layout.AddPushConstants (
@@ -170,7 +163,7 @@ namespace ModelSample {
 			cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/pbrtest.vert.spv");
 			cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/pbrtest.frag.spv");
 
-			pipeline = new Pipeline (cfg);
+			pipeline = new GraphicPipeline (cfg);
 
 			cfg.ResetShadersAndVerticesInfos ();
 			cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/FullScreenQuad.vert.spv");
@@ -178,7 +171,7 @@ namespace ModelSample {
 
 			cfg.blendAttachments[0] = new VkPipelineColorBlendAttachmentState (true);
 
-			uiPipeline = new Pipeline (cfg);
+			uiPipeline = new GraphicPipeline (cfg);
 
 			uboMats = new HostBuffer (dev, VkBufferUsageFlags.UniformBuffer, (ulong)Marshal.SizeOf<Matrices>());
 			uboMats.Map ();//permanent map
@@ -205,9 +198,7 @@ namespace ModelSample {
 		void buildCommandBuffers () {
 			for (int i = 0; i < swapChain.ImageCount; ++i) { 								
                 cmds[i]?.Free ();
-
-				cmds[i] = cmdPool.AllocateCommandBuffer ();
-				cmds[i].Start ();
+				cmds[i] = cmdPool.AllocateAndStart ();
 
 				statPool.Begin (cmds[i]);
 				cmds[i].BeginRegion ("draw" + i, 0.5f, 1f, 0f);
@@ -249,32 +240,6 @@ namespace ModelSample {
 			pipeline.RenderPass.End (cmd);
 			cmd.EndRegion ();
 		}
-
-		/*
-		void recordCopyVkvgSurf (CommandBuffer cmd, VkImage srcImg, VkImage dstImg) {
-			Utils.setImageLayout (cmd.Handle, dstImg, VkImageAspectFlags.Color,
-                    VkImageLayout.PresentSrcKHR, VkImageLayout.TransferDstOptimal,
-                    VkPipelineStageFlags.BottomOfPipe, VkPipelineStageFlags.Transfer);
-            Utils.setImageLayout (cmd.Handle, srcImg, VkImageAspectFlags.Color,
-                    VkImageLayout.ColorAttachmentOptimal, VkImageLayout.TransferSrcOptimal,
-                    VkPipelineStageFlags.ColorAttachmentOutput, VkPipelineStageFlags.Transfer);
-
-			VkImageSubresourceLayers imgSubResLayer = new VkImageSubresourceLayers (VkImageAspectFlags.Color);
-			VkImageCopy cregion = new VkImageCopy {
-			    srcSubresource = imgSubResLayer,
-			    dstSubresource = imgSubResLayer,
-			    extent = new VkExtent3D { width = (uint)vkvgSurf.Width, height = (uint)vkvgSurf.Height }
-			};
-			Vk.vkCmdCopyImage (cmd.Handle, srcImg, VkImageLayout.TransferSrcOptimal,
-			    dstImg, VkImageLayout.TransferDstOptimal, 1, ref cregion);
-
-			Utils.setImageLayout (cmd.Handle, dstImg, VkImageAspectFlags.Color,
-			    VkImageLayout.TransferDstOptimal, VkImageLayout.PresentSrcKHR,
-			    VkPipelineStageFlags.Transfer, VkPipelineStageFlags.BottomOfPipe);
-			Utils.setImageLayout (cmd.Handle, srcImg, VkImageAspectFlags.Color,
-			    VkImageLayout.TransferSrcOptimal, VkImageLayout.ColorAttachmentOptimal,
-			    VkPipelineStageFlags.Transfer, VkPipelineStageFlags.ColorAttachmentOutput);		 
-		}*/
 
 		void updateMatrices () {
 

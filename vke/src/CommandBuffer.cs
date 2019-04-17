@@ -82,8 +82,10 @@ namespace VKE {
         /// <summary>
         /// Update dynamic viewport state
         /// </summary>
-        public void SetViewport (float width, float height, float minDepth = 0.0f, float maxDepth = 1.0f) {
+        public void SetViewport (float width, float height, float x = 0f, float y = 0f, float minDepth = 0.0f, float maxDepth = 1.0f) {
             VkViewport viewport = new VkViewport {
+				x = x,
+				y = y,
                 height = height,
                 width = width,
                 minDepth = 0.0f,
@@ -98,13 +100,20 @@ namespace VKE {
             VkRect2D scissor = new VkRect2D (offsetX, offsetY, width, height);
             vkCmdSetScissor (handle, 0, 1, ref scissor);
         }
-        public void BindPipeline (Pipeline pipeline) {
-            vkCmdBindPipeline (handle, VkPipelineBindPoint.Graphics, pipeline.handle);
+        public void BindPipeline (Pipeline pipeline, VkPipelineBindPoint bindPoint = VkPipelineBindPoint.Graphics) {
+            vkCmdBindPipeline (handle, bindPoint, pipeline.Handle);
         }
-        public void BindDescriptorSet (PipelineLayout pipelineLayout, DescriptorSet descriptorSet, uint firstSet = 0) {
+		public void Dispatch (uint groupCountX, uint groupCountY = 1, uint groupCountZ = 1) {
+			vkCmdDispatch (handle, groupCountX, groupCountY, groupCountZ);
+		}
+
+		public void BindDescriptorSet (PipelineLayout pipelineLayout, DescriptorSet descriptorSet, uint firstSet = 0) {
             vkCmdBindDescriptorSets (handle, VkPipelineBindPoint.Graphics, pipelineLayout.handle, firstSet, 1, ref descriptorSet.handle, 0, IntPtr.Zero);
         }
-        public void BindVertexBuffer (Buffer vertices, uint binding = 0, ulong offset = 0) {
+		public void BindDescriptorSet (VkPipelineBindPoint bindPoint, PipelineLayout pipelineLayout, DescriptorSet descriptorSet, uint firstSet = 0) {
+			vkCmdBindDescriptorSets (handle, bindPoint, pipelineLayout.handle, firstSet, 1, ref descriptorSet.handle, 0, IntPtr.Zero);
+		}
+		public void BindVertexBuffer (Buffer vertices, uint binding = 0, ulong offset = 0) {
             vkCmdBindVertexBuffers (handle, binding, 1, ref vertices.handle, ref offset);
         }
         public void BindIndexBuffer (Buffer indices, VkIndexType indexType = VkIndexType.Uint32, ulong offset = 0) {

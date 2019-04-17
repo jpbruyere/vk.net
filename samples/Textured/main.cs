@@ -14,6 +14,11 @@ namespace TextureSample {
 			}
 		}
 
+		protected override void configureEnabledFeatures (ref VkPhysicalDeviceFeatures features) {
+			base.configureEnabledFeatures (ref features);
+			features.textureCompressionBC = true;
+		}
+
 		float rotSpeed = 0.01f, zoomSpeed = 0.01f;
 		float rotX, rotY, rotZ = 0f, zoom = 1f;
 
@@ -33,7 +38,7 @@ namespace TextureSample {
 		DescriptorSetLayout dsLayout;
 		DescriptorSet descriptorSet;
 
-		Pipeline pipeline;
+		GraphicPipeline pipeline;
 		Framebuffer[] frameBuffers;
 
 		Image texture;
@@ -68,7 +73,7 @@ namespace TextureSample {
 
 			descriptorSet = descriptorPool.Allocate (dsLayout);
 
-			PipelineConfig cfg = PipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, VkSampleCountFlags.SampleCount1);
+			GraphicPipelineConfig cfg = GraphicPipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, VkSampleCountFlags.SampleCount1);
 
 			cfg.Layout = new PipelineLayout (dev, dsLayout);
 			cfg.RenderPass = new RenderPass (dev, swapChain.ColorFormat, dev.GetSuitableDepthFormat (), cfg.Samples);
@@ -79,7 +84,7 @@ namespace TextureSample {
 			cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/main.vert.spv");
 			cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/main.frag.spv");
 
-			pipeline = new Pipeline (cfg);
+			pipeline = new GraphicPipeline (cfg);
 
 			uboMats = new HostBuffer (dev, VkBufferUsageFlags.UniformBuffer, matrices);
 			uboMats.Map ();//permanent map
@@ -154,11 +159,6 @@ namespace TextureSample {
 				Matrix4x4.CreateFromAxisAngle (Vector3.UnitX, rotX);
 
 			uboMats.Update (matrices, (uint)Marshal.SizeOf<Matrices> ());
-		}
-
-		protected override void configureEnabledFeatures (ref VkPhysicalDeviceFeatures features) {
-			base.configureEnabledFeatures (ref features);
-			features.textureCompressionBC = true;
 		}
 
 		public override void UpdateView () {

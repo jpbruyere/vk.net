@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 using VK;
 
 namespace VKE {
-	class EnvironmentCube : Pipeline {
+	class EnvironmentCube : GraphicPipeline {
 		DescriptorPool descriptorPool;
 		DescriptorSetLayout descLayoutMain;
 		public DescriptorSet dsSkybox;
@@ -40,7 +40,7 @@ namespace VKE {
 				cubemap.CreateSampler ();
 				cubemap.SetName ("skybox Texture");
 
-				PipelineConfig cfg = PipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, renderPass.Samples);
+				GraphicPipelineConfig cfg = GraphicPipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, renderPass.Samples);
 				cfg.RenderPass = renderPass;
 				cfg.Layout = new PipelineLayout (dev, descLayoutMain);
 				cfg.AddVertexBinding (0, 5 * sizeof (float));
@@ -136,7 +136,7 @@ namespace VKE {
 			lutBrdf.CreateView ();
 			lutBrdf.CreateSampler (VkSamplerAddressMode.ClampToEdge);
 
-			PipelineConfig cfg = PipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, VkSampleCountFlags.SampleCount1, false);
+			GraphicPipelineConfig cfg = GraphicPipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, VkSampleCountFlags.SampleCount1, false);
 
 			cfg.Layout = new PipelineLayout (dev, new DescriptorSetLayout (dev));
 			cfg.RenderPass = new RenderPass (dev);
@@ -146,7 +146,7 @@ namespace VKE {
 			cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/genbrdflut.vert.spv");
 			cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/genbrdflut.frag.spv");
 
-			using (Pipeline pl = new Pipeline (cfg)) {
+			using (GraphicPipeline pl = new GraphicPipeline (cfg)) {
 				using (Framebuffer fb = new Framebuffer (cfg.RenderPass, dim, dim, lutBrdf)) {
 					CommandBuffer cmd = cmdPool.AllocateCommandBuffer ();
 					cmd.Start (VkCommandBufferUsageFlags.OneTimeSubmit);
@@ -205,7 +205,7 @@ namespace VKE {
 
 			DescriptorSet dset = dsPool.Allocate (dsLayout);
 
-			PipelineConfig cfg = PipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, VkSampleCountFlags.SampleCount1, false);
+			GraphicPipelineConfig cfg = GraphicPipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, VkSampleCountFlags.SampleCount1, false);
 
 			DescriptorSetWrites dsUpdate = new DescriptorSetWrites (dsLayout);
 			dsUpdate.Write (dev, dset, cubemap.Descriptor);
@@ -245,7 +245,7 @@ namespace VKE {
 
 			VkImageSubresourceRange subRes = new VkImageSubresourceRange (VkImageAspectFlags.Color, 0, numMips, 0, 6);
 
-			using (Pipeline pl = new Pipeline (cfg)) {
+			using (GraphicPipeline pl = new GraphicPipeline (cfg)) {
 				using (Framebuffer fb = new Framebuffer (pl.RenderPass, dim, dim, imgFbOffscreen)) {
 					CommandBuffer cmd = cmdPool.AllocateCommandBuffer ();
 					cmd.Start (VkCommandBufferUsageFlags.OneTimeSubmit);

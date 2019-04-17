@@ -39,8 +39,8 @@ namespace PbrSample {
 		DescriptorSet dsSkybox;
 		DescriptorSet dsMain;
 
-		Pipeline pipeline;
-		Pipeline skyboxPL;
+		GraphicPipeline pipeline;
+		GraphicPipeline skyboxPL;
 
 		Model model;
 
@@ -97,9 +97,11 @@ namespace PbrSample {
 			 1.0f, 1.0f, 1.0f,    1.0f, 0.0f,
 		};
 
-		Camera Camera = new Camera (Utils.DegreesToRadians (60f), 1f);
-
 		Program () : base () {
+			camera.Model = Matrix4x4.CreateRotationX (Utils.DegreesToRadians (-90)) * Matrix4x4.CreateRotationY (Utils.DegreesToRadians (180));
+			camera.SetRotation (-0.1f, -0.4f);
+			camera.SetPosition (0, 0, -3);
+
 			vboSkybox = new GPUBuffer<float> (presentQueue, cmdPool, VkBufferUsageFlags.VertexBuffer, box_vertices);
 
 			cubemap = KTX.KTX.Load (presentQueue, cmdPool, cubemapPathes[0],
@@ -140,7 +142,7 @@ namespace PbrSample {
 			dsMain = descriptorPool.Allocate (descLayoutMain);
 			dsSkybox = descriptorPool.Allocate (descLayoutMain);
 
-			PipelineConfig cfg = PipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, samples);
+			GraphicPipelineConfig cfg = GraphicPipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, samples);
 
 			cfg.Layout = new PipelineLayout (dev, descLayoutMain, descLayoutTextures);
 			cfg.Layout.AddPushConstants (
@@ -154,7 +156,7 @@ namespace PbrSample {
 			cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/pbrtest.vert.spv");
 			cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/pbrtest.frag.spv");
 
-			pipeline = new Pipeline (cfg);
+			pipeline = new GraphicPipeline (cfg);
 
 			#region skybox pipeline
 			cfg.ResetShadersAndVerticesInfos ();
@@ -166,7 +168,7 @@ namespace PbrSample {
 			cfg.depthStencilState.depthTestEnable = false;
 			cfg.depthStencilState.depthWriteEnable = false;
 
-			skyboxPL = new Pipeline (cfg);
+			skyboxPL = new GraphicPipeline (cfg);
 			#endregion
 
 			uboMats = new HostBuffer (dev, VkBufferUsageFlags.UniformBuffer, (ulong)Marshal.SizeOf<Matrices>()*2);
@@ -210,11 +212,11 @@ namespace PbrSample {
 
 		void updateMatrices () {
 
-			Camera.AspectRatio = (float)swapChain.Width / swapChain.Height;
+			camera.AspectRatio = (float)swapChain.Width / swapChain.Height;
 
-			matrices.projection = Camera.Projection;
-			matrices.view = Camera.View;
-			matrices.model = Camera.Model;
+			matrices.projection = camera.Projection;
+			matrices.view = camera.View;
+			matrices.model = camera.Model;
 			uboMats.Update (matrices, (uint)Marshal.SizeOf<Matrices> ());
 			matrices.view *= Matrix4x4.CreateTranslation(-matrices.view.Translation);
 			matrices.model = Matrix4x4.Identity;
@@ -230,9 +232,9 @@ namespace PbrSample {
 			double diffX = lastMouseX - xPos;
 			double diffY = lastMouseY - yPos;
 			if (MouseButton[0]) {
-				Camera.Rotate ((float)-diffX,(float)-diffY);
+				camera.Rotate ((float)-diffX,(float)-diffY);
 			} else if (MouseButton[1]) {
-				Camera.Zoom ((float)diffY);
+				camera.Zoom ((float)diffY);
 			}
 
 			updateViewRequested = true;
@@ -240,42 +242,6 @@ namespace PbrSample {
 
 		protected override void onKeyDown (Key key, int scanCode, Modifier modifiers) {
 			switch (key) {
-				case Key.Up:
-					if (modifiers.HasFlag (Modifier.Shift))
-						matrices.lightPos += new Vector4 (0, 0, 1, 0);
-					else
-						Camera.Move (0, 0, 1);
-					break;
-				case Key.Down:
-					if (modifiers.HasFlag (Modifier.Shift))
-						matrices.lightPos += new Vector4 (0, 0, -1, 0);
-					else
-						Camera.Move (0, 0, -1);
-					break;
-				case Key.Left:
-					if (modifiers.HasFlag (Modifier.Shift))
-						matrices.lightPos += new Vector4 (1, 0, 0, 0);
-					else
-						Camera.Move (1, 0, 0);
-					break;
-				case Key.Right:
-					if (modifiers.HasFlag (Modifier.Shift))
-						matrices.lightPos += new Vector4 (-1, 0, 0, 0);
-					else
-						Camera.Move (-1, 0, 0);
-					break;
-				case Key.PageUp:
-					if (modifiers.HasFlag (Modifier.Shift))
-						matrices.lightPos += new Vector4 (0, 1, 0, 0);
-					else
-						Camera.Move (0, 1, 0);
-					break;
-				case Key.PageDown:
-					if (modifiers.HasFlag (Modifier.Shift))
-						matrices.lightPos += new Vector4 (0, -1, 0, 0);
-					else
-						Camera.Move (0, -1, 0);
-					break;
 				case Key.F1:
 					if (modifiers.HasFlag (Modifier.Shift))
 						matrices.exposure -= 0.3f;
@@ -287,13 +253,6 @@ namespace PbrSample {
 						matrices.gamma -= 0.1f;
 					else
 						matrices.gamma += 0.1f;
-					break;
-				case Key.F3:
-					if (Camera.Type == Camera.CamType.FirstPerson)
-						Camera.Type = Camera.CamType.LookAt;
-					else
-						Camera.Type = Camera.CamType.FirstPerson;
-					Console.WriteLine ($"camera type = {Camera.Type}");
 					break;
 				default:
 					base.onKeyDown (key, scanCode, modifiers);
