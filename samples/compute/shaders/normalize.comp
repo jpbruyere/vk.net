@@ -30,10 +30,12 @@ void main()
     ivec2 uv = ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y);    
     vec4 d = getPixel (uv);
     
-    d.r = 1.0 / d.r;
-    d.g = 0.0;
-    d.b = 0.0;
-    d.a = 1.0;
+    if (d.r > 0.0) {
+        d.r = 1.0 / d.r;
+        d.g = 0.0;
+        d.b = 0.0;
+        d.a = 1.0;
+    }
     
     setPixel (uv, d);
 }
