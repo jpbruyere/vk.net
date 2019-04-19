@@ -212,6 +212,14 @@ namespace test2 {
 					pass++;
 				}
 
+				plNormalize.Bind (cmd);
+				if (pong)
+					plNormalize.BindDescriptorSet (cmd, dsetPong);
+				else
+					plNormalize.BindDescriptorSet (cmd, dsetPing);
+				cmd.Dispatch (imgDim, imgDim);
+				pong = !pong;
+
 				cmd.End ();
 
 				computeQ.Submit (cmd);
