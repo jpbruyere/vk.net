@@ -58,7 +58,10 @@ namespace VKE {
 				info.basePipelineIndex = 0;
 
 				Utils.CheckResult (Vk.vkCreateComputePipelines (dev.VkDev, VkPipelineCache.Null, 1, ref info, IntPtr.Zero, out handle));
+
+				dev.DestroyShaderModule (info.stage.module);
 			}
+
 		}
 
 		public override void Bind (CommandBuffer cmd) {

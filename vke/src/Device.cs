@@ -77,8 +77,8 @@ namespace VKE {
             }            
 
             List<IntPtr> deviceExtensions = new List<IntPtr> ();
-			if (DebugMarkersEnabled && !extensions.Contains("VK_EXT_debug_marker")) 
-				deviceExtensions.Add (new FixedUtf8String ("VK_EXT_debug_marker"));
+			if (DebugMarkersEnabled && !extensions.Contains(Ext.D.VK_EXT_debug_marker)) 
+				deviceExtensions.Add (new FixedUtf8String (Ext.D.VK_EXT_debug_marker));
 
             for (int i = 0; i < extensions.Length; i++) 
                 deviceExtensions.Add (new FixedUtf8String(extensions[i]));            

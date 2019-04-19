@@ -24,10 +24,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 using System;
-using System.Collections.Generic;
-using System.Runtime.InteropServices;
 using VK;
-using static VK.Vk;
 
 namespace VKE {
 	public class ShaderInfo : IDisposable {

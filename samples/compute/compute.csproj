@@ -7,12 +7,13 @@
     <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
     <OutputPath>$(SolutionDir)build\$(Configuration)\samples\compute</OutputPath>
     <IntermediateOutputPath>$(SolutionDir)build\obj\$(Configuration)</IntermediateOutputPath>        
+    <StartupObject>test2.Program</StartupObject>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <DefineConstants>DEBUG;DEBUG_MARKER</DefineConstants>
+    <DefineConstants>DEBUG;</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -28,7 +29,7 @@
       <Link>data\%(RecursiveDir)%(Filename)%(Extension)</Link>
     </Datas>
     <GLSLShader Include="shaders\**\*.frag;shaders\**\*.vert;shaders\**\*.comp" />    
-    <Compile Include="*.cs" />
+    <Compile Include="*.cs" />    
   </ItemGroup>
   <ItemGroup>
     <Reference Include="System.Numerics" />

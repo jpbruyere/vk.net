@@ -86,10 +86,10 @@ namespace VKE {
             Glfw3.SetCursorPosCallback (hWin, HandleCursorPosDelegate);
             Glfw3.SetWindowSizeCallback (hWin, HandleWindowSizeDelegate);
 
-            initVulkan (vSync);
+            initVulkan (vSync, debugMarkers);
         }
 
-		void initVulkan (bool vSync) {
+		void initVulkan (bool vSync, bool debugMarkers) {
             instance = new Instance ();
 
 #if DEBUG
@@ -109,8 +109,10 @@ namespace VKE {
             VkPhysicalDeviceFeatures enabledFeatures = default(VkPhysicalDeviceFeatures);
             configureEnabledFeatures (ref enabledFeatures);
 
-            //First create the c# device class
-            dev = new Device (phy);
+			if (debugMarkers)
+				debugMarkers = phy.GetDeviceExtensionSupported (Ext.D.VK_EXT_debug_marker);
+			//First create the c# device class
+			dev = new Device (phy, debugMarkers);
             //create queue class
             createQueues ();
 

@@ -87,7 +87,7 @@ namespace VKE {
 			AddAttachment (colorFormat, (samples == VkSampleCountFlags.SampleCount1) ? VkImageLayout.PresentSrcKHR : VkImageLayout.ColorAttachmentOptimal, samples);
 			AddAttachment (depthFormat, VkImageLayout.DepthStencilAttachmentOptimal, samples);
 
-            ClearValues.Add (new VkClearValue { color = new VkClearColorValue (0.0f, 0.0f, 0.2f) });
+            ClearValues.Add (new VkClearValue { color = new VkClearColorValue (0.0f, 0.0f, 0.0f) });
             ClearValues.Add (new VkClearValue { depthStencil = new VkClearDepthStencilValue (1.0f, 0) });
 
 			SubPass subpass0 = new SubPass ();

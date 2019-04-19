@@ -59,7 +59,9 @@ namespace VKE {
                     prefix = "DBUG";
                     break;
             }
+			Console.ForegroundColor = ConsoleColor.Red;
             Console.WriteLine ("{0} {1}: {2}",prefix, messageCode, Marshal.PtrToStringAnsi(pMessage));
+			Console.ForegroundColor = ConsoleColor.White;
             return VkBool32.False;
         }
         

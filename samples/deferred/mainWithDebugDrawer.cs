@@ -396,6 +396,9 @@ namespace deferredDebug {
 
 					descriptorPool.Dispose ();
 #if DEBUG
+					foreach (Framebuffer fb in debugFB) 
+						fb.Dispose ();
+
 					debugDraw.Dispose ();
 					timestampQPool?.Dispose ();
 					statPool?.Dispose ();
