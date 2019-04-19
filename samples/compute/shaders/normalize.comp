@@ -2,8 +2,12 @@
 
 #extension GL_ARB_separate_shader_objects : enable
 
-layout(binding = 0) buffer buff {
-    float data[];
+layout(binding = 0) buffer buffIn {
+    vec4 dataIn[];
+};
+ 
+layout(binding = 1) buffer buffOut {
+    vec4 dataOut[];
 };
 
 layout(push_constant) uniform PushConsts {
@@ -12,19 +16,25 @@ layout(push_constant) uniform PushConsts {
 };
 
 
-//layout (local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+layout (local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+vec4 getPixel (ivec2 uv) {
+    return dataIn[uv.y * imgDim + uv.x];
+}
+void setPixel (ivec2 uv, vec4 pix) {
+    dataOut[uv.y * imgDim + uv.x] = pix;
+}
 
 void main()
-{	
-    uint ptr = (gl_GlobalInvocationID.y * imgDim + gl_GlobalInvocationID.x) * 4;
-    data[ptr+1] = 0.0;
-    data[ptr+2] = 0.6;
-
-    if (data[ptr]<0.01) {
-        data[ptr] = 0.0;
-        data[ptr+3] = 0.5;
-    }else{
-        data[ptr] = 1.0 / data[ptr];
-        data[ptr+3] = 1.0;
-    }    
+{
+    ivec2 uv = ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y);    
+    vec4 d = getPixel (uv);
+    
+    d.r = 1.0 / d.r;
+    d.g = 0.0;
+    d.b = 0.0;
+    d.a = 1.0;
+    
+    setPixel (uv, d);
 }
+

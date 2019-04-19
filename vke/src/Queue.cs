@@ -101,7 +101,14 @@ namespace VKE {
             qFamIndex = searchQFamily (requestedFlags);
             dev.queues.Add (this);
         }
-
+		/// <summary>
+		/// End command recording, submit, and wait queue idle
+		/// </summary>
+		public void EndSubmitAndWait (CommandBuffer cmd) {
+			cmd.End ();
+			Submit (cmd);
+			WaitIdle ();
+		}
         public void Submit (CommandBuffer cmd, VkSemaphore wait = default(VkSemaphore), VkSemaphore signal = default (VkSemaphore), VkFence fence = default (VkFence)) {
             cmd.Submit (handle, wait, signal, fence);
         }
