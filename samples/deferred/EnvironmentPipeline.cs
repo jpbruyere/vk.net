@@ -331,15 +331,16 @@ namespace VKE {
 		}
 
 		protected override void Dispose (bool disposing) {
-			vboSkybox.Dispose ();
-			cubemap.Dispose ();
-			lutBrdf.Dispose ();
-			irradianceCube.Dispose ();
-			prefilterCube.Dispose ();
+			if (disposing) {
+				vboSkybox.Dispose ();
+				cubemap.Dispose ();
+				lutBrdf.Dispose ();
+				irradianceCube.Dispose ();
+				prefilterCube.Dispose ();
 
-			descLayoutMain.Dispose ();
-			descriptorPool.Dispose ();
-
+				descLayoutMain.Dispose ();
+				descriptorPool.Dispose ();
+			}
 			base.Dispose (disposing);
 		}
 	}

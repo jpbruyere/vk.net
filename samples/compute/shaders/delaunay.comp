@@ -1,0 +1,93 @@
+#version 450
+
+#extension GL_ARB_separate_shader_objects : enable
+
+layout(binding = 0) buffer readonly buff {
+    float data[];
+};
+layout(binding = 1) buffer writeonly buffOut {
+    float dataOut[];
+};
+layout(push_constant) uniform PushConsts {
+    int iStepSize;
+    int imgDim;
+};
+
+
+//layout (local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+const ivec2 dirs[] = ivec2[8] (
+    ivec2( 1, 0),
+    ivec2( 1, 1),
+    ivec2( 0, 1),
+    ivec2(-1, 1),
+    ivec2(-1, 0),
+    ivec2(-1,-1),
+    ivec2( 0,-1),
+    ivec2( 1,-1)
+);
+
+const float EPSILON = 0.0005;
+
+bool approxEqual(const float a, const float b) {
+    return (abs(a - b) < EPSILON);    
+}
+
+vec4 getPixel (ivec2 uv) {
+    uint ptr = (uv.y * imgDim + uv.x) * 4;
+    return vec4 (data[ptr], data[ptr+1], data[ptr+2], data[ptr+3]);
+}
+
+void setPixel (ivec2 uv, vec4 pixel) {
+    uint ptr = (uv.y * imgDim + uv.x) * 4;
+    dataOut[ptr] = pixel.r;
+    dataOut[ptr+1] = pixel.g;
+    dataOut[ptr+2] = pixel.b;
+    dataOut[ptr+3] = pixel.a;
+}
+
+void main()
+{
+	ivec2 uv = ivec2(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y);    
+    
+    vec4 c = getPixel(uv);
+    ivec2 thisSeedPos;
+                      
+    if (approxEqual (c.r, 0.0))//no seed in current pixel
+        thisSeedPos = ivec2(-1);
+    else
+        thisSeedPos = ivec2(int(c.g), int(c.b));
+        
+    float thisSeedDist = distance(uv, thisSeedPos);
+    
+    for (int i; i<8; i++) {        
+        ivec2 otherPos = uv + dirs[i] * iStepSize;
+        if (otherPos.x < 0.0 || otherPos.y < 0.0 || otherPos.x > imgDim || otherPos.y > imgDim)  {                      
+            continue;//otherPos out of image        
+        }        
+            
+        vec4 otherC = getPixel(otherPos);
+        
+        if (approxEqual (otherC.r, 0.0)){//No seed in other        
+            //setPixel (otherPos, otherC);
+            continue;
+        }else {                         
+            ivec2 otherSeedPos = ivec2(int(otherC.g), int(otherC.b));                       
+            if (thisSeedPos.x < 0) {//replace current
+                c = otherC;
+                thisSeedPos = otherSeedPos;
+                thisSeedDist = distance(uv, thisSeedPos);
+            }else{                
+                float otherSeedDist = distance(uv, otherSeedPos);
+                if (thisSeedDist > otherSeedDist) {
+                    c = otherC;
+                    thisSeedPos = otherSeedPos;
+                    thisSeedDist = otherSeedDist;
+                } 
+            }
+            c.r+=1;
+            c.a=1;
+        }        
+    }
+    setPixel(uv, c);
+}

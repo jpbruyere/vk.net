@@ -26,16 +26,20 @@
 using System;
 using System.Runtime.InteropServices;
 using VK;
-using VK;
+
 using static VK.Vk;
 
 namespace VKE {
     public class CommandBuffer {
+		public enum States { Init, Record, Pending, Invalid };
+
         CommandPool pool;
         VkCommandBuffer handle;
+		States state;
 
         public VkCommandBuffer Handle => handle;
 		public Device Device => pool?.dev;//this help
+		public States State => state;
 
         internal CommandBuffer (VkDevice _dev, CommandPool _pool, VkCommandBuffer _buff)
         {

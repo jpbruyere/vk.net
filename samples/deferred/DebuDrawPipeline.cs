@@ -66,8 +66,10 @@ namespace VKE {
 		}
 
 		protected override void Dispose (bool disposing) {
-			Vertices.Unmap ();
-			Vertices.Dispose ();
+			if (disposing) {
+				Vertices.Unmap ();
+				Vertices.Dispose ();
+			}
 
 			base.Dispose (disposing);
 		}

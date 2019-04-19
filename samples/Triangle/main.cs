@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 using VKE;
 using VK;
 
-namespace ModelSample {
+namespace Triangle {
     class Program : VkWindow {
 		static void Main (string[] args) {
 			using (Program vke = new Program ()) {
@@ -40,7 +40,7 @@ namespace ModelSample {
         DescriptorSet descriptorSet;
 				        
         Framebuffer[] frameBuffers;		        
-        Pipeline pipeline;
+        GraphicPipeline pipeline;
 
         Vertex[] vertices = {
             new Vertex ( 1.0f,  1.0f, 0.0f ,  1.0f, 0.0f, 0.0f),
@@ -74,7 +74,7 @@ namespace ModelSample {
 			cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/triangle.vert.spv");
 			cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/triangle.frag.spv");
 
-			pipeline = new Pipeline (cfg);
+			pipeline = new GraphicPipeline (cfg);
 
 			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (descriptorSet, dsLayout);
 			uboUpdate.Write (dev, uboMats.Descriptor);

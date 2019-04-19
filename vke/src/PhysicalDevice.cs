@@ -139,6 +139,27 @@ namespace VKE {
 			}		
         }
 
+		public unsafe bool GetDeviceExtensionSupported (string extName) {
+			uint propCount = 0;
+
+			vkEnumerateDeviceExtensionProperties (phy, IntPtr.Zero, out propCount, IntPtr.Zero);
+
+			VkExtensionProperties[] extProps = new VkExtensionProperties[propCount];
+
+			vkEnumerateDeviceExtensionProperties (phy, IntPtr.Zero, out propCount, extProps.Pin ());
+			extProps.Unpin ();
+
+			for (int i = 0; i < extProps.Length; i++) {
+				fixed (VkExtensionProperties* ep = extProps) {
+					IntPtr n = (IntPtr)ep[i].extensionName;
+					if (Marshal.PtrToStringAnsi (n) == extName)
+							return true;
+				}
+			}
+			Console.WriteLine ($"INFO: unsuported device extension: {extName}");
+			return false;
+		}
+
 
         public bool GetPresentIsSupported (uint qFamilyIndex, VkSurfaceKHR surf) {
             VkBool32 isSupported = false;

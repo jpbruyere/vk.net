@@ -44,7 +44,7 @@ namespace VKE {
             GCHandle ptr = GCHandle.Alloc (data, GCHandleType.Pinned);
             unsafe {
                 System.Buffer.MemoryCopy (ptr.AddrOfPinnedObject ().ToPointer (), (mappedData + (int)offset).ToPointer (), size, size);
-                Flush ();
+                Flush ();//TODO:flush only if not coherent
             }
             ptr.Free ();
         }

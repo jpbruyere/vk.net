@@ -75,7 +75,10 @@ namespace VKE {
             Update (data, createInfo.size);
             Unmap ();
         }
-    }
+		public void Update (T[] data) {
+			Update (data, (ulong)(Marshal.SizeOf<T> () * data.Length));
+		}
+	}
     public class HostBuffer : Buffer {
         public HostBuffer (Device device, VkBufferUsageFlags usage, UInt64 size)
                     : base (device, usage, VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent, size) {
@@ -99,6 +102,7 @@ namespace VKE {
     public class Buffer : Resource {
         internal VkBuffer handle;
         public VkDescriptorBufferInfo Descriptor;
+		public VkBuffer Handle => handle;
         protected VkBufferCreateInfo createInfo = VkBufferCreateInfo.New();
         
 		protected override VkDebugMarkerObjectNameInfoEXT DebugMarkerInfo
@@ -134,7 +138,7 @@ namespace VKE {
             Descriptor.offset = offset;
         }
 
-        public void CopyTo (CommandBuffer cmd, Image img) {
+        public void CopyTo (CommandBuffer cmd, Image img, VkImageLayout finalLayout = VkImageLayout.ShaderReadOnlyOptimal) {
             img.SetLayout (cmd, VkImageAspectFlags.Color,
                 VkImageLayout.Undefined, VkImageLayout.TransferDstOptimal,
                 VkPipelineStageFlags.AllCommands, VkPipelineStageFlags.Transfer);
@@ -147,7 +151,7 @@ namespace VKE {
             vkCmdCopyBufferToImage (cmd.Handle, handle, img.handle, VkImageLayout.TransferDstOptimal, 1, ref bufferCopyRegion);
 
             img.SetLayout (cmd, VkImageAspectFlags.Color,
-                VkImageLayout.TransferDstOptimal, VkImageLayout.ShaderReadOnlyOptimal,
+                VkImageLayout.TransferDstOptimal, finalLayout,
                 VkPipelineStageFlags.Transfer, VkPipelineStageFlags.AllGraphics);
         }
         public void CopyTo (CommandBuffer cmd, Buffer buff, ulong size = 0, ulong srcOffset = 0, ulong dstOffset = 0) {
