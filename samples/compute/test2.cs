@@ -20,12 +20,13 @@ namespace test2 {
 
 		Queue computeQ, transferQ;
 
-		HostBuffer inBuff, outBuff;
+		GPUBuffer inBuff, outBuff;
+		HostBuffer<float> stagingDataBuff;
 		DescriptorPool dsPool;
 		DescriptorSetLayout dslCompute, dslImage;
 		DescriptorSet dsetPing, dsetPong, dsImage;
 
-		ComputePipeline plCompute;
+		ComputePipeline plCompute, plNormalize;
 
 		DebugReport dbgReport;
 
@@ -34,6 +35,17 @@ namespace test2 {
 		uint data_size => imgDim * imgDim * 4;
 
 		float[] datas;
+
+		uint seedCount;
+
+		void addSeed (uint x, uint y) {
+			uint ptr = (y * imgDim + x) * 4;
+			datas[ptr] = ++seedCount;//seedId
+			datas[ptr + 1] = x;
+			datas[ptr + 2] = y;
+			datas[ptr + 3] = 1;
+
+		}
 
 
 		public Program () : base () {
@@ -62,8 +74,10 @@ namespace test2 {
 			addSeed (220, 150);
 
 
-			inBuff = new HostBuffer<float> (dev, VkBufferUsageFlags.StorageBuffer | VkBufferUsageFlags.TransferSrc, datas);
-			outBuff = new HostBuffer<float> (dev, VkBufferUsageFlags.StorageBuffer | VkBufferUsageFlags.TransferSrc, data_size);
+			stagingDataBuff = new HostBuffer<float> (dev, VkBufferUsageFlags.TransferSrc, datas);
+
+			inBuff = new GPUBuffer<float> (dev, VkBufferUsageFlags.StorageBuffer | VkBufferUsageFlags.TransferSrc | VkBufferUsageFlags.TransferDst, (int)data_size);
+			outBuff = new GPUBuffer<float> (dev, VkBufferUsageFlags.StorageBuffer | VkBufferUsageFlags.TransferSrc, (int)data_size);
 
 			dsPool = new DescriptorPool (dev, 3,
 				new VkDescriptorPoolSize (VkDescriptorType.CombinedImageSampler),
@@ -88,6 +102,9 @@ namespace test2 {
 			plCompute = new ComputePipeline (
 				new PipelineLayout (dev, new VkPushConstantRange (VkShaderStageFlags.Compute, 2 * sizeof (int)), dslCompute),
 				"shaders/computeTest.comp.spv" );
+			plNormalize = new ComputePipeline (
+				plCompute.Layout,
+				"shaders/normalize.comp.spv");
 
 			GraphicPipelineConfig cfg = GraphicPipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, VkSampleCountFlags.SampleCount1);
 
@@ -161,11 +178,13 @@ namespace test2 {
 		int invocationCount = 1;
 
 		public override void Update () {
+			initGpuBuffers ();
+
 			using (CommandPool cmdPoolCompute = new CommandPool (dev, computeQ.qFamIndex)) {
 
 				CommandBuffer cmd = cmdPoolCompute.AllocateAndStart (VkCommandBufferUsageFlags.OneTimeSubmit);
 
-				//pong = false;
+				pong = false;
 				uint stepSize = imgDim / 2;
 
 				plCompute.Bind (cmd);
@@ -200,17 +219,6 @@ namespace test2 {
 			}
 
 			printResults ();
-		}
-
-		uint seedCount;
-
-		void addSeed (uint x, uint y) {
-			uint ptr = (y * imgDim + x) * 4;
-			datas[ptr] = (float)++seedCount;//seedId
-			datas[ptr + 1] = (float)x;
-			datas[ptr + 2] = (float)y;
-			datas[ptr + 3] = 1;
-
 		}
 
 		protected override void onKeyDown (Key key, int scanCode, Modifier modifiers) {
@@ -251,6 +259,16 @@ namespace test2 {
 			}
 		}
 
+		void initGpuBuffers () {
+			using (CommandPool staggingCmdPool = new CommandPool (dev, transferQ.qFamIndex)) {
+				CommandBuffer cmd = staggingCmdPool.AllocateAndStart (VkCommandBufferUsageFlags.OneTimeSubmit);
+
+				stagingDataBuff.CopyTo (cmd, inBuff);
+
+				transferQ.EndSubmitAndWait (cmd);
+			}
+		}
+
 		protected override void Dispose (bool disposing) {
 			if (disposing) {
 				if (!isDisposed) {
@@ -261,6 +279,7 @@ namespace test2 {
 
 					grPipeline.Dispose ();
 					plCompute.Dispose ();
+					plNormalize.Dispose ();
 
 					dslCompute.Dispose ();
 					dslImage.Dispose ();
@@ -269,6 +288,7 @@ namespace test2 {
 
 					inBuff.Dispose ();
 					outBuff.Dispose ();
+					stagingDataBuff.Dispose ();
 
 					imgResult.Dispose ();
 
