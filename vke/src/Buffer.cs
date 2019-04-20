@@ -162,8 +162,12 @@ namespace VKE {
             };
             vkCmdCopyBuffer (cmd.Handle, handle, buff.handle, 1, ref bufferCopy);
         }
+		public void Fill (CommandBuffer cmd, uint data, ulong size = 0, ulong offset = 0) {
+			vkCmdFillBuffer (cmd.Handle, handle, offset, (size == 0) ? deviceMemSize : size, data);
+		}
 
-        protected override VkMemoryRequirements getMemoryRequirements () {
+
+		protected override VkMemoryRequirements getMemoryRequirements () {
             VkMemoryRequirements memReqs;
             vkGetBufferMemoryRequirements (dev.VkDev, handle, out memReqs);
             return memReqs;
