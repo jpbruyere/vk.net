@@ -22,6 +22,8 @@ Parameters and structures use **IntPtr** and **ref/out** decorations instead of 
 </p>
 
 # CVKL
-Higher c# classes with `IDispose` model and reference counting.
 <a href="https://www.nuget.org/packages/CVKL"><img src="https://buildstats.info/nuget/CVKL"></a>
+
+Higher c# classes with `IDispose` model and reference counting.
+
 
