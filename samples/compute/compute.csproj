@@ -7,7 +7,7 @@
     <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
     <OutputPath>$(SolutionDir)build\$(Configuration)\samples\compute</OutputPath>
     <IntermediateOutputPath>$(SolutionDir)build\obj\$(Configuration)</IntermediateOutputPath>        
-    <StartupObject>test2.Program</StartupObject>
+    <StartupObject>triangulation.Program</StartupObject>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>

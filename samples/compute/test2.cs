@@ -1,11 +1,11 @@
 ﻿using System;
+using System.Numerics;
 using System.Runtime.InteropServices;
-using VKE;
-using VK;
-using System.Linq;
 using Glfw;
+using VK;
+using VKE;
 
-namespace test2 {
+namespace triangulation {
 	class Program : VkWindow {
 		static void Main (string[] args) {
 			using (Program vke = new Program ()) {
@@ -14,39 +14,52 @@ namespace test2 {
 		}
 
 		Framebuffer[] frameBuffers;
-		GraphicPipeline grPipeline;
+		GraphicPipeline grPipeline, trianglesPipeline;
 
 		Image imgResult;
 
 		Queue computeQ, transferQ;
 
 		GPUBuffer inBuff, outBuff;
-		HostBuffer<float> stagingDataBuff;
+		HostBuffer<Vector2> staggingVBO;
 		DescriptorPool dsPool;
-		DescriptorSetLayout dslCompute, dslImage;
-		DescriptorSet dsetPing, dsetPong, dsImage;
+		DescriptorSetLayout dslCompute, dslImage, dslVAO;
+		DescriptorSet dsPing, dsPong, dsImage, dsVAO;
 
-		ComputePipeline plCompute, plNormalize;
+		ComputePipeline plCompute, plNormalize, plInit;
 
 		DebugReport dbgReport;
 
-		const uint imgDim = 256;
 
-		uint data_size => imgDim * imgDim * 4;
+		GPUBuffer<Vector2> vbo;
+		GPUBuffer<uint> ibo;
 
-		float[] datas;
+		uint zoom = 2;
 
-		uint seedCount;
+		const int MAX_VERTICES = 128;
+		const uint IMG_DIM = 256;
 
-		void addSeed (uint x, uint y) {
-			uint ptr = (y * imgDim + x) * 4;
-			datas[ptr] = ++seedCount;//seedId
-			datas[ptr + 1] = x;
-			datas[ptr + 2] = y;
-			datas[ptr + 3] = 1;
+		int invocationCount = 8;
+
+		uint data_size => IMG_DIM * IMG_DIM * 4;
+
+		Vector2[] points = new Vector2[MAX_VERTICES];
+		uint pointCount;
+		bool clear = true;//if true, inBuff will be fill with zeros
+
+		bool pong;//ping-pong between buffers
+
+		void addPoint (uint x, uint y) {
+			points[pointCount] = new Vector2 (x, y);
+			pointCount++;
+			staggingVBO.Update (points, pointCount * (ulong)Marshal.SizeOf<Vector2> ());
+
 
 		}
-
+		void clearPoints () {
+			pointCount = 0;
+			clear = true;
+		}
 
 		public Program () : base () {
 #if DEBUG
@@ -59,29 +72,24 @@ namespace test2 {
 			);
 #endif
 			imgResult = new Image (dev, VkFormat.R32g32b32a32Sfloat, VkImageUsageFlags.TransferDst | VkImageUsageFlags.Sampled, VkMemoryPropertyFlags.DeviceLocal,
-				imgDim, imgDim);
+				IMG_DIM, IMG_DIM);
 			imgResult.CreateView ();
-			imgResult.CreateSampler ();
+			imgResult.CreateSampler (VkFilter.Nearest, VkFilter.Nearest, VkSamplerMipmapMode.Nearest, VkSamplerAddressMode.ClampToBorder);
 			imgResult.Descriptor.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
 
-			datas = new float[data_size];
-			/*Random rnd = new Random ();
-			for (uint i = 0; i < data_size; i++) {
-				datas[i] = (float)rnd.NextDouble ();
-			}*/
 
-			addSeed (127, 127);
-			addSeed (220, 150);
+			staggingVBO = new HostBuffer<Vector2> (dev, VkBufferUsageFlags.TransferSrc, MAX_VERTICES);
+			staggingVBO.Map ();
 
-
-			stagingDataBuff = new HostBuffer<float> (dev, VkBufferUsageFlags.TransferSrc, datas);
+			vbo = new GPUBuffer<Vector2> (dev, VkBufferUsageFlags.VertexBuffer | VkBufferUsageFlags.StorageBuffer | VkBufferUsageFlags.TransferDst, MAX_VERTICES);
+			ibo = new GPUBuffer<uint> (dev, VkBufferUsageFlags.IndexBuffer | VkBufferUsageFlags.StorageBuffer, MAX_VERTICES * 3);
 
 			inBuff = new GPUBuffer<float> (dev, VkBufferUsageFlags.StorageBuffer | VkBufferUsageFlags.TransferSrc | VkBufferUsageFlags.TransferDst, (int)data_size);
-			outBuff = new GPUBuffer<float> (dev, VkBufferUsageFlags.StorageBuffer | VkBufferUsageFlags.TransferSrc, (int)data_size);
+			outBuff = new GPUBuffer<float> (dev, VkBufferUsageFlags.StorageBuffer | VkBufferUsageFlags.TransferSrc | VkBufferUsageFlags.TransferDst, (int)data_size);
 
-			dsPool = new DescriptorPool (dev, 3,
+			dsPool = new DescriptorPool (dev, 4,
 				new VkDescriptorPoolSize (VkDescriptorType.CombinedImageSampler),
-				new VkDescriptorPoolSize (VkDescriptorType.StorageBuffer, 4));
+				new VkDescriptorPoolSize (VkDescriptorType.StorageBuffer, 6));
 			dslImage = new DescriptorSetLayout (dev,
 				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler)
 			);
@@ -89,30 +97,36 @@ namespace test2 {
 				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Compute, VkDescriptorType.StorageBuffer),
 				new VkDescriptorSetLayoutBinding (1, VkShaderStageFlags.Compute, VkDescriptorType.StorageBuffer)
 			);
+			dslVAO = new DescriptorSetLayout (dev,
+				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Compute, VkDescriptorType.StorageBuffer),
+				new VkDescriptorSetLayoutBinding (1, VkShaderStageFlags.Compute, VkDescriptorType.StorageBuffer)
+			);
 			dsImage = dsPool.Allocate (dslImage);
-			dsetPing = dsPool.Allocate (dslCompute);
-			dsetPong = dsPool.Allocate (dslCompute);
+			dsPing = dsPool.Allocate (dslCompute);
+			dsPong = dsPool.Allocate (dslCompute);
+			dsVAO = dsPool.Allocate (dslCompute);
 
-			DescriptorSetWrites dsUpdate = new DescriptorSetWrites (dsetPing, dslCompute);
+
+			DescriptorSetWrites dsUpdate = new DescriptorSetWrites (dsPing, dslCompute);
 			dsUpdate.Write (dev, inBuff.Descriptor, outBuff.Descriptor);
-			dsUpdate.Write (dev, dsetPong, outBuff.Descriptor, inBuff.Descriptor);
+			dsUpdate.Write (dev, dsPong, outBuff.Descriptor, inBuff.Descriptor);
 			dsUpdate = new DescriptorSetWrites (dsImage, dslImage);
 			dsUpdate.Write (dev, imgResult.Descriptor);
+			dsUpdate = new DescriptorSetWrites (dsVAO, dslVAO);
+			dsUpdate.Write (dev, vbo.Descriptor, ibo.Descriptor);
 
-			plCompute = new ComputePipeline (
-				new PipelineLayout (dev, new VkPushConstantRange (VkShaderStageFlags.Compute, 2 * sizeof (int)), dslCompute),
-				"shaders/computeTest.comp.spv" );
-			plNormalize = new ComputePipeline (
-				plCompute.Layout,
-				"shaders/normalize.comp.spv");
+
+			plInit = new ComputePipeline (
+				new PipelineLayout (dev, new VkPushConstantRange (VkShaderStageFlags.Compute, 3 * sizeof (int)), dslCompute, dslVAO),
+				"shaders/init.comp.spv");
+			plCompute = new ComputePipeline (plInit.Layout, "shaders/computeTest.comp.spv");
+			plNormalize = new ComputePipeline (plInit.Layout, "shaders/normalize.comp.spv");
 
 			GraphicPipelineConfig cfg = GraphicPipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, VkSampleCountFlags.SampleCount1);
 
 			cfg.Layout = new PipelineLayout (dev, dslImage);
 			cfg.RenderPass = new RenderPass (dev, swapChain.ColorFormat, dev.GetSuitableDepthFormat (), VkSampleCountFlags.SampleCount1);
-			cfg.RenderPass.ClearValues[0] = new VkClearValue { color = new VkClearColorValue (0.0f, 0.1f, 0.0f) };
-
-			cfg.ResetShadersAndVerticesInfos ();
+			cfg.RenderPass.ClearValues[0] = new VkClearValue { color = new VkClearColorValue (0.1f, 0.1f, 0.1f) };
 			cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/FullScreenQuad.vert.spv");
 			cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/simpletexture.frag.spv");
 
@@ -120,7 +134,19 @@ namespace test2 {
 
 			grPipeline = new GraphicPipeline (cfg);
 
-			//UpdateFrequency = 500;
+			cfg.ResetShadersAndVerticesInfos ();
+			cfg.Layout = new PipelineLayout (dev, new VkPushConstantRange (VkShaderStageFlags.Vertex, 4 * sizeof (int)));
+			cfg.inputAssemblyState.topology = VkPrimitiveTopology.LineStrip;
+			cfg.AddVertexBinding<Vector2> (0);
+			cfg.SetVertexAttributes (0, VkFormat.R32g32Sfloat);
+			cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/triangle.vert.spv");
+			cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/triangle.frag.spv");
+
+			trianglesPipeline = new GraphicPipeline (cfg);
+
+			UpdateFrequency = 5;
+
+			addPoint (IMG_DIM / 2 - 1, IMG_DIM / 2 - 1);
 		}
 
 		protected override void createQueues () {
@@ -157,25 +183,31 @@ namespace test2 {
 
 				grPipeline.RenderPass.Begin (cmds[i], frameBuffers[i]);
 
-				uint zoom = 2;
+				int xPad = (int)swapChain.Width / 2 - (int)IMG_DIM * (int)zoom / 2;
+				int yPad = (int)swapChain.Height / 2- (int)IMG_DIM * (int)zoom / 2;
 
-				int xPad = (int)swapChain.Width / 2 - (int)imgDim * (int)zoom / 2;
-				int yPad = (int)swapChain.Height / 2- (int)imgDim * (int)zoom / 2;
-
-				cmds[i].SetViewport (imgDim * zoom, imgDim * zoom, xPad, yPad);
-				cmds[i].SetScissor (imgDim * zoom, imgDim * zoom, Math.Max (0, xPad), Math.Max (0, yPad));
+				cmds[i].SetViewport (IMG_DIM * zoom, IMG_DIM * zoom, xPad, yPad);
+				cmds[i].SetScissor (IMG_DIM * zoom, IMG_DIM * zoom, Math.Max (0, xPad), Math.Max (0, yPad));
 
 				cmds[i].BindDescriptorSet (grPipeline.Layout, dsImage);
 				cmds[i].BindPipeline (grPipeline);
 				cmds[i].Draw (3, 1, 0, 0);
+
+				trianglesPipeline.Bind (cmds[i]);
+				cmds[i].PushConstant (trianglesPipeline.Layout, VkShaderStageFlags.Vertex, IMG_DIM);
+				cmds[i].PushConstant (trianglesPipeline.Layout, VkShaderStageFlags.Vertex, xPad, sizeof(int));
+				cmds[i].PushConstant (trianglesPipeline.Layout, VkShaderStageFlags.Vertex, yPad, 2 * sizeof (int));
+				cmds[i].PushConstant (trianglesPipeline.Layout, VkShaderStageFlags.Vertex, zoom, 3 * sizeof (int));
+
+				cmds[i].BindVertexBuffer (vbo);
+				cmds[i].BindIndexBuffer (ibo, VkIndexType.Uint32);
+				cmds[i].DrawIndexed (pointCount*3);
 
 				grPipeline.RenderPass.End (cmds[i]);
 
 				cmds[i].End ();
 			}
 		}
-		bool pong;
-		int invocationCount = 1;
 
 		public override void Update () {
 			initGpuBuffers ();
@@ -184,26 +216,41 @@ namespace test2 {
 
 				CommandBuffer cmd = cmdPoolCompute.AllocateAndStart (VkCommandBufferUsageFlags.OneTimeSubmit);
 
+				plInit.BindDescriptorSet (cmd, dsVAO, 1);
+				cmd.PushConstant (plCompute.Layout, VkShaderStageFlags.Compute, IMG_DIM, sizeof (int));
+				cmd.PushConstant (plCompute.Layout, VkShaderStageFlags.Compute, pointCount, 2 * sizeof (int));
+
+				if (!pong)
+					plInit.BindDescriptorSet (cmd, dsPong);
+				else
+					plInit.BindDescriptorSet (cmd, dsPing);
+
+				plInit.Bind (cmd);
+				cmd.Dispatch (pointCount);
+
+				VkMemoryBarrier memBar = VkMemoryBarrier.New ();
+				memBar.srcAccessMask = VkAccessFlags.ShaderWrite;
+				memBar.dstAccessMask = VkAccessFlags.ShaderRead;
+				Vk.vkCmdPipelineBarrier (cmd.Handle, VkPipelineStageFlags.ComputeShader, VkPipelineStageFlags.ComputeShader, VkDependencyFlags.ByRegion,
+					1, ref memBar, 0, IntPtr.Zero, 0, IntPtr.Zero);
+
 				pong = false;
-				uint stepSize = imgDim / 2;
+				uint stepSize = IMG_DIM / 2;
 
 				plCompute.Bind (cmd);
-				cmd.PushConstant (plCompute.Layout, VkShaderStageFlags.Compute, imgDim, sizeof(int));
+
 
 				int pass = 0;
 				while (stepSize > 0 && pass < invocationCount) {
 					cmd.PushConstant (plCompute.Layout, VkShaderStageFlags.Compute, stepSize);
 
 					if (pong)
-						plCompute.BindDescriptorSet (cmd, dsetPong);
+						plCompute.BindDescriptorSet (cmd, dsPong);
 					else
-						plCompute.BindDescriptorSet (cmd, dsetPing);
+						plCompute.BindDescriptorSet (cmd, dsPing);
 
-					cmd.Dispatch (imgDim, imgDim);
+					cmd.Dispatch (IMG_DIM, IMG_DIM);
 
-					VkMemoryBarrier memBar = VkMemoryBarrier.New ();
-					memBar.srcAccessMask = VkAccessFlags.ShaderWrite;
-					memBar.dstAccessMask = VkAccessFlags.ShaderRead;
 					Vk.vkCmdPipelineBarrier (cmd.Handle, VkPipelineStageFlags.ComputeShader, VkPipelineStageFlags.ComputeShader, VkDependencyFlags.ByRegion,
 						1, ref memBar, 0, IntPtr.Zero, 0, IntPtr.Zero);
 
@@ -214,10 +261,10 @@ namespace test2 {
 
 				plNormalize.Bind (cmd);
 				if (pong)
-					plNormalize.BindDescriptorSet (cmd, dsetPong);
+					plNormalize.BindDescriptorSet (cmd, dsPong);
 				else
-					plNormalize.BindDescriptorSet (cmd, dsetPing);
-				cmd.Dispatch (imgDim, imgDim);
+					plNormalize.BindDescriptorSet (cmd, dsPing);
+				cmd.Dispatch (IMG_DIM, IMG_DIM);
 				pong = !pong;
 
 				cmd.End ();
@@ -229,8 +276,24 @@ namespace test2 {
 			printResults ();
 		}
 
+		protected override void onMouseButtonDown (MouseButton button) {
+			int xPad = (int)swapChain.Width / 2 - (int)IMG_DIM * (int)zoom / 2;
+			int yPad = (int)swapChain.Height / 2 - (int)IMG_DIM * (int)zoom / 2;
+
+			int localX = (int)((lastMouseX - xPad) / zoom);
+			int localY = (int)((lastMouseY - yPad) / zoom);
+
+			if (localX < 0 || localY < 0 || localX >= IMG_DIM || localY >= IMG_DIM)
+				base.onMouseButtonDown (button);
+			else {
+				addPoint ((uint)localX, (uint)localY);
+			}
+		}
 		protected override void onKeyDown (Key key, int scanCode, Modifier modifiers) {
 			switch (key) {
+				case Key.Delete:
+					clearPoints ();
+					break;
 				case Key.KeypadAdd:
 					invocationCount++;
 					break;
@@ -271,7 +334,14 @@ namespace test2 {
 			using (CommandPool staggingCmdPool = new CommandPool (dev, transferQ.qFamIndex)) {
 				CommandBuffer cmd = staggingCmdPool.AllocateAndStart (VkCommandBufferUsageFlags.OneTimeSubmit);
 
-				stagingDataBuff.CopyTo (cmd, inBuff);
+				if (clear) {
+					if (pong)
+						inBuff.Fill (cmd, 0);
+					else
+						outBuff.Fill (cmd, 0);
+				}
+
+				staggingVBO.CopyTo (cmd, vbo, pointCount * (ulong)Marshal.SizeOf<Vector2>());
 
 				transferQ.EndSubmitAndWait (cmd);
 			}
@@ -286,6 +356,9 @@ namespace test2 {
 						frameBuffers[i]?.Dispose ();
 
 					grPipeline.Dispose ();
+					trianglesPipeline.Dispose ();
+
+					plInit.Dispose ();
 					plCompute.Dispose ();
 					plNormalize.Dispose ();
 
@@ -296,7 +369,9 @@ namespace test2 {
 
 					inBuff.Dispose ();
 					outBuff.Dispose ();
-					stagingDataBuff.Dispose ();
+					staggingVBO.Dispose ();
+					vbo.Dispose ();
+					ibo.Dispose ();
 
 					imgResult.Dispose ();
 

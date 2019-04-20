@@ -1,0 +1,36 @@
+#version 450
+
+#extension GL_ARB_separate_shader_objects : enable
+
+layout(binding = 0) buffer buffIn {
+    vec4 dataIn[];
+};
+ 
+layout(binding = 1) buffer buffOut {
+    vec4 dataOut[];
+};
+
+layout(set = 1, binding = 0) buffer VBO {
+    vec2 vertices[];
+};
+ 
+layout(set = 1, binding = 1) buffer IBO {
+    uint indices[];
+};
+
+layout(push_constant) uniform PushConsts {
+    int iStepSize;
+    int imgDim;
+    int pointCount;
+};
+
+
+layout (local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+void main()
+{
+    vec2 v = vertices[gl_GlobalInvocationID.x];
+    ivec2 uv = ivec2(int(v.x), int(v.y));
+    dataIn[uv.y * imgDim + uv.x] = vec4 (gl_GlobalInvocationID.x + 1, uv.x, uv.y, 1.0);
+}
+

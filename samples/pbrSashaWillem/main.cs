@@ -18,7 +18,7 @@ namespace pbrSachaWillem {
 			features.pipelineStatisticsQuery = true;
 		}
 
-		VkSampleCountFlags samples = VkSampleCountFlags.SampleCount4;
+		VkSampleCountFlags samples = VkSampleCountFlags.SampleCount1;
 
 		Framebuffer[] frameBuffers;
 		PBRPipeline pbrPipeline;

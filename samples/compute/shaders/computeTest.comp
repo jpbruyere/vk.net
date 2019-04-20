@@ -10,9 +10,19 @@ layout(binding = 1) buffer buffOut {
     vec4 dataOut[];
 };
 
+layout(set = 1, binding = 0) buffer VBO {
+    vec2 vertices[];
+};
+ 
+layout(set = 1, binding = 1) buffer IBO {
+    uint indices[];
+};
+
+
 layout(push_constant) uniform PushConsts {
     int iStepSize;
     int imgDim;
+    int pointCount;
 };
 
 const ivec2 dirs[] = ivec2[8] (
