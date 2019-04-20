@@ -17,8 +17,8 @@ Parameters and structures unses **IntPtr** and **ref/out** decorations instead o
 
 ### Port of the gltfPBR from Sacha Willems
 <p align="center">
-  <a href="https://github.com/jpbruyere/vkvg/blob/master/samples/pbrSashaWillem/screenshot.png">
-    <kbd><img src="https://github.com/jpbruyere/vkvg/blob/master/samples/pbrSashaWillem/screenshot.png" height="300"></kbd>
+  <a href="https://github.com/jpbruyere/vk.net/blob/master/samples/pbrSashaWillem/screenshot.png">
+    <kbd><img src="https://github.com/jpbruyere/vk.net/blob/master/samples/pbrSashaWillem/screenshot.png" height="300"></kbd>
   </a>
 </p>
 
