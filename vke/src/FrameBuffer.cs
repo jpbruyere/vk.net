@@ -30,7 +30,7 @@ using VK;
 
 using static VK.Vk;
 
-namespace VKE {
+namespace CVKL {
 
     public class Framebuffer : Activable {
         internal VkFramebuffer handle;
@@ -47,7 +47,7 @@ namespace VKE {
 			=> new VkDebugMarkerObjectNameInfoEXT(VkDebugReportObjectTypeEXT.FramebufferEXT, handle.Handle);
 
 		#region CTORS
-		public Framebuffer (RenderPass _renderPass, uint _width, uint _height, uint _layers = 1) : base(_renderPass.dev) {
+		public Framebuffer (RenderPass _renderPass, uint _width, uint _height, uint _layers = 1) : base(_renderPass.Dev) {
             renderPass = _renderPass;
             createInfo.width = _width;
             createInfo.height = _height;
@@ -71,7 +71,7 @@ namespace VKE {
 						//TODO:check subpass usage
 					}
 
-					v = new Image (renderPass.dev, ad.format, usage, VkMemoryPropertyFlags.DeviceLocal,
+					v = new Image (renderPass.Dev, ad.format, usage, VkMemoryPropertyFlags.DeviceLocal,
 						_width, _height, VkImageType.Image2D, ad.samples, VkImageTiling.Optimal, 1, createInfo.layers);
 					v.CreateView (VkImageViewType.ImageView2D, aspectFlags);
 				} else
@@ -89,7 +89,7 @@ namespace VKE {
 				createInfo.attachmentCount = (uint)views.Length;
 				createInfo.pAttachments = views.Pin ();
 
-				Utils.CheckResult (vkCreateFramebuffer (renderPass.dev.VkDev, ref createInfo, IntPtr.Zero, out handle));
+				Utils.CheckResult (vkCreateFramebuffer (renderPass.Dev.VkDev, ref createInfo, IntPtr.Zero, out handle));
 
 				views.Unpin ();
 			}
@@ -104,7 +104,7 @@ namespace VKE {
 #region IDisposable Support
 		protected override void Dispose (bool disposing) {
 			if (state == ActivableState.Activated)
-				dev.DestroyFramebuffer (handle);
+				Dev.DestroyFramebuffer (handle);
 			if (disposing) {
 				foreach (Image img in attachments) 
 					img.Dispose();

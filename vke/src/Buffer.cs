@@ -24,27 +24,32 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using VK;
-using System.Runtime.CompilerServices;
-
 using static VK.Vk;
 
-using System.Collections.Generic;
+namespace CVKL {
 
-namespace VKE {
-    public class GPUBuffer : Buffer {
+	#region GPUBuffer
+	/// <summary>
+	/// Device local Buffer
+	/// </summary>
+	public class GPUBuffer : Buffer {
         public GPUBuffer (Device device, VkBufferUsageFlags usage, UInt64 size) 
         : base (device, usage, VkMemoryPropertyFlags.DeviceLocal, size){ 
         }
     }
-    public class GPUBuffer<T> : GPUBuffer {
+	/// <summary>
+	/// Device local Buffer
+	/// </summary>
+	public class GPUBuffer<T> : GPUBuffer {
         public GPUBuffer (Device device, VkBufferUsageFlags usage, int elementCount)
             : base (device, usage, (ulong)(Marshal.SizeOf<T> () * elementCount)) {
         }
         public GPUBuffer (Queue staggingQ, CommandPool staggingCmdPool, VkBufferUsageFlags usage, T[] elements)
             : base (staggingQ.Dev, usage | VkBufferUsageFlags.TransferDst, (ulong)(Marshal.SizeOf<T> () * elements.Length)) {
-			using (HostBuffer<T> stagging = new HostBuffer<T> (dev, VkBufferUsageFlags.TransferSrc, elements)) { 
+			using (HostBuffer<T> stagging = new HostBuffer<T> (Dev, VkBufferUsageFlags.TransferSrc, elements)) { 
 				CommandBuffer cmd = staggingCmdPool.AllocateCommandBuffer ();
 				cmd.Start (VkCommandBufferUsageFlags.OneTimeSubmit);
 
@@ -59,47 +64,61 @@ namespace VKE {
 			}
         }
     }
-    public class HostBuffer<T> : HostBuffer {
+	#endregion
+
+	#region HostBuffer
+	public class HostBuffer<T> : HostBuffer {
 		public HostBuffer (Device device, VkBufferUsageFlags usage, uint arrayElementCount)
 			: base (device, usage, (ulong)(Marshal.SizeOf<T> () * arrayElementCount)) {
 		}
-		public HostBuffer (Device device, VkBufferUsageFlags usage, IList<T> data)
+		public HostBuffer (Device device, VkBufferUsageFlags usage, IList<T> data, bool keepMapped = false)
             : base (device, usage, (ulong)(Marshal.SizeOf<T> () * data.Count)) {
             Map ();
             Update (data, createInfo.size);
-            Unmap ();
+			if (!keepMapped)
+            	Unmap ();
         }
-        public HostBuffer (Device device, VkBufferUsageFlags usage, T[] data)
+        public HostBuffer (Device device, VkBufferUsageFlags usage, T[] data, bool keepMapped = false)
             : base (device, usage, (ulong)(Marshal.SizeOf<T> () * data.Length)) {
             Map ();
             Update (data, createInfo.size);
-            Unmap ();
+			if (!keepMapped)
+            	Unmap ();
         }
 		public void Update (T[] data) {
 			Update (data, (ulong)(Marshal.SizeOf<T> () * data.Length));
 		}
 	}
-    public class HostBuffer : Buffer {
+	/// <summary>
+	/// Mappable Buffer with HostVisble and HostCoherent memory flags
+	/// </summary>
+	public class HostBuffer : Buffer {
         public HostBuffer (Device device, VkBufferUsageFlags usage, UInt64 size)
                     : base (device, usage, VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent, size) {
         }
-        public HostBuffer (Device device, VkBufferUsageFlags usage, object data)
+        public HostBuffer (Device device, VkBufferUsageFlags usage, object data, bool keepMapped = false)
             : base (device, usage, VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent, (ulong)Marshal.SizeOf(data)) {
             Map ();
             Update (data, createInfo.size);
-            Unmap ();
+			if (!keepMapped)
+            	Unmap ();
         }
-        public HostBuffer (Device device, VkBufferUsageFlags usage, UInt64 size, IntPtr data)
+        public HostBuffer (Device device, VkBufferUsageFlags usage, UInt64 size, IntPtr data, bool keepMapped = false)
             : base (device, usage, VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent, size) {
             Map ();
             unsafe {
                 System.Buffer.MemoryCopy (data.ToPointer (), mappedData.ToPointer (), size, size);
             }
-            Unmap ();
+			if (!keepMapped)
+            	Unmap ();
         }
     }
+	#endregion
 
-    public class Buffer : Resource {
+	/// <summary>
+	/// Base class for HostBuffer and GPUBuffer
+	/// </summary>
+	public class Buffer : Resource {
         internal VkBuffer handle;
         public VkDescriptorBufferInfo Descriptor;
 		public VkBuffer Handle => handle;
@@ -116,7 +135,7 @@ namespace VKE {
             createInfo.usage = usage;
             createInfo.sharingMode = VkSharingMode.Exclusive;
 
-            Utils.CheckResult (vkCreateBuffer (dev.VkDev, ref createInfo, IntPtr.Zero, out handle));
+            Utils.CheckResult (vkCreateBuffer (Dev.VkDev, ref createInfo, IntPtr.Zero, out handle));
 
             Activate ();//DONT OVERRIDE Activate in derived classes!!!!
         }
@@ -169,12 +188,12 @@ namespace VKE {
 
 		protected override VkMemoryRequirements getMemoryRequirements () {
             VkMemoryRequirements memReqs;
-            vkGetBufferMemoryRequirements (dev.VkDev, handle, out memReqs);
+            vkGetBufferMemoryRequirements (Dev.VkDev, handle, out memReqs);
             return memReqs;
         }
 
         protected override void bindMemory (ulong offset) {
-            Utils.CheckResult (vkBindBufferMemory (dev.VkDev, handle, vkMemory, offset));
+            Utils.CheckResult (vkBindBufferMemory (Dev.VkDev, handle, vkMemory, offset));
         }
 
 		public override string ToString () {
@@ -185,7 +204,7 @@ namespace VKE {
 		protected override void Dispose (bool disposing) {
 			if (state == ActivableState.Activated) {
 				base.Dispose (disposing);
-				vkDestroyBuffer (dev.VkDev, handle, IntPtr.Zero);
+				vkDestroyBuffer (Dev.VkDev, handle, IntPtr.Zero);
 			}
 			state = ActivableState.Disposed;
         }

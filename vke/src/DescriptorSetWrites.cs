@@ -29,7 +29,7 @@ using System.Runtime.InteropServices;
 using VK;
 using static VK.Vk;
 
-namespace VKE {
+namespace CVKL {
 	/// <summary>
 	/// Descriptor set writes is defined once, then update affect descriptors to write array
 	/// </summary>

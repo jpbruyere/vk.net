@@ -4,7 +4,7 @@ using System.Numerics;
 using System.Runtime.InteropServices;
 using VK;
 
-namespace VKE {
+namespace CVKL {
 	class EnvironmentCube : GraphicPipeline {
 		DescriptorPool descriptorPool;
 		DescriptorSetLayout descLayoutMain;

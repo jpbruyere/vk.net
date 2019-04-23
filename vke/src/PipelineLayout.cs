@@ -29,7 +29,7 @@ using System.Linq;
 using VK;
 using static VK.Vk;
 
-namespace VKE {
+namespace CVKL {
 	public sealed class PipelineLayout : Activable {
         internal VkPipelineLayout handle;
 		public VkPipelineLayout Handle => handle;
@@ -77,7 +77,7 @@ namespace VKE {
 					info.pushConstantRangeCount = (uint)PushConstantRanges.Count;
 					info.pPushConstantRanges = PushConstantRanges.Pin();
 				}
-				Utils.CheckResult (vkCreatePipelineLayout (dev.VkDev, ref info, IntPtr.Zero, out handle));
+				Utils.CheckResult (vkCreatePipelineLayout (Dev.VkDev, ref info, IntPtr.Zero, out handle));
 
 				if (dsls.Length > 0)
 					dsls.Unpin ();
@@ -100,7 +100,7 @@ namespace VKE {
 				} else
 					System.Diagnostics.Debug.WriteLine ("VKE Activable PipelineLayout disposed by finalizer");
 
-				vkDestroyPipelineLayout (dev.VkDev, handle, IntPtr.Zero);
+				vkDestroyPipelineLayout (Dev.VkDev, handle, IntPtr.Zero);
 			}else if (disposing)
 				System.Diagnostics.Debug.WriteLine ("Calling dispose on unactive PipelineLayout");
 

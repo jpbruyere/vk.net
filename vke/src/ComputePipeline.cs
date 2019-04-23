@@ -27,41 +27,43 @@ using System;
 using VK;
 using static VK.Vk;
 
-namespace VKE {
-    public class ComputePipeline : Pipeline {
+namespace CVKL {
+    public sealed class ComputePipeline : Pipeline {
 
 		public string SpirVPath;
     
 		#region CTORS
-		protected ComputePipeline (Device dev, string name = "compute pipeline") : base (dev, name) { 
+		public ComputePipeline (Device dev, string name = "compute pipeline") : base (dev, name) { 
 		}
 		/// <summary>
 		/// Create a new Pipeline with supplied RenderPass
 		/// </summary>
-		public ComputePipeline (PipelineLayout layout, string spirvPath, string name = "pipeline") : base(layout.dev, name)
+		public ComputePipeline (PipelineLayout layout, string spirvPath, string name = "pipeline") : base(layout.Dev, name)
 		{
 			SpirVPath = spirvPath;
 			this.layout = layout;
 
-			init ();
+			Activate ();
 		}
 		#endregion
 
-		void init () {
-			layout.Activate ();
+		public override void Activate () {
+			if (state != ActivableState.Activated) {
+				layout.Activate ();
 
-			using (ShaderInfo shader = new ShaderInfo (VkShaderStageFlags.Compute, SpirVPath)) {
-				VkComputePipelineCreateInfo info = VkComputePipelineCreateInfo.New ();
-				info.layout = layout.Handle;
-				info.stage = shader.GetStageCreateInfo (dev);
-				info.basePipelineHandle = 0;
-				info.basePipelineIndex = 0;
+				using (ShaderInfo shader = new ShaderInfo (VkShaderStageFlags.Compute, SpirVPath)) {
+					VkComputePipelineCreateInfo info = VkComputePipelineCreateInfo.New ();
+					info.layout = layout.Handle;
+					info.stage = shader.GetStageCreateInfo (Dev);
+					info.basePipelineHandle = 0;
+					info.basePipelineIndex = 0;
 
-				Utils.CheckResult (Vk.vkCreateComputePipelines (dev.VkDev, VkPipelineCache.Null, 1, ref info, IntPtr.Zero, out handle));
+					Utils.CheckResult (Vk.vkCreateComputePipelines (Dev.VkDev, VkPipelineCache.Null, 1, ref info, IntPtr.Zero, out handle));
 
-				dev.DestroyShaderModule (info.stage.module);
+					Dev.DestroyShaderModule (info.stage.module);
+				}
 			}
-
+			base.Activate ();
 		}
 
 		public override void Bind (CommandBuffer cmd) {

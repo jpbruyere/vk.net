@@ -62,7 +62,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\vke\VKE.csproj">
       <Project>{32B7E80D-BEA7-4811-B82D-CC2533069F0A}</Project>
-      <Name>VKE</Name>
+      <Name>CVKL</Name>
     </ProjectReference>
     <ProjectReference Include="..\..\crow\Crow\Crow.csproj">
       <Project>{C2980F9B-4798-4C05-99E2-E174810F7C7B}</Project>

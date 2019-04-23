@@ -3,7 +3,7 @@ using System.Numerics;
 using System.Runtime.InteropServices;
 using Glfw;
 using VK;
-using VKE;
+using CVKL;
 
 namespace pbrSachaWillem {
 	class Program : VkWindow{	
@@ -97,10 +97,10 @@ namespace pbrSachaWillem {
 				ctx.SetSource (0.8, 0.8, 0.8);
 				y += dy;
 				ctx.MoveTo (x, y);
-				ctx.ShowText (string.Format ($"Exposure:{pbrPipeline.matrices.exposure,5} "));
+				ctx.ShowText (string.Format ($"Exposure:{pbrPipeline.parametters.exposure,5} "));
 				y += dy;
 				ctx.MoveTo (x, y);
-				ctx.ShowText (string.Format ($"Gamma:   {pbrPipeline.matrices.gamma,5} "));
+				ctx.ShowText (string.Format ($"Gamma:   {pbrPipeline.parametters.gamma,5} "));
 				if (results == null)
 					return;
 
@@ -121,6 +121,9 @@ namespace pbrSachaWillem {
 				y += dy;
 				ctx.MoveTo (x, y);
 				ctx.ShowText (string.Format ($"{"Elapsed microsecond",-20} :{timestampQPool.ElapsedMiliseconds:0.0000} "));
+				y += dy;
+				ctx.MoveTo (x, y);
+				ctx.ShowText (string.Format ($"{"Debug draw:",-20} :{currentDebugView.ToString()} "));
 			}
 		}
 		void recordDrawOverlay (CommandBuffer cmd) {
@@ -137,14 +140,16 @@ namespace pbrSachaWillem {
 		}
 		#endregion
 
+		Vector3 lightPos = new Vector3 (1, 0, 0);
+
 		Program () {
 			vkvgDev = new vkvg.Device (instance.Handle, phy.Handle, dev.VkDev.Handle, presentQueue.qFamIndex,
 				vkvg.SampleCount.Sample_4, presentQueue.index);
 
 			//UpdateFrequency = 20;
-			camera.Model = Matrix4x4.CreateRotationX (Utils.DegreesToRadians (-90)) * Matrix4x4.CreateRotationY (Utils.DegreesToRadians (180));
-			camera.SetRotation (-0.1f,-0.4f);
-			camera.SetPosition (0, 0, -3);
+			camera.Model = Matrix4x4.CreateScale (1.0f);// *  Matrix4x4.CreateRotationX (Utils.DegreesToRadians (180));
+			//camera.SetRotation (-0.1f,-0.4f);*/
+			camera.SetPosition (0, 0, 2);
 
 			pbrPipeline = new PBRPipeline(presentQueue,
 				new RenderPass (dev, swapChain.ColorFormat, dev.GetSuitableDepthFormat (), samples));
@@ -191,6 +196,19 @@ namespace pbrSachaWillem {
 		}
 		#endregion
 
+
+		enum DebugView {
+			none,
+			color,
+			normal,
+			occlusion,
+			emissive,
+			metallic,
+			roughness
+		}
+
+		DebugView currentDebugView = DebugView.none;
+
 		#region update
 		void updateMatrices () {
 			camera.AspectRatio = (float)swapChain.Width / swapChain.Height;
@@ -198,15 +216,43 @@ namespace pbrSachaWillem {
 			pbrPipeline.matrices.projection = camera.Projection;
 			pbrPipeline.matrices.view = camera.View;
 			pbrPipeline.matrices.model = camera.Model;
-			pbrPipeline.uboMats.Update (pbrPipeline.matrices, (uint)Marshal.SizeOf<PBRPipeline.Matrices> ());
-			pbrPipeline.matrices.view *= Matrix4x4.CreateTranslation (-pbrPipeline.matrices.view.Translation);
-			pbrPipeline.matrices.model = Matrix4x4.Identity;
-			pbrPipeline.uboMats.Update (pbrPipeline.matrices, (uint)Marshal.SizeOf<PBRPipeline.Matrices> (), (uint)Marshal.SizeOf<PBRPipeline.Matrices> ());
-		}
 
+			BoundingBox aabb = pbrPipeline.model.DefaultScene.AABB;
+
+			//pbrPipeline.matrices.model = Matrix4x4.Identity;
+
+			pbrPipeline.matrices.camPos = new Vector3 (
+				-camera.Position.Z * (float)Math.Sin (camera.Rotation.Y) * (float)Math.Cos (camera.Rotation.X),
+				 camera.Position.Z * (float)Math.Sin (camera.Rotation.X),
+				 camera.Position.Z * (float)Math.Cos (camera.Rotation.Y) * (float)Math.Cos (camera.Rotation.X)
+			);
+
+			pbrPipeline.uboMats.Update (pbrPipeline.matrices, (uint)Marshal.SizeOf<PBRPipeline.Matrices> ());
+
+			Matrix4x4 v = pbrPipeline.matrices.view;
+			pbrPipeline.matrices.view = new Matrix4x4 (
+				v.M11, v.M12, v.M13,     0,
+				v.M21, v.M22, v.M23,     0,
+				v.M31, v.M32, v.M33,     0,
+				    0,     0,     0,     1);		
+
+			//pbrPipeline.matrices.view *= Matrix4x4.CreateTranslation (-pbrPipeline.matrices.view.Translation);
+			//pbrPipeline.matrices.model = Matrix4x4.Identity;
+			pbrPipeline.uboSkybox.Update (pbrPipeline.matrices, (uint)Marshal.SizeOf<PBRPipeline.Matrices> ());
+		}
+		void updateParams () {
+			pbrPipeline.parametters.debugViewInputs = (float)currentDebugView;
+			pbrPipeline.uboParams.Update (pbrPipeline.parametters, (uint)Marshal.SizeOf<PBRPipeline.Params> ());
+		}
 		public override void UpdateView () {
 			updateMatrices ();
+			updateParams ();
 			updateViewRequested = false;
+			if (queryUpdatePrefilCube) {
+				pbrPipeline.updatePrefil (presentQueue, cmdPool);
+				buildCommandBuffers ();
+				queryUpdatePrefilCube = false;
+			}
 		}
 		public override void Update () {
 			results = statPool.GetResults ();
@@ -214,10 +260,12 @@ namespace pbrSachaWillem {
 		}
 		#endregion
 
+
 		protected override void OnResize () {
 			initUISurface ();
 
 			updateMatrices ();
+			updateParams ();
 
 			if (frameBuffers != null)
 				for (int i = 0; i < swapChain.ImageCount; ++i)
@@ -239,7 +287,7 @@ namespace pbrSachaWillem {
 
 			buildCommandBuffers ();
 		}
-
+		bool queryUpdatePrefilCube;
 
 		#region Mouse and keyboard
 		protected override void onMouseMove (double xPos, double yPos) {
@@ -256,53 +304,77 @@ namespace pbrSachaWillem {
 
 		protected override void onKeyDown (Key key, int scanCode, Modifier modifiers) {
 			switch (key) {
+				case Key.P:
+					queryUpdatePrefilCube = updateViewRequested = true;
+					break;
+				case Key.Keypad0:
+					currentDebugView = DebugView.none;
+					break;
+				case Key.Keypad1:
+					currentDebugView = DebugView.color;
+					break;
+				case Key.Keypad2:
+					currentDebugView = DebugView.normal;
+					break;
+				case Key.Keypad3:
+					currentDebugView = DebugView.occlusion;
+					break;
+				case Key.Keypad4:
+					currentDebugView = DebugView.emissive;
+					break;
+				case Key.Keypad5:
+					currentDebugView = DebugView.metallic;
+					break;
+				case Key.Keypad6:
+					currentDebugView = DebugView.roughness;
+					break;
 				case Key.Up:
 					if (modifiers.HasFlag (Modifier.Shift))
-						pbrPipeline.matrices.lightPos += new Vector4 (0, 0, 1, 0);
+						lightPos -= Vector3.UnitZ;
 					else
 						camera.Move (0, 0, 1);
 					break;
 				case Key.Down:
 					if (modifiers.HasFlag (Modifier.Shift))
-						pbrPipeline.matrices.lightPos += new Vector4 (0, 0, -1, 0);
+						lightPos += Vector3.UnitZ;
 					else
 						camera.Move (0, 0, -1);
 					break;
 				case Key.Left:
 					if (modifiers.HasFlag (Modifier.Shift))
-						pbrPipeline.matrices.lightPos += new Vector4 (1, 0, 0, 0);
+						lightPos -= Vector3.UnitX;
 					else
 						camera.Move (1, 0, 0);
 					break;
 				case Key.Right:
 					if (modifiers.HasFlag (Modifier.Shift))
-						pbrPipeline.matrices.lightPos += new Vector4 (-1, 0, 0, 0);
+						lightPos += Vector3.UnitX;
 					else
 						camera.Move (-1, 0, 0);
 					break;
 				case Key.PageUp:
 					if (modifiers.HasFlag (Modifier.Shift))
-						pbrPipeline.matrices.lightPos += new Vector4 (0, 1, 0, 0);
+						lightPos += Vector3.UnitY;
 					else
 						camera.Move (0, 1, 0);
 					break;
 				case Key.PageDown:
 					if (modifiers.HasFlag (Modifier.Shift))
-						pbrPipeline.matrices.lightPos += new Vector4 (0, -1, 0, 0);
+						lightPos -= Vector3.UnitY;
 					else
 						camera.Move (0, -1, 0);
 					break;
 				case Key.F1:
 					if (modifiers.HasFlag (Modifier.Shift))
-						pbrPipeline.matrices.exposure -= 0.3f;
+						pbrPipeline.parametters.exposure -= 0.3f;
 					else
-						pbrPipeline.matrices.exposure += 0.3f;
+						pbrPipeline.parametters.exposure += 0.3f;
 					break;
 				case Key.F2:
 					if (modifiers.HasFlag (Modifier.Shift))
-						pbrPipeline.matrices.gamma -= 0.1f;
+						pbrPipeline.parametters.gamma -= 0.1f;
 					else
-						pbrPipeline.matrices.gamma += 0.1f;
+						pbrPipeline.parametters.gamma += 0.1f;
 					break;
 				case Key.F3:
 					if (camera.Type == Camera.CamType.FirstPerson)

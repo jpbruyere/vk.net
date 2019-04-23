@@ -1,6 +1,6 @@
 ﻿using System.Numerics;
 using System.Runtime.InteropServices;
-using VKE;
+using CVKL;
 using VK;
 
 namespace Triangle {
@@ -65,7 +65,7 @@ namespace Triangle {
 			cfg.Layout = new PipelineLayout (dev, dsLayout);
 			cfg.Layout.AddPushConstants (
 				new VkPushConstantRange (VkShaderStageFlags.Vertex, (uint)Marshal.SizeOf<Matrix4x4> ()),
-				new VkPushConstantRange (VkShaderStageFlags.Fragment, (uint)Marshal.SizeOf<Model.PbrMaterial> (), 64)
+				new VkPushConstantRange (VkShaderStageFlags.Fragment, (uint)Marshal.SizeOf<PbrModel.PbrMaterial> (), 64)
 			);
 			cfg.RenderPass = new RenderPass (dev, swapChain.ColorFormat, dev.GetSuitableDepthFormat (), cfg.Samples);
 			cfg.AddVertexBinding<Vertex> (0);
@@ -113,6 +113,9 @@ namespace Triangle {
 					frameBuffers[i]?.Dispose ();
 			frameBuffers = new Framebuffer[swapChain.ImageCount];
 
+			cmdPool.Reset (VkCommandPoolResetFlags.ReleaseResources);
+			cmds = cmdPool.AllocateCommandBuffer (swapChain.ImageCount);
+
             for (int i = 0; i < swapChain.ImageCount; ++i) {
 				frameBuffers[i] = new Framebuffer (pipeline.RenderPass, swapChain.Width, swapChain.Height,
 					(pipeline.Samples == VkSampleCountFlags.SampleCount1) ? new Image[] {
@@ -123,8 +126,7 @@ namespace Triangle {
 						null,
 						swapChain.images[i]
 					});                
-
-                cmds[i] = cmdPool.AllocateCommandBuffer ();
+					                
                 cmds[i].Start ();
 
                 pipeline.RenderPass.Begin (cmds[i], frameBuffers[i]);

@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{32B7E80D-BEA7-4811-B82D-CC2533069F0A}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AssemblyName>CVKL</AssemblyName>
+    <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <OutputPath>bin\$(Configuration)</OutputPath>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <WarningLevel>4</WarningLevel>
+    <Optimize>false</Optimize>    
+    <CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
+    <DefineConstants>DEBUG;RENDERDOC;</DefineConstants>
+    <LangVersion>7.2</LangVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <Optimize>true</Optimize>
+    <LangVersion>7.2</LangVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="mscorlib" />
+    <Reference Include="System.ComponentModel.Composition" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Runtime.CompilerServices.Unsafe">
+      <HintPath>..\packages\System.Runtime.CompilerServices.Unsafe.4.6.0-preview4.19212.13\lib\netstandard2.0\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>..\packages\Newtonsoft.Json.12.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="glTFLoader">
+      <HintPath>..\packages\glTF2Loader.1.1.3-alpha\lib\net35\glTFLoader.dll</HintPath>
+    </Reference>
+    <Reference Include="VK">
+      <HintPath>..\packages\Vulkan.0.1.2.6\lib\netstandard2.0\VK.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Numerics.Vectors">
+      <HintPath>..\packages\System.Numerics.Vectors.4.6.0-preview4.19212.13\lib\net46\System.Numerics.Vectors.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Numerics" />
+  </ItemGroup>
+  <ItemGroup>        
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="src\Activable.cs" />
+    <Compile Include="src\Buffer.cs" />
+    <Compile Include="src\Camera.cs" />
+    <Compile Include="src\CommandBuffer.cs" />
+    <Compile Include="src\CommandPool.cs" />
+    <Compile Include="src\ComputePipeline.cs" />
+    <Compile Include="src\DebugReport.cs" />
+    <Compile Include="src\DescriptorPool.cs" />
+    <Compile Include="src\DescriptorSet.cs" />
+    <Compile Include="src\DescriptorSetLayout.cs" />
+    <Compile Include="src\DescriptorSetWrites.cs" />
+    <Compile Include="src\Device.cs" />
+    <Compile Include="src\ExtensionMethods.cs" />
+    <Compile Include="src\FixedUtf8String.cs" />
+    <Compile Include="src\FrameBuffer.cs" />
+    <Compile Include="src\GraphicPipeline.cs" />
+    <Compile Include="src\GraphicPipelineConfig.cs" />
+    <Compile Include="src\Image.cs" />
+    <Compile Include="src\Instance.cs" />
+    <Compile Include="src\Model.cs" />
+    <Compile Include="src\NativeList.cs" />
+    <Compile Include="src\PbrModel.cs" />
+    <Compile Include="src\PbrModel2.cs" />
+    <Compile Include="src\PhysicalDevice.cs" />
+    <Compile Include="src\Pipeline.cs" />
+    <Compile Include="src\PipelineLayout.cs" />
+    <Compile Include="src\QueryPool.cs" />
+    <Compile Include="src\Queue.cs" />
+    <Compile Include="src\RenderPass.cs" />
+    <Compile Include="src\Resource.cs" />
+    <Compile Include="src\ShaderInfo.cs" />
+    <Compile Include="src\SubPass.cs" />
+    <Compile Include="src\SwapChain.cs" />
+    <Compile Include="src\Utils.cs" />
+    <Compile Include="src\Version.cs" />
+    <Compile Include="src\VertexAttribute.cs" />
+    <Compile Include="src\VkFormatSize.cs" />
+    <Compile Include="src\VkWindow.cs" />
+    <Compile Include="src\gl.cs" />
+    <Compile Include="src\glTFLoader.cs" />
+    <Compile Include="src\ktx.cs" />
+    <Compile Include="src\stb.cs" />
+    <Compile Include="src\glfw\CodePoint.cs" />
+    <Compile Include="src\glfw\Delegates.cs" />
+    <Compile Include="src\glfw\ErrorCode.cs" />
+    <Compile Include="src\glfw\Glfw3.cs" />
+    <Compile Include="src\glfw\InputAction.cs" />
+    <Compile Include="src\glfw\Key.cs" />
+    <Compile Include="src\glfw\Modifier.cs" />
+    <Compile Include="src\glfw\MonitorEvent.cs" />
+    <Compile Include="src\glfw\MonitorHandle.cs" />
+    <Compile Include="src\glfw\MouseButton.cs" />
+    <Compile Include="src\glfw\NativeString.cs" />
+    <Compile Include="src\glfw\VideoMode.cs" />
+    <Compile Include="src\glfw\VideoModePointer.cs" />
+    <Compile Include="src\glfw\WindowAttribute.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
+  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />    
+</Project>

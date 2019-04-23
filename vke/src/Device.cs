@@ -32,7 +32,7 @@ using VK;
 using static VK.Vk;
 
 
-namespace VKE {
+namespace CVKL {
     public class Device : IDisposable {	
         public readonly PhysicalDevice phy;
 		public readonly bool DebugMarkersEnabled;

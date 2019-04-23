@@ -3,7 +3,7 @@ using System.Numerics;
 using System.Runtime.InteropServices;
 using VK;
 
-namespace VKE {
+namespace CVKL {
 	public class DebugDrawPipeline : GraphicPipeline {
 		public HostBuffer Vertices;
 		uint vertexCount;

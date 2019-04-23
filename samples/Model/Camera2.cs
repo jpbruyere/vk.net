@@ -3,9 +3,9 @@ using System.Numerics;
 using System.Runtime.InteropServices;
 
 using Vulkan;
-using static VKE.Camera;
+using static CVKL.Camera;
 
-namespace VKE {
+namespace CVKL {
 	public class Camera2 {
 
 		float fov, aspectRatio, zNear = 0.1f, zFar = 256f;

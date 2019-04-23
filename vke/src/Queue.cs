@@ -29,7 +29,7 @@ using VK;
 
 using static VK.Vk;
 
-namespace VKE {
+namespace CVKL {
 
     public class PresentQueue : Queue {
         public readonly VkSurfaceKHR Surface;

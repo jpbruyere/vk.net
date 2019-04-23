@@ -1,4 +1,5 @@
-﻿using System;
+﻿/* credit to https://github.com/mellinoe */
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -8,10 +9,6 @@ namespace VK
     public static partial class Vk
     {
         internal static NativeLibrary s_nativeLib;
-
-		public static string getWhy () {
-			return "static ctor wont be called if I dont access the static class!!";
-		}
 
         static Vk()
         {

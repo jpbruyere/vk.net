@@ -2,8 +2,8 @@
 using System.Runtime.InteropServices;
 using Glfw;
 using VK;
-using VKE;
-using static VKE.Camera;
+using CVKL;
+using static CVKL.Camera;
 
 namespace ModelSample {
 	class Program : VkWindow {
@@ -120,11 +120,11 @@ namespace ModelSample {
 			//model = new Model (presentQueue, "/mnt/devel/vkChess/data/chess.gltf");
 			model = new Model (presentQueue, "../data/models/DamagedHelmet/glTF/DamagedHelmet.gltf");
 			model.WriteMaterialsDescriptorSets (descLayoutTextures,
-				ShaderBinding.Color,
-				ShaderBinding.Normal,
-				ShaderBinding.AmbientOcclusion,
-				ShaderBinding.MetalRoughness,
-				ShaderBinding.Emissive);
+				VK.AttachmentType.Color,
+				VK.AttachmentType.Normal,
+				VK.AttachmentType.AmbientOcclusion,
+				VK.AttachmentType.MetalRoughness,
+				VK.AttachmentType.Emissive);
 		}
 
 		void init (VkSampleCountFlags samples = VkSampleCountFlags.SampleCount4) { 

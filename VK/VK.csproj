@@ -18,16 +18,7 @@
     <RepositoryUrl>https://github.com/jpbruyere/vk.net</RepositoryUrl>
     <!--<PackageIconUrl>https://github.com/KhronosGroup/glTF/blob/master/specification/figures/gltf.png</PackageIconUrl>-->
     
-    <Authors>Jean-Philippe Bruyère</Authors>
-    
-<!--    <CustomCommands>
-      <CustomCommands>
-        <Command>
-          <type>AfterBuild</type>
-          <command>mono $(SolutionDir)vk.rewrite/bin/$(Configuration)/vk.rewrite.exe ${TargetFile}</command>
-        </Command>
-      </CustomCommands>
-    </CustomCommands>   -->     
+    <Authors>Jean-Philippe Bruyère</Authors> 
     <SynchReleaseVersion>false</SynchReleaseVersion>
   </PropertyGroup>
 
@@ -38,11 +29,6 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
-  <ItemGroup>
-    <Compile Include="..\vk.generator\bin\**\*.cs">
-      <Link>generated\%(Filename)%(Extension)</Link>
-    </Compile>
-  </ItemGroup>
  <Target Name="rewrite" AfterTargets="CoreBuild">
     <Exec Condition="$(OS) == 'Windows_NT'" Command="$(SolutionDir)build/$(TargetFramework)rewrite/vk.rewrite.exe $(OutputPath)VK.dll" />
     <Exec Condition="$(OS) != 'Windows_NT'" Command="mono ../vk.rewrite/bin/Release/vk.rewrite.exe $(OutputPath)VK.dll" ConsoleToMSBuild="true" EchoOff="true">
