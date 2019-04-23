@@ -29,7 +29,7 @@ using VK;
 
 using static VK.Vk;
 
-namespace VKE {
+namespace CVKL {
     public class RenderPass : Activable {
         internal VkRenderPass handle;        
 
@@ -126,7 +126,7 @@ namespace VKE {
 				renderPassInfo.dependencyCount = (uint)dependencies.Count;
 				renderPassInfo.pDependencies = dependencies.Pin ();
 
-				handle = dev.CreateRenderPass (renderPassInfo);
+				handle = Dev.CreateRenderPass (renderPassInfo);
 
 				attachments.Unpin ();
 				spDescs.Unpin ();
@@ -234,7 +234,7 @@ namespace VKE {
 				} else
 					System.Diagnostics.Debug.WriteLine ("VKE Activable RenderPass disposed by finalizer");
 
-				dev.DestroyRenderPass (handle);
+				Dev.DestroyRenderPass (handle);
 			}else if (disposing)
 				System.Diagnostics.Debug.WriteLine ("Calling dispose on unactive RenderPass");
 

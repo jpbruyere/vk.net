@@ -2,9 +2,9 @@
 using System.Numerics;
 using System.Runtime.InteropServices;
 using Glfw;
-using VKE;
+using CVKL;
 using VK;
-using Buffer = VKE.Buffer;
+using Buffer = CVKL.Buffer;
 
 namespace TextureSample {
 	class Program : VkWindow {

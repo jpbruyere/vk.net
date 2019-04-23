@@ -31,7 +31,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
-namespace VKE {
+namespace CVKL {
     public class PhysicalDeviceCollection : IEnumerable<PhysicalDevice> {
         VkInstance inst;
         PhysicalDevice[] phys;

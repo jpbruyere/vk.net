@@ -9,10 +9,11 @@ layout (location = 2) in vec2 inUV;
 
 layout (binding = 0) uniform UBO 
 {
-	mat4 projectionMatrix;
+    mat4 projectionMatrix;
     mat4 viewMatrix;
-	mat4 modelMatrix;
+    mat4 modelMatrix;
     vec4 lightPos;
+    vec4 camPos;
     float gamma;
     float exposure;    
 } ubo;
@@ -37,13 +38,14 @@ void main()
     
     mat4 mod = ubo.modelMatrix * pc.model;
     vec4 pos = mod * vec4(inPos.xyz, 1.0);
-    
+    //pos.y=-pos.y;
     outN = normalize(transpose(inverse(mat3(mod))) * inNormal);    
     //outN = normalize(mat3(mod)* inNormal);    
     
     mat4 viewInv = inverse(ubo.viewMatrix);
-    //outV = -(ubo.viewMatrix * pos).xyz;
-    outV = normalize(vec3(viewInv * vec4(0.0, 0.0, 0.0, 1.0) - pos));
-    outWorldPos = pos.xyz;   
+    //outV = -pos.xyz;
+    outV = vec3(viewInv * vec4(0.0, 0.0, 0.0, 1.0) - pos);
+    
+    outWorldPos = pos.xyz/pos.w;   
 	gl_Position = ubo.projectionMatrix * ubo.viewMatrix * pos;
 }

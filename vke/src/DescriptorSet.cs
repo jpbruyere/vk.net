@@ -28,7 +28,7 @@ using System.Collections.Generic;
 using VK;
 using static VK.Vk;
 
-namespace VKE {
+namespace CVKL {
     public class DescriptorSet {
         internal VkDescriptorSet handle;
 		public VkDescriptorSet Handle => handle;

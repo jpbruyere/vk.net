@@ -29,13 +29,13 @@
   <ItemGroup>
     <Reference Include="System.Numerics" />
     <Reference Include="VK">
-      <HintPath>..\..\packages\Vulkan.0.1.1-alpha\lib\netstandard2.0\VK.dll</HintPath>
+      <HintPath>..\..\packages\Vulkan.0.1.2.6\lib\netstandard2.0\VK.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\vke\VKE.csproj">
       <Project>{32B7E80D-BEA7-4811-B82D-CC2533069F0A}</Project>
-      <Name>VKE</Name>
+      <Name>CVKL</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

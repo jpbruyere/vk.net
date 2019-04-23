@@ -9,6 +9,7 @@ layout (binding = 0) uniform UBO
     mat4 viewMatrix;
     mat4 modelMatrix;
     vec4 lightPos;
+    vec4 camPos;
     float gamma;
     float exposure;    
 } ubo;
@@ -45,9 +46,9 @@ const uint MAP_COLOR = 0x1;
 const uint MAP_NORMAL = 0x2;
 const uint MAP_AO = 0x4;
 const uint MAP_METAL = 0x8;
-const uint MAP_ROUGHNESS = 0x16;
-const uint MAP_METALROUGHNESS = 0x32;
-const uint MAP_EMISSIVE = 0x64;
+const uint MAP_ROUGHNESS = 0x10;
+const uint MAP_METALROUGHNESS = 0x20;
+const uint MAP_EMISSIVE = 0x40;
 
 const float PI = 3.141592653589793;
 
@@ -170,7 +171,9 @@ void main()
         perturbNormal(inN, texture(samplerNormal, inUV).xyz * 2.0 - 1.0) :
         normalize(inN);    
     vec3 V = normalize(inV);
+    //vec3 V = normalize(ubo.camPos.xyz- inWorldPos);
     vec3 R = -normalize(reflect(V, N));
+    R.y *= -1.0f;
     
     vec3 F0 = vec3(0.04);
     F0 = mix(F0, base_color.rgb, metallic);

@@ -29,12 +29,15 @@ using VK;
 
 using static VK.Vk;
 
-namespace VKE {
+namespace CVKL {
     public class Image : Resource {
 		internal VkImage handle; 
         VkImageCreateInfo info = VkImageCreateInfo.New();
 
-        bool imported = false;
+		/// <summary>
+		/// if true, the vkImage handle will not be destroyed on dispose, useful to create image for swapchain
+		/// </summary>
+        bool imported;
 
         public VkDescriptorImageInfo Descriptor;
         public VkImageCreateInfo CreateInfo => info;
@@ -126,7 +129,40 @@ namespace VKE {
 
 			return img;
 		}
+		/// <summary>
+		/// Load image from data pointed by IntPtr pointer containing full image file (jpg, png,...)
+		/// </summary>
+		public static Image Load (Device dev, 
+			IntPtr bitmap, ulong bitmapByteCount, VkImageUsageFlags usage = VkImageUsageFlags.TransferSrc,
+			VkFormat format = VkFormat.R8g8b8a8Unorm,
+			VkMemoryPropertyFlags memoryProps = VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent,
+			VkImageTiling tiling = VkImageTiling.Linear, bool generateMipmaps = false,
+			VkImageType imageType = VkImageType.Image2D) {
 
+			int width, height, channels;
+			IntPtr imgPtr = Stb.Load (bitmap, (int)bitmapByteCount, out width, out height, out channels, 4);
+
+			if (imgPtr == IntPtr.Zero)
+				throw new Exception ($"STBI image loading error.");
+
+			uint mipLevels = generateMipmaps ? (uint)Math.Floor (Math.Log (Math.Max (width, height))) + 1 : 1;
+
+			if (generateMipmaps)
+				usage |= (VkImageUsageFlags.TransferSrc | VkImageUsageFlags.TransferDst);
+
+			long size = width * height * 4;
+			Image img = new Image (dev, format, usage, memoryProps, (uint)width, (uint)height, imageType, VkSampleCountFlags.SampleCount1, tiling, mipLevels);
+
+			img.Map ();
+			unsafe {
+				System.Buffer.MemoryCopy (imgPtr.ToPointer (), img.MappedData.ToPointer (), size, size);
+			}
+			img.Unmap ();
+
+			Stb.FreeImage (imgPtr);
+
+			return img;
+		}
 		/// <summary>
 		/// Load image from byte array containing full image file (jpg, png,...)
 		/// </summary>
@@ -180,7 +216,7 @@ namespace VKE {
 				if (generateMipmaps)
 					BuildMipmaps (staggingQ, staggingCmdPool);
 			} else {
-				using (HostBuffer stagging = new HostBuffer (dev, VkBufferUsageFlags.TransferSrc, (UInt64)size, bitmap)) {				
+				using (HostBuffer stagging = new HostBuffer (Dev, VkBufferUsageFlags.TransferSrc, (UInt64)size, bitmap)) {				
 
 					CommandBuffer cmd = staggingCmdPool.AllocateCommandBuffer ();
 
@@ -264,15 +300,15 @@ namespace VKE {
 
         protected override VkMemoryRequirements getMemoryRequirements () {
             VkMemoryRequirements memReqs;
-            vkGetImageMemoryRequirements (dev.VkDev, handle, out memReqs);
+            vkGetImageMemoryRequirements (Dev.VkDev, handle, out memReqs);
             return memReqs;
         }
         protected override void bindMemory (ulong offset = 0) {
-            Utils.CheckResult (vkBindImageMemory (dev.VkDev, handle, vkMemory, offset));
+            Utils.CheckResult (vkBindImageMemory (Dev.VkDev, handle, vkMemory, offset));
         }
         public override void Activate () {
 			if (state != ActivableState.Activated) {
-				Utils.CheckResult (vkCreateImage (dev.VkDev, ref info, IntPtr.Zero, out handle));
+				Utils.CheckResult (vkCreateImage (Dev.VkDev, ref info, IntPtr.Zero, out handle));
 				allocateMemory ();
 				bindMemory ();
 			}
@@ -302,10 +338,10 @@ namespace VKE {
             viewInfo.subresourceRange.baseArrayLayer = baseArrayLayer;
             viewInfo.subresourceRange.layerCount = layerCount;
 
-            Utils.CheckResult (vkCreateImageView (dev.VkDev, ref viewInfo, IntPtr.Zero, out view));
+            Utils.CheckResult (vkCreateImageView (Dev.VkDev, ref viewInfo, IntPtr.Zero, out view));
 
             if (Descriptor.imageView.Handle != 0)
-                dev.DestroyImageView (Descriptor.imageView);
+                Dev.DestroyImageView (Descriptor.imageView);
             Descriptor.imageView = view;
         }
 
@@ -321,7 +357,7 @@ namespace VKE {
             VkSampler sampler;
             VkSamplerCreateInfo sampInfo = VkSamplerCreateInfo.New();
             sampInfo.maxAnisotropy = maxAnisotropy;
-			//samplerInfo.maxAnisotropy = device->enabledFeatures.samplerAnisotropy ? device->properties.limits.maxSamplerAnisotropy : 1.0f;
+			sampInfo.maxAnisotropy = 1.0f;// device->enabledFeatures.samplerAnisotropy ? device->properties.limits.maxSamplerAnisotropy : 1.0f;
 			//samplerInfo.anisotropyEnable = device->enabledFeatures.samplerAnisotropy;
 			sampInfo.addressModeU = addressMode;
             sampInfo.addressModeV = addressMode;
@@ -332,10 +368,10 @@ namespace VKE {
             sampInfo.minLod = minLod;
             sampInfo.maxLod = maxLod < 0f ? info.mipLevels : maxLod;
 
-            Utils.CheckResult (vkCreateSampler (dev.VkDev, ref sampInfo, IntPtr.Zero, out sampler));
+            Utils.CheckResult (vkCreateSampler (Dev.VkDev, ref sampInfo, IntPtr.Zero, out sampler));
 
             if (Descriptor.sampler.Handle != 0)
-                dev.DestroySampler (Descriptor.sampler);
+                Dev.DestroySampler (Descriptor.sampler);
             Descriptor.sampler = sampler;
         }
 
@@ -522,12 +558,12 @@ namespace VKE {
         protected override void Dispose (bool disposing) {
 			if (state == ActivableState.Activated) {
 				if (Descriptor.sampler.Handle != 0)
-                    dev.DestroySampler (Descriptor.sampler);
+                    Dev.DestroySampler (Descriptor.sampler);
                 if (Descriptor.imageView.Handle != 0)
-                    dev.DestroyImageView (Descriptor.imageView);
+                    Dev.DestroyImageView (Descriptor.imageView);
 				if (!imported) {
 					base.Dispose (disposing);
-					dev.DestroyImage (handle);
+					Dev.DestroyImage (handle);
 				}
 			}
 			state = ActivableState.Disposed;

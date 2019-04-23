@@ -26,7 +26,7 @@
 using System;
 using VK;
 
-namespace VKE {
+namespace CVKL {
 	public class ShaderInfo : IDisposable {
 		public VkShaderStageFlags StageFlags;
 		public string SpirvPath;

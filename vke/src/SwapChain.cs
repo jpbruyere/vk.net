@@ -27,7 +27,7 @@ using System;
 using VK;
 using static VK.Vk;
 
-namespace VKE {
+namespace CVKL {
     public class SwapChain {
         Device dev;
         PresentQueue presentQueue;

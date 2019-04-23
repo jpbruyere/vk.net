@@ -3,7 +3,7 @@ using System.Numerics;
 using System.Runtime.InteropServices;
 using VK;
 
-namespace VKE {
+namespace CVKL {
 	class PBRPipeline : GraphicPipeline {	
 		public struct Matrices {
 			public Matrix4x4 projection;
@@ -33,18 +33,18 @@ namespace VKE {
 		public PBRPipeline (Queue staggingQ, RenderPass renderPass) :
 			base (renderPass, "pbr pipeline") {
 
-			descriptorPool = new DescriptorPool (dev, 2,
+			descriptorPool = new DescriptorPool (Dev, 2,
 				new VkDescriptorPoolSize (VkDescriptorType.UniformBuffer, 2),
 				new VkDescriptorPoolSize (VkDescriptorType.CombinedImageSampler, 8)
 			);
 
-			descLayoutMain = new DescriptorSetLayout (dev,
+			descLayoutMain = new DescriptorSetLayout (Dev,
 				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment, VkDescriptorType.UniformBuffer),
 				new VkDescriptorSetLayoutBinding (1, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
 				new VkDescriptorSetLayoutBinding (2, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
 				new VkDescriptorSetLayoutBinding (3, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler));
 
-			descLayoutTextures = new DescriptorSetLayout (dev,
+			descLayoutTextures = new DescriptorSetLayout (Dev,
 				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
 				new VkDescriptorSetLayoutBinding (1, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
 				new VkDescriptorSetLayoutBinding (2, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
@@ -56,7 +56,7 @@ namespace VKE {
 
 			GraphicPipelineConfig cfg = GraphicPipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, renderPass.Samples);
 
-			cfg.Layout = new PipelineLayout (dev, descLayoutMain, descLayoutTextures);
+			cfg.Layout = new PipelineLayout (Dev, descLayoutMain, descLayoutTextures);
 			cfg.Layout.AddPushConstants (
 				new VkPushConstantRange (VkShaderStageFlags.Vertex, (uint)Marshal.SizeOf<Matrix4x4> ()),
 				new VkPushConstantRange (VkShaderStageFlags.Fragment, (uint)Marshal.SizeOf<Model.PbrMaterial> (), 64)
@@ -74,11 +74,11 @@ namespace VKE {
 
 			envCube = new EnvironmentCube (staggingQ, RenderPass);
 
-			uboMats = new HostBuffer (dev, VkBufferUsageFlags.UniformBuffer, (ulong)Marshal.SizeOf<Matrices> () * 2);
+			uboMats = new HostBuffer (Dev, VkBufferUsageFlags.UniformBuffer, (ulong)Marshal.SizeOf<Matrices> () * 2);
 			uboMats.Map ();//permanent map
 
 			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (descLayoutMain);
-			uboUpdate.Write (dev, dsMain, uboMats.Descriptor,
+			uboUpdate.Write (Dev, dsMain, uboMats.Descriptor,
 				envCube.lutBrdf.Descriptor,
 				envCube.irradianceCube.Descriptor,
 				envCube.prefilterCube.Descriptor);
@@ -86,14 +86,14 @@ namespace VKE {
 			envCube.WriteDesc (uboMats.Descriptor);
 
 			model = new Model (staggingQ, "../data/models/DamagedHelmet/glTF/DamagedHelmet.gltf");
-			//model = new Model (dev, presentQueue, "../data/models/icosphere.gltf");
-			//model = new Model (dev, presentQueue, cmdPool, "../data/models/cube.gltf");
+			//model = new Model (Dev, presentQueue, "../data/models/icosphere.gltf");
+			//model = new Model (Dev, presentQueue, cmdPool, "../data/models/cube.gltf");
 			model.WriteMaterialsDescriptorSets (descLayoutTextures,
-				ShaderBinding.Color,
-				ShaderBinding.Normal,
-				ShaderBinding.AmbientOcclusion,
-				ShaderBinding.MetalRoughness,
-				ShaderBinding.Emissive);
+				VK.AttachmentType.Color,
+				VK.AttachmentType.Normal,
+				VK.AttachmentType.AmbientOcclusion,
+				VK.AttachmentType.MetalRoughness,
+				VK.AttachmentType.Emissive);
 		}
 
 		public void RecordDraw (CommandBuffer cmd) {		
@@ -114,7 +114,7 @@ namespace VKE {
 
 
 			Matrix4x4 modelMat = Matrix4x4.Identity;
-			Model.PbrMaterial material = new Model.PbrMaterial (1, 0, Model.AlphaMode.Opaque, 0.5f, ShaderBinding.None);
+			Model.PbrMaterial material = new Model.PbrMaterial (1, 0, Model.AlphaMode.Opaque, 0.5f, VK.AttachmentType.None);
 			Model.Primitive p = model.Scenes[0].Root.Children[0].Mesh.Primitives[0];
 
 			for (int metalFact = 0; metalFact < 10; metalFact++) {

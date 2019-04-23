@@ -28,7 +28,7 @@ using System.Collections.Generic;
 using VK;
 using static VK.Vk;
 
-namespace VKE {
+namespace CVKL {
 	public class TimestampQueryPool : QueryPool {
 		public readonly float Period;
 
@@ -36,7 +36,7 @@ namespace VKE {
 		public TimestampQueryPool (Device device, uint count = 2)
 		: base (device, VkQueryType.Timestamp, 0, count)
 		{
-			Period = dev.phy.Limits.timestampPeriod;
+			Period = Dev.phy.Limits.timestampPeriod;
 
 			resultLength = 1;
 
@@ -132,7 +132,7 @@ namespace VKE {
 		public override void Activate () {
 			if (state != ActivableState.Activated) {
 				VkQueryPoolCreateInfo infos = createInfos;     	        
-	            Utils.CheckResult (vkCreateQueryPool (dev.VkDev, ref infos, IntPtr.Zero, out handle));
+	            Utils.CheckResult (vkCreateQueryPool (Dev.VkDev, ref infos, IntPtr.Zero, out handle));
 			}
 			base.Activate ();
 		}
@@ -140,7 +140,7 @@ namespace VKE {
 		public ulong[] GetResults () {
 			ulong[] results = new ulong[resultLength * createInfos.queryCount];
 			IntPtr ptr = results.Pin ();
-			vkGetQueryPoolResults (dev.VkDev, handle, 0, createInfos.queryCount, (UIntPtr)(resultLength * createInfos.queryCount* sizeof (ulong)), ptr, sizeof (ulong), VkQueryResultFlags.QueryResult64);
+			vkGetQueryPoolResults (Dev.VkDev, handle, 0, createInfos.queryCount, (UIntPtr)(resultLength * createInfos.queryCount* sizeof (ulong)), ptr, sizeof (ulong), VkQueryResultFlags.QueryResult64);
 			results.Unpin ();
 			return results;
 		}
@@ -155,7 +155,7 @@ namespace VKE {
 			if (!disposing)
 				System.Diagnostics.Debug.WriteLine ("VKE QueryPool disposed by finalizer");
 			if (state == ActivableState.Activated)
-				vkDestroyQueryPool (dev.VkDev, handle, IntPtr.Zero);
+				vkDestroyQueryPool (Dev.VkDev, handle, IntPtr.Zero);
 			base.Dispose (disposing);
 		}
 		#endregion

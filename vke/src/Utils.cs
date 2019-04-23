@@ -37,7 +37,7 @@ namespace VK {
             return degrees * (float)Math.PI / 180f;
         }
 
-		#region Extensions methods
+
 		public static void FromFloatArray (ref Vector3 v, float[] floats) {
 			if (floats.Length > 0)
 				v.X = floats[0];
@@ -87,10 +87,19 @@ namespace VK {
             v.Z = BitConverter.ToSingle (byteArray, offset + 8);
             v.W = BitConverter.ToSingle (byteArray, offset + 12);
         }
-		#endregion        
+		#region Extensions methods
+		public static void ImportFloatArray (this ref Vector3 v, float[] floats) {
+			if (floats.Length > 0)
+				v.X = floats[0];
+			if (floats.Length > 1)
+				v.Y = floats[1];
+			if (floats.Length > 2)
+				v.Z = floats[2];
+		}
+		#endregion
 
 		// Fixed sub resource on first mip level and layer
-        public static void setImageLayout (
+		public static void setImageLayout (
             VkCommandBuffer cmdbuffer,
             VkImage image,
             VkImageAspectFlags aspectMask,

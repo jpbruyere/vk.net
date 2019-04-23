@@ -2,9 +2,9 @@
 using System.Numerics;
 using System.Runtime.InteropServices;
 using Glfw;
-using VKE;
+using CVKL;
 using VK;
-using Buffer = VKE.Buffer;
+using Buffer = CVKL.Buffer;
 
 namespace TextureCube {
 	class Program : VkWindow {
@@ -29,7 +29,7 @@ namespace TextureCube {
 		DescriptorPool 		descriptorPool;
 		DescriptorSetLayout dsLayout;
 		DescriptorSet 		descriptorSet;
-		Pipeline 			pipeline;
+		GraphicPipeline 	pipeline;
 		Framebuffer[] 		frameBuffers;
 
 		Image texture;
@@ -113,7 +113,7 @@ namespace TextureCube {
 			cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/skybox.vert.spv");
 			cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/skybox.frag.spv");
 
-			pipeline = new Pipeline (cfg);
+			pipeline = new GraphicPipeline (cfg);
 
 			uboMats = new HostBuffer (dev, VkBufferUsageFlags.UniformBuffer, matrices);
 			uboMats.Map ();//permanent map

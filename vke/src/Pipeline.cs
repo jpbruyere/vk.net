@@ -1,5 +1,5 @@
 ﻿//
-// FrameBuffer.cs
+// Pipeline.cs
 //
 // Author:
 //       Jean-Philippe Bruyère <jp_bruyere@hotmail.com>
@@ -24,55 +24,42 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 using System;
-using System.Collections.Generic;
-using System.Runtime.InteropServices;
 using VK;
 using static VK.Vk;
 
-namespace VKE {
-    public abstract class Pipeline : IDisposable {
-		protected Device dev;        
+namespace CVKL {
+	public abstract class Pipeline : Activable {
         protected VkPipeline handle;
 		protected PipelineLayout layout;
 
-		public Device Dev => dev;
 		public VkPipeline Handle => handle;
 		public PipelineLayout Layout => layout;
 
 		protected readonly VkPipelineBindPoint bindPoint;
 
 		#region CTORS
-		protected Pipeline (Device dev, string name = "custom pipeline") {
-			this.dev = dev;
+		protected Pipeline (Device dev, string name = "custom pipeline") : base(dev, name) {
 		}
 		#endregion
+
+		protected override VkDebugMarkerObjectNameInfoEXT DebugMarkerInfo
+			=> new VkDebugMarkerObjectNameInfoEXT (VkDebugReportObjectTypeEXT.PipelineEXT, handle.Handle);
 
 		public abstract void Bind (CommandBuffer cmd);
 		public abstract void BindDescriptorSet (CommandBuffer cmd, DescriptorSet dset, uint firstSet = 0);
-		        
 
-		#region IDisposable Support
-		protected bool isDisposed;
-
-		protected virtual void Dispose (bool disposing) {
-			if (!isDisposed) {
+		protected override void Dispose (bool disposing) {
+			if (state == ActivableState.Activated) {
 				if (disposing) {
 					layout.Dispose ();
-				}else
-					System.Diagnostics.Debug.WriteLine ("Pipeline disposed by finalizer.");
+				} else
+					System.Diagnostics.Debug.WriteLine ($"Pipeline '{name}' disposed by finalizer");
 
-				vkDestroyPipeline (dev.VkDev, handle, IntPtr.Zero);
-				isDisposed = true;
-			}
-		}
+				vkDestroyPipeline (Dev.VkDev, handle, IntPtr.Zero);
+			} else if (disposing)
+				System.Diagnostics.Debug.WriteLine ($"Calling dispose on unactive Pipeline: {name}");
 
-		~Pipeline() {
-			Dispose(false);
+			base.Dispose (disposing);
 		}
-		public void Dispose () {
-			Dispose (true);
-			GC.SuppressFinalize(this);
-		}
-		#endregion
 	}
 }

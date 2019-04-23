@@ -1,7 +1,7 @@
 ﻿using System;
 using Glfw;
 using VK;
-using VKE;
+using CVKL;
 
 namespace delaunay {
 	class Program : VkWindow {
@@ -29,7 +29,8 @@ namespace delaunay {
 		DebugReport dbgReport;
 
 		const uint imgDim = 256;
-		uint zoom = 1;
+		uint zoom = 2;
+		int invocationCount = 8;
 
 		uint data_size => imgDim * imgDim * 4;
 
@@ -64,10 +65,6 @@ namespace delaunay {
 			imgResult.Descriptor.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
 
 			datas = new float[data_size];
-			/*Random rnd = new Random ();
-			for (uint i = 0; i < data_size; i++) {
-				datas[i] = (float)rnd.NextDouble ();
-			}*/
 
 			addSeed (imgDim / 2 - 1, imgDim / 2 - 1);
 
@@ -172,7 +169,6 @@ namespace delaunay {
 			}
 		}
 		bool pong;
-		int invocationCount = 1;
 
 		public override void Update () {
 			initGpuBuffers ();
