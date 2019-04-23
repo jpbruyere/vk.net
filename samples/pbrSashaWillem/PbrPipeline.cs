@@ -5,12 +5,14 @@ using VK;
 
 namespace CVKL {
 	class PBRPipeline : GraphicPipeline {
+		[StructLayout(LayoutKind.Sequential)]
 		public struct Matrices {
 			public Matrix4x4 projection;
 			public Matrix4x4 model;
 			public Matrix4x4 view;
 			public Vector3 camPos;
 		}
+		[StructLayout (LayoutKind.Sequential)]
 		public struct Params {
 			public Vector4 lightDir;
 			public float exposure;
@@ -44,7 +46,7 @@ namespace CVKL {
 		DescriptorSet dsMain, dsSkybox;
 
 		public PbrModel2 model;
-		EnvironmentCube envCube;
+		public EnvironmentCube envCube;
 
 		public PBRPipeline (Queue staggingQ, RenderPass renderPass) :
 			base (renderPass, "pbr pipeline") {
@@ -118,7 +120,7 @@ namespace CVKL {
 			};
 
 
-			model = new PbrModel2 (staggingQ, modelPathes[4], descLayoutTextures,
+			model = new PbrModel2 (staggingQ, modelPathes[6], descLayoutTextures,
 				AttachmentType.Color,
 				AttachmentType.MetalRoughness,
 				AttachmentType.Normal,
@@ -144,18 +146,6 @@ namespace CVKL {
 
 		}
 
-		public void updatePrefil (Queue staggingQueue, CommandPool cmdPool) {
-			Dev.WaitIdle ();
-			envCube.prefilterCube.Dispose ();
-			envCube.prefilterCube = envCube.generateCubeMap (staggingQueue, cmdPool, EnvironmentCube.CBTarget.PREFILTEREDENV);
-
-			DescriptorSetWrites updateDesc = new DescriptorSetWrites ();
-			updateDesc.AddWriteInfo (descLayoutMain.Bindings[3]);
-			updateDesc.Write (Dev, dsMain, envCube.prefilterCube.Descriptor);
-			updateDesc.AddWriteInfo (descLayoutMain.Bindings[2]);
-			updateDesc.Write (Dev, dsSkybox, envCube.prefilterCube.Descriptor, envCube.prefilterCube.Descriptor);
-		}
-
 		public void RecordDraw (CommandBuffer cmd) {		
 			envCube.RecordDraw (cmd);
 			drawModel (cmd);
@@ -167,37 +157,6 @@ namespace CVKL {
 			model.DrawAll (cmd, Layout);
 
 		}
-		//void drawShadedModelArray (CommandBuffer cmd) {
-		//	Bind (cmd);
-		//	cmd.BindDescriptorSet (Layout, dsMain);
-		//	model.Bind (cmd);
-		//	model.DrawAll (cmd, Layout);
-
-
-		//	Matrix4x4 modelMat = Matrix4x4.Identity;
-		//	PbrModel2.PbrMaterial material = new PbrModel2.PbrMaterial (1, 0, AlphaMode.Opaque, 0.5f, VK.AttachmentType.None);
-		//	Model.Primitive p = model.Scenes[0].Root.Children[0].Mesh.Primitives[0];
-
-		//	for (int metalFact = 0; metalFact < 10; metalFact++) {
-
-		//		material.metallicFactor = (float)metalFact / 10;
-
-		//		for (int roughFact = 0; roughFact < 10; roughFact++) {
-
-		//			material.roughnessFactor = (float)roughFact / 10;
-
-		//			modelMat = Matrix4x4.CreateTranslation (-roughFact, metalFact, 0);
-				
-
-		//			cmd.PushConstant (Layout, VkShaderStageFlags.Vertex, modelMat);
-		//			cmd.PushConstant (Layout, VkShaderStageFlags.Fragment, material, (uint)Marshal.SizeOf<Matrix4x4> ());
-
-		//			cmd.DrawIndexed (p.indexCount, 1, p.indexBase, p.vertexBase, 0);
-		//		}
-		//	}
-
-
-		//}
 
 		protected override void Dispose (bool disposing) {
 			model.Dispose ();
