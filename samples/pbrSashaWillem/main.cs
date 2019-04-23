@@ -15,21 +15,36 @@ namespace pbrSachaWillem {
 
 		protected override void configureEnabledFeatures (ref VkPhysicalDeviceFeatures features) {
 			base.configureEnabledFeatures (ref features);
+#if DEBUG
 			features.pipelineStatisticsQuery = true;
+#endif
 			//features.samplerAnisotropy = true;
 		}
 
-		VkSampleCountFlags samples = VkSampleCountFlags.SampleCount4;
+		VkSampleCountFlags samples = VkSampleCountFlags.SampleCount8;
 
 		Framebuffer[] frameBuffers;
 		PBRPipeline pbrPipeline;
 
-		#region stats
+		enum DebugView {
+			none,
+			color,
+			normal,
+			occlusion,
+			emissive,
+			metallic,
+			roughness
+		}
+
+		DebugView currentDebugView = DebugView.none;
+#if DEBUG
 		PipelineStatisticsQueryPool statPool;
 		TimestampQueryPool timestampQPool;
 		ulong[] results;
 
-		#endregion
+
+		bool queryUpdatePrefilCube, showDebugImg;
+
 
 		#region ui
 		DescriptorSet dsDebugImg;
@@ -133,13 +148,13 @@ namespace pbrSachaWillem {
 				ctx.ShowText (string.Format ($"{"Elapsed microsecond",-20} :{timestampQPool.ElapsedMiliseconds:0.0000} "));*/
 				y += dy;
 				ctx.MoveTo (x, y);
-				ctx.ShowText (string.Format ($"{"Debug draw:",-20} :{currentDebugView.ToString ()} "));
+				ctx.ShowText (string.Format ($"{"Debug draw (numpad 0->6)",-30} : {currentDebugView.ToString ()} "));
 				y += dy;
 				ctx.MoveTo (x, y);
-				ctx.ShowText (string.Format ($"{"Debug Prefil Face:",-20} :{pbrPipeline.envCube.debugFace.ToString ()} "));
+				ctx.ShowText (string.Format ($"{"Debug Prefil Face: (f)",-30} : {pbrPipeline.envCube.debugFace.ToString ()} "));
 				y += dy;
 				ctx.MoveTo (x, y);
-				ctx.ShowText (string.Format ($"{"Debug Prefil Mip:",-20} :{pbrPipeline.envCube.debugMip.ToString ()} "));
+				ctx.ShowText (string.Format ($"{"Debug Prefil Mip: (m)",-30} : {pbrPipeline.envCube.debugMip.ToString ()} "));
 			}
 		}
 		void recordDrawOverlay (CommandBuffer cmd) {
@@ -168,12 +183,11 @@ namespace pbrSachaWillem {
 			cmd.Draw (3, 1, 0, 0);
 		}
 		#endregion
+#endif
 
 		Vector3 lightPos = new Vector3 (1, 0, 0);
 
 		Program () {
-			vkvgDev = new vkvg.Device (instance.Handle, phy.Handle, dev.VkDev.Handle, presentQueue.qFamIndex,
-				vkvg.SampleCount.Sample_4, presentQueue.index);
 
 			//UpdateFrequency = 20;
 			camera.Model = Matrix4x4.CreateScale (1.0f);
@@ -181,6 +195,10 @@ namespace pbrSachaWillem {
 
 			pbrPipeline = new PBRPipeline(presentQueue,
 				new RenderPass (dev, swapChain.ColorFormat, dev.GetSuitableDepthFormat (), samples));
+
+#if DEBUG
+			vkvgDev = new vkvg.Device (instance.Handle, phy.Handle, dev.VkDev.Handle, presentQueue.qFamIndex,
+				vkvg.SampleCount.Sample_4, presentQueue.index);
 
 			initUIPipeline ();
 
@@ -192,6 +210,8 @@ namespace pbrSachaWillem {
 				VkQueryPipelineStatisticFlags.FragmentShaderInvocations);
 
 			timestampQPool = new TimestampQueryPool (dev);
+#endif
+
 		}
 
 		#region commands
@@ -200,12 +220,13 @@ namespace pbrSachaWillem {
 				cmds[i]?.Free ();
 				cmds[i] = cmdPool.AllocateCommandBuffer ();
 				cmds[i].Start ();
-
+#if DEBUG
 				statPool.Begin (cmds[i]);
-
 				recordDraw (cmds[i], frameBuffers[i]);
-
 				statPool.End (cmds[i]);
+#else
+				recordDraw (cmds[i], frameBuffers[i]);
+#endif
 
 				cmds[i].End ();
 			}
@@ -217,28 +238,15 @@ namespace pbrSachaWillem {
 			cmd.SetScissor (fb.Width, fb.Height);
 
 			pbrPipeline.RecordDraw (cmd);
-
+#if DEBUG
 			recordDrawOverlay (cmd);
-
+#endif
 			pbrPipeline.RenderPass.End (cmd);
 		}
-		#endregion
+#endregion
 
 
-		enum DebugView {
-			none,
-			color,
-			normal,
-			occlusion,
-			emissive,
-			metallic,
-			roughness
-		}
-
-		DebugView currentDebugView = DebugView.none;
-		bool queryUpdatePrefilCube, showDebugImg;
-
-		#region update
+#region update
 		void updateMatrices () {
 			camera.AspectRatio = (float)swapChain.Width / swapChain.Height;
 
@@ -246,7 +254,7 @@ namespace pbrSachaWillem {
 			pbrPipeline.matrices.view = camera.View;
 			pbrPipeline.matrices.model = camera.Model;
 
-			BoundingBox aabb = pbrPipeline.model.DefaultScene.AABB;
+			//BoundingBox aabb = pbrPipeline.model.DefaultScene.AABB;
 			pbrPipeline.matrices.camPos = new Vector3 (
 				-camera.Position.Z * (float)Math.Sin (camera.Rotation.Y) * (float)Math.Cos (camera.Rotation.X),
 				 camera.Position.Z * (float)Math.Sin (camera.Rotation.X),
@@ -267,15 +275,19 @@ namespace pbrSachaWillem {
 			updateViewRequested = false;
 		}
 		public override void Update () {
+#if DEBUG
 			results = statPool.GetResults ();
 			vkvgDraw ();
+#endif
+
 		}
-		#endregion
+#endregion
 
 
 		protected override void OnResize () {
+#if DEBUG
 			initUISurface ();
-
+#endif
 			updateMatrices ();
 			updateParams ();
 
@@ -300,7 +312,7 @@ namespace pbrSachaWillem {
 			buildCommandBuffers ();
 		}
 
-		#region Mouse and keyboard
+#region Mouse and keyboard
 		protected override void onMouseMove (double xPos, double yPos) {
 			double diffX = lastMouseX - xPos;
 			double diffY = lastMouseY - yPos;
@@ -308,13 +320,15 @@ namespace pbrSachaWillem {
 				camera.Rotate ((float)-diffX, (float)-diffY);
 			} else if (MouseButton[1]) {
 				camera.SetZoom ((float)diffY);
-			}
+			} else
+				return;
 
 			updateViewRequested = true;
 		}
 
 		protected override void onKeyDown (Key key, int scanCode, Modifier modifiers) {
 			switch (key) {
+#if DEBUG
 				case Key.F:
 					if (modifiers.HasFlag (Modifier.Shift)) {
 						pbrPipeline.envCube.debugFace --;
@@ -343,6 +357,7 @@ namespace pbrSachaWillem {
 					showDebugImg = !showDebugImg;
 					queryUpdatePrefilCube = updateViewRequested = true;
 					break;
+#endif
 				case Key.Keypad0:
 					currentDebugView = DebugView.none;
 					break;
@@ -425,9 +440,9 @@ namespace pbrSachaWillem {
 			}
 			updateViewRequested = true;
 		}
-		#endregion
+#endregion
 
-		#region dispose
+#region dispose
 		protected override void Dispose (bool disposing) {
 			if (disposing) {
 				if (!isDisposed) {
@@ -437,6 +452,7 @@ namespace pbrSachaWillem {
 
 					pbrPipeline.Dispose ();
 
+#if Debug
 					uiPipeline.Dispose ();
 					descLayoutMain.Dispose ();
 					descriptorPool.Dispose ();
@@ -447,11 +463,12 @@ namespace pbrSachaWillem {
 
 					timestampQPool?.Dispose ();
 					statPool?.Dispose ();
+#endif
 				}
 			}
 
 			base.Dispose (disposing);
 		}
-		#endregion
+#endregion
 	}
 }
