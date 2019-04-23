@@ -177,7 +177,7 @@ namespace pbrSachaWillem {
 
 			//UpdateFrequency = 20;
 			camera.Model = Matrix4x4.CreateScale (1.0f);
-			camera.SetPosition (0, 0, 2);
+			camera.SetPosition (0, 0, 3);
 
 			pbrPipeline = new PBRPipeline(presentQueue,
 				new RenderPass (dev, swapChain.ColorFormat, dev.GetSuitableDepthFormat (), samples));
