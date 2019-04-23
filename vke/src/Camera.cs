@@ -57,6 +57,13 @@ namespace CVKL {
 			rotation.X += rotSpeed * y;
 			Update ();
 		}
+		public float Zoom {
+			get { return zoom; }
+			set {
+				zoom = value;
+				Update ();
+			}
+		}
 		public void SetRotation (float x, float y, float z = 0) {
 			rotation.X = x;
 			rotation.Y = y;
@@ -75,7 +82,7 @@ namespace CVKL {
 			position.Z += moveSpeed * z;
 			Update ();
 		}
-		public void Zoom (float factor) {
+		public void SetZoom (float factor) {
 			zoom += zoomSpeed * factor;
 			Update ();
 		}
@@ -103,15 +110,16 @@ namespace CVKL {
 			Projection = Matrix4x4.CreatePerspectiveFieldOfView (fov, aspectRatio, zNear, zFar) * VKProjectionCorrection;
 			Matrix4x4 translation = Matrix4x4.CreateTranslation (position * new Vector3(1,1,-1)) ;
 			if (Type == CamType.LookAt) {
-				View = Matrix4x4.CreateFromAxisAngle (Vector3.UnitZ, rotation.Z) *
-						Matrix4x4.CreateFromAxisAngle (Vector3.UnitY, rotation.Y) *
-						Matrix4x4.CreateFromAxisAngle (Vector3.UnitX, rotation.X) *
-						translation;
-			} else {
-				View =	Matrix4x4.CreateTranslation (position) *
+				View =  
 						Matrix4x4.CreateFromAxisAngle (Vector3.UnitZ, rotation.Z) *
 						Matrix4x4.CreateFromAxisAngle (Vector3.UnitY, rotation.Y) *
-						Matrix4x4.CreateFromAxisAngle (Vector3.UnitX, rotation.X);
+						Matrix4x4.CreateFromAxisAngle (Vector3.UnitX, rotation.X) *
+						translation ;
+			} else {
+				View =	translation *
+						Matrix4x4.CreateFromAxisAngle (Vector3.UnitX, rotation.X) *
+						Matrix4x4.CreateFromAxisAngle (Vector3.UnitY, rotation.Y) *
+						Matrix4x4.CreateFromAxisAngle (Vector3.UnitZ, rotation.Z);
 			}
 		}
 	}

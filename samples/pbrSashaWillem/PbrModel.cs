@@ -82,6 +82,28 @@ namespace CVKL {
 		public GPUBuffer ibo;
 		public GPUBuffer<PbrMaterial> materialUBO;
 
+		public PbrModel2 (Queue transferQ, string path) {
+			dev = transferQ.Dev;
+			using (CommandPool cmdPool = new CommandPool (dev, transferQ.index)) {
+				using (glTFLoader ctx = new glTFLoader (path, transferQ, cmdPool)) {
+					ulong vertexCount, indexCount;
+
+					ctx.GetVertexCount (out vertexCount, out indexCount);
+					ulong vertSize = vertexCount * (ulong)Marshal.SizeOf<Vertex> ();
+					ulong idxSize = indexCount * (IndexBufferType == VkIndexType.Uint16 ? 2ul : 4ul);
+					ulong size = vertSize + idxSize;
+
+					vbo = new GPUBuffer (dev, VkBufferUsageFlags.VertexBuffer | VkBufferUsageFlags.TransferDst, vertSize);
+					ibo = new GPUBuffer (dev, VkBufferUsageFlags.IndexBuffer | VkBufferUsageFlags.TransferDst, idxSize);
+
+					vbo.SetName ("vbo gltf");
+					ibo.SetName ("ibo gltf");
+
+					Meshes = new List<Mesh> (ctx.LoadMeshes<Vertex> (VkIndexType.Uint16, vbo, 0, ibo, 0));
+					Scenes = new List<Scene> (ctx.LoadScenes (out defaultSceneIndex));
+				}
+			}
+		}
 		public PbrModel2 (Queue transferQ, string path, DescriptorSetLayout layout, params AttachmentType[] attachments) {
             dev = transferQ.Dev;
 			using (CommandPool cmdPool = new CommandPool (dev, transferQ.index)) {
@@ -140,9 +162,6 @@ namespace CVKL {
 
 				descriptorSets[i] = descriptorPool.Allocate (layout);
 				descriptorSets[i].Handle.SetDebugMarkerName (dev, "descSet " + mats[i].Name);
-
-				materials[i].metallicFactor = 1.0f;
-				materials[i].roughnessFactor = 0.05f;
 
 				VkDescriptorSetLayoutBinding dslb =
 					new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler);
@@ -248,7 +267,6 @@ namespace CVKL {
 					foreach (Image txt in textures) {
 						txt.Dispose ();
 					}
-					//uboMaterials?.Dispose ();
 				} else
 					Debug.WriteLine ("model was not disposed");
 				isDisposed = true;
