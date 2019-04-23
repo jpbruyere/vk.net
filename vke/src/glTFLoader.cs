@@ -1,5 +1,5 @@
 ﻿//
-// Model.cs
+// glTFLoader .cs
 //
 // Author:
 //       Jean-Philippe Bruyère <jp_bruyere@hotmail.com>
@@ -36,9 +36,9 @@ using System.IO;
 
 
 
-namespace VKE {
+namespace CVKL {
 	using static VK.Utils;
-	using static VKE.Model;
+	using static CVKL.Model;
 
 	/// <summary>
 	/// Loading context with I as the vertex index type (uint16,uint32)
@@ -65,16 +65,16 @@ namespace VKE {
 			bufferHandles = new GCHandle[gltf.Buffers.Length];
 		}
 
-		public static byte[] loadDataUri (GL.Image img) {
+		static byte[] loadDataUri (GL.Image img) {
 			int idxComa = img.Uri.IndexOf (",", 5, StringComparison.Ordinal);
 			return Convert.FromBase64String (img.Uri.Substring (idxComa + 1));
 		}
-		public static byte[] loadDataUri (GL.Buffer buff) {
+		static byte[] loadDataUri (GL.Buffer buff) {
 			int idxComa = buff.Uri.IndexOf (",", 5, StringComparison.Ordinal);
 			return Convert.FromBase64String (buff.Uri.Substring (idxComa + 1));
 		}
 
-		public void EnsureBufferIsLoaded (int bufferIdx) {
+		void EnsureBufferIsLoaded (int bufferIdx) {
 			if (loadedBuffers[bufferIdx] == null) {
 				//load full buffer
 				string uri = gltf.Buffers[bufferIdx].Uri;
@@ -106,7 +106,8 @@ namespace VKE {
 		public Mesh[] LoadMeshes<TVertex> (VkIndexType indexType, Buffer vbo, ulong vboOffset, Buffer ibo, ulong iboOffset) {
 			ulong vCount, iCount;
 			GetVertexCount (out vCount, out iCount);
-			ulong vertSize = vCount * (ulong)Marshal.SizeOf<TVertex> ();
+			int vertexByteSize = Marshal.SizeOf<TVertex> ();
+			ulong vertSize = vCount * (ulong)vertexByteSize;
 			ulong idxSize = iCount * (indexType == VkIndexType.Uint16 ? 2ul : 4ul);
 			ulong size = vertSize + idxSize;
 
@@ -119,10 +120,13 @@ namespace VKE {
 				stagging.Map ();
 
 				unsafe {
-					byte* stagVertPtr = (byte*)stagging.MappedData.ToPointer ();
-					byte* stagIdxPtr = (byte*)(stagging.MappedData.ToPointer ()) + vertSize;
+					byte* stagVertPtrInit = (byte*)stagging.MappedData.ToPointer ();
+					byte* stagIdxPtrInit = (byte*)(stagging.MappedData.ToPointer ()) + vertSize;
+					byte* stagVertPtr = stagVertPtrInit;
+					byte* stagIdxPtr = stagIdxPtrInit;
 
 					foreach (GL.Mesh mesh in gltf.Meshes) {
+
 						string meshName = mesh.Name;
 						if (string.IsNullOrEmpty (meshName)) {
 							meshName = "mesh_" + autoNamedMesh.ToString ();
@@ -131,7 +135,7 @@ namespace VKE {
 						Mesh m = new Mesh { Name = meshName };
 
 						foreach (GL.MeshPrimitive p in mesh.Primitives) {
-							GL.Accessor AccPos = null, AccNorm = null, AccUv = null;
+							GL.Accessor AccPos = null, AccNorm = null, AccUv = null, AccUv1 = null;
 
 							int accessorIdx;
 							if (p.Attributes.TryGetValue ("POSITION", out accessorIdx)) {
@@ -146,6 +150,10 @@ namespace VKE {
 								AccUv = gltf.Accessors[accessorIdx];
 								EnsureBufferIsLoaded (gltf.BufferViews[(int)AccUv.BufferView].Buffer);
 							}
+							if (p.Attributes.TryGetValue ("TEXCOORD_1", out accessorIdx)) {
+								AccUv1 = gltf.Accessors[accessorIdx];
+								EnsureBufferIsLoaded (gltf.BufferViews[(int)AccUv1.BufferView].Buffer);
+							}
 
 							Primitive prim = new Primitive {
 								indexBase = (uint)indexCount,
@@ -153,8 +161,12 @@ namespace VKE {
 								vertexCount = (uint)AccPos.Count,
 								material = (uint)(p.Material ?? 0)
 							};
+
+							prim.bb.min.ImportFloatArray (AccPos.Min);
+							prim.bb.max.ImportFloatArray (AccPos.Max);
+
 							//Interleaving vertices
-							byte* inPosPtr = null, inNormPtr = null, inUvPtr = null;
+							byte * inPosPtr = null, inNormPtr = null, inUvPtr = null, inUv1Ptr = null;
 
 							GL.BufferView bv = gltf.BufferViews[(int)AccPos.BufferView];
 							inPosPtr = (byte*)bufferHandles[bv.Buffer].AddrOfPinnedObject ().ToPointer ();
@@ -170,6 +182,12 @@ namespace VKE {
 								inUvPtr = (byte*)bufferHandles[bv.Buffer].AddrOfPinnedObject ().ToPointer ();
 								inUvPtr += AccUv.ByteOffset + bv.ByteOffset;
 							}
+							if (AccUv1 != null) {
+								bv = gltf.BufferViews[(int)AccUv1.BufferView];
+								inUv1Ptr = (byte*)bufferHandles[bv.Buffer].AddrOfPinnedObject ().ToPointer ();
+								inUv1Ptr += AccUv1.ByteOffset + bv.ByteOffset;
+							}
+
 
 							for (int j = 0; j < prim.vertexCount; j++) {
 								System.Buffer.MemoryCopy (inPosPtr, stagVertPtr, 12, 12);
@@ -182,7 +200,11 @@ namespace VKE {
 									System.Buffer.MemoryCopy (inUvPtr, stagVertPtr + 24, 8, 8);
 									inUvPtr += 8;
 								}
-								stagVertPtr += 32;
+								if (inUv1Ptr != null) {
+									System.Buffer.MemoryCopy (inUv1Ptr, stagVertPtr + 32, 8, 8);
+									inUv1Ptr += 8;
+								}
+								stagVertPtr += vertexByteSize;
 							}
 
 							//indices loading
@@ -196,34 +218,36 @@ namespace VKE {
 								//TODO:double check this, I dont seems to increment stag pointer
 								if (acc.ComponentType == GL.Accessor.ComponentTypeEnum.UNSIGNED_SHORT) {
 									if (indexType == VkIndexType.Uint16) {
-										System.Buffer.MemoryCopy (inIdxPtr, stagIdxPtr, bv.ByteLength, bv.ByteLength);
-										stagIdxPtr += bv.ByteLength;
-									} else { 
-										for (int i = 0; i < bv.ByteLength; i++) {
-											uint* usPtr = (uint*)stagIdxPtr;
-											usPtr[0] = (uint)inIdxPtr[i];
-										}
-										stagIdxPtr += bv.ByteLength * 2;
+										System.Buffer.MemoryCopy (inIdxPtr, stagIdxPtr, (long)acc.Count * 2, (long)acc.Count * 2);
+										stagIdxPtr += (long)acc.Count * 2;
+									} else {
+										uint* usPtr = (uint*)stagIdxPtr;
+										for (int i = 0; i < acc.Count; i++) 
+											usPtr[i] = inIdxPtr[i];										
+										stagIdxPtr += (long)acc.Count * 4;
 									}
 								} else if (acc.ComponentType == GL.Accessor.ComponentTypeEnum.UNSIGNED_INT) {
 									if (indexType == VkIndexType.Uint32) {
-										System.Buffer.MemoryCopy (inIdxPtr, stagIdxPtr, bv.ByteLength, bv.ByteLength);
-										stagIdxPtr += bv.ByteLength;
-									} else { 
-										for (int i = 0; i < bv.ByteLength; i++) {
-											ushort* usPtr = (ushort*)stagIdxPtr;
-											usPtr[0] = (ushort)inIdxPtr[i];
-										}
-										stagIdxPtr += bv.ByteLength / 2;
+										System.Buffer.MemoryCopy (inIdxPtr, stagIdxPtr, (long)acc.Count * 4, (long)acc.Count * 4);
+										stagIdxPtr += (long)acc.Count * 4;
+									} else {
+										ushort* usPtr = (ushort*)stagIdxPtr;
+										for (int i = 0; i < acc.Count; i++) 
+											usPtr[i] = (ushort)inIdxPtr[i];
+										stagIdxPtr += (long)acc.Count * 2;
 									}
 								} else if (acc.ComponentType == GL.Accessor.ComponentTypeEnum.UNSIGNED_BYTE) {
-									//convert to Uint16
+									//convert
 									if (indexType == VkIndexType.Uint16) {
-										for (int i = 0; i < bv.ByteLength; i++) {
-											ushort* usPtr = (ushort*)stagIdxPtr;
-											usPtr[0] = (ushort)inIdxPtr[i];
-										}
-										stagIdxPtr += bv.ByteLength * 2;
+										ushort* usPtr = (ushort*)stagIdxPtr;
+										for (int i = 0; i < acc.Count; i++)
+											usPtr[i] = (ushort)inIdxPtr[i];
+										stagIdxPtr += (long)acc.Count * 2;
+									} else {
+										uint* usPtr = (uint*)stagIdxPtr;
+										for (int i = 0; i < acc.Count; i++)
+											usPtr[i] = (uint)inIdxPtr[i];
+										stagIdxPtr += (long)acc.Count * 4;
 									}
 								} else
 									throw new NotImplementedException ();
@@ -232,7 +256,7 @@ namespace VKE {
 								indexCount += acc.Count;
 							}
 
-							m.Primitives.Add (prim);
+							m.AddPrimitive (prim);
 
 							vertexCount += AccPos.Count;
 						}
@@ -246,7 +270,8 @@ namespace VKE {
 				cmd.Start (VkCommandBufferUsageFlags.OneTimeSubmit);
 
 				stagging.CopyTo (cmd, vbo, vertSize, 0, vboOffset);
-				stagging.CopyTo (cmd, ibo, idxSize, vertSize, iboOffset);
+				if (iCount>0)
+					stagging.CopyTo (cmd, ibo, idxSize, vertSize, iboOffset);
 
 				cmd.End ();
 
@@ -280,7 +305,7 @@ namespace VKE {
 					continue;
 
 				scenes[i].Root = new Node {
-					matrix = Matrix4x4.Identity,
+					localMatrix = Matrix4x4.Identity,
 					Children = new List<Node> ()
 				};
 
@@ -294,33 +319,35 @@ namespace VKE {
 			Debug.WriteLine ("Loading node {0}", gltfNode.Name);
 
 			Vector3 translation = new Vector3 ();
-			Quaternion rotation = new Quaternion ();
-			Vector3 scale = new Vector3 ();
+			Quaternion rotation = Quaternion.Identity;
+			Vector3 scale = new Vector3 (1);
 			Matrix4x4 localTransform = Matrix4x4.Identity;
 
-			if (gltfNode.Matrix == null) {
-				FromFloatArray (ref translation, gltfNode.Translation);
-				FromFloatArray (ref rotation, gltfNode.Rotation);
-				FromFloatArray (ref scale, gltfNode.Scale);
-
-				localTransform =
-					Matrix4x4.CreateTranslation (translation) *
-					Matrix4x4.CreateFromQuaternion (rotation) *
-					Matrix4x4.CreateScale (scale);
-
-			} else {
-				unsafe {
-					long size = (long)Marshal.SizeOf<Matrix4x4> ();
-					GCHandle ptr = GCHandle.Alloc (localTransform, GCHandleType.Pinned);
-					fixed (float* m = gltfNode.Matrix) {
-						System.Buffer.MemoryCopy (m, ptr.AddrOfPinnedObject ().ToPointer (), size, size);
-					}
-					ptr.Free ();
-				}
+			if (gltfNode.Matrix != null) {
+				float[] M = gltfNode.Matrix;
+				localTransform = new Matrix4x4 (
+					M[0], M[1], M[2], M[3],
+					M[4], M[5], M[6], M[7],
+					M[8], M[9],M[10],M[11],
+				   M[12],M[13],M[14],M[15]);
 			}
 
+			if (gltfNode.Translation != null) 
+				FromFloatArray (ref translation, gltfNode.Translation);
+			if (gltfNode.Translation != null) 
+				FromFloatArray (ref rotation, gltfNode.Rotation);			
+			if (gltfNode.Translation != null) 
+				FromFloatArray (ref scale, gltfNode.Scale);
+
+			localTransform *=
+				Matrix4x4.CreateScale (scale) *
+				Matrix4x4.CreateFromQuaternion (rotation) *
+				Matrix4x4.CreateTranslation (translation);
+
+			//localTransform = Matrix4x4.Identity;
+
 			Node node = new Node {
-				matrix = localTransform,
+				localMatrix = localTransform,
 				Parent = parentNode
 			};
 			parentNode.Children.Add (node);
@@ -334,6 +361,75 @@ namespace VKE {
 			if (gltfNode.Mesh != null)
 				node.Mesh = meshes[(int)gltfNode.Mesh];
 		}
+
+		///// <summary>
+		///// build texture array
+		///// </summary>
+		///// <returns>The images.</returns>
+		///// <param name="textureSize">Texture size.</param>
+		//public Image LoadImages (uint textureSize) {
+		//	Image imgs = new Image (dev, VkFormat.R8g8b8a8Unorm, VkImageUsageFlags.Sampled | VkImageUsageFlags.TransferDst, VkMemoryPropertyFlags.DeviceLocal, textureSize, textureSize,
+		//		VkImageType.Image2D, VkSampleCountFlags.SampleCount1, VkImageTiling.Optimal);
+
+		//	CommandBuffer cmd = cmdPool.AllocateAndStart (VkCommandBufferUsageFlags.OneTimeSubmit);
+
+		//	foreach (GL.Image img in gltf.Images) {
+		//		Image vkimg = null;
+
+		//		string imgName = img.Name;
+
+		//		if (img.BufferView != null) {//load image from gltf buffer view
+		//			GL.BufferView bv = gltf.BufferViews[(int)img.BufferView];
+		//			EnsureBufferIsLoaded (bv.Buffer);
+		//			vkimg = Image.Load (dev, bufferHandles[bv.Buffer].AddrOfPinnedObject () + bv.ByteOffset, (ulong)bv.ByteLength);
+		//		} else if (img.Uri.StartsWith ("data:", StringComparison.Ordinal)) {//load base64 encoded image
+		//			Debug.WriteLine ("loading embedded image {0} : {1}", img.Name, img.MimeType);
+		//			vkimg = Image.Load (dev, transferQ, cmdPool, glTFLoader.loadDataUri (img));
+		//		} else {
+		//			Debug.WriteLine ("loading image {0} : {1} : {2}", img.Name, img.MimeType, img.Uri);//load image from file path in uri
+		//			vkimg = Image.Load (dev, transferQ, cmdPool, Path.Combine (baseDirectory, img.Uri));
+		//			imgName += ";" + img.Uri;
+		//		}
+
+
+		//		VkImageSubresourceRange mipSubRange = new VkImageSubresourceRange (VkImageAspectFlags.Color, 0, 1, 0, info.arrayLayers);
+
+		//		SetLayout (cmd, VkImageLayout.Undefined, VkImageLayout.TransferSrcOptimal, mipSubRange,
+		//				VkPipelineStageFlags.Transfer, VkPipelineStageFlags.Transfer);
+
+		//		for (int i = 1; i < info.mipLevels; i++) {
+		//			VkImageBlit imageBlit = new VkImageBlit {
+		//				srcSubresource = new VkImageSubresourceLayers (VkImageAspectFlags.Color, info.arrayLayers, (uint)i - 1),
+		//				srcOffsets_1 = new VkOffset3D ((int)info.extent.width >> (i - 1), (int)info.extent.height >> (i - 1), 1),
+		//				dstSubresource = new VkImageSubresourceLayers (VkImageAspectFlags.Color, info.arrayLayers, (uint)i),
+		//				dstOffsets_1 = new VkOffset3D ((int)info.extent.width >> i, (int)info.extent.height >> i, 1)
+		//			};
+
+		//			mipSubRange.baseMipLevel = (uint)i;
+
+		//			SetLayout (cmd, VkImageLayout.Undefined, VkImageLayout.TransferDstOptimal, mipSubRange,
+		//				VkPipelineStageFlags.Transfer, VkPipelineStageFlags.Transfer);
+		//			vkCmdBlitImage (cmd.Handle, handle, VkImageLayout.TransferSrcOptimal, handle, VkImageLayout.TransferDstOptimal, 1, ref imageBlit, VkFilter.Linear);
+		//			SetLayout (cmd, VkImageLayout.TransferDstOptimal, VkImageLayout.TransferSrcOptimal, mipSubRange,
+		//				VkPipelineStageFlags.Transfer, VkPipelineStageFlags.Transfer);
+		//		}
+		//		SetLayout (cmd, VkImageAspectFlags.Color, VkImageLayout.TransferSrcOptimal, VkImageLayout.ShaderReadOnlyOptimal,
+		//				VkPipelineStageFlags.Transfer, VkPipelineStageFlags.FragmentShader);
+
+
+		//		vkimg.CreateView ();
+		//		vkimg.CreateSampler ();
+		//		vkimg.Descriptor.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
+
+		//		vkimg.SetName (imgName);
+		//		vkimg.Descriptor.imageView.SetDebugMarkerName (dev, "imgView " + imgName);
+		//		vkimg.Descriptor.sampler.SetDebugMarkerName (dev, "sampler " + imgName);
+
+		//		textures.Add (vkimg);
+		//	}
+
+		//	return imgs;
+		//}
 
 		public Image[] LoadImages () {
 			if (gltf.Images == null)
@@ -383,34 +479,44 @@ namespace VKE {
 				Material pbr = new Material ();
 				pbr.Name = mat.Name;
 
-				pbr.pbrDatas.alphaCutoff = mat.AlphaCutoff;
-				pbr.pbrDatas.alphaMode = (AlphaMode)mat.AlphaMode;
-				FromFloatArray (ref pbr.pbrDatas.emissiveFactor, mat.EmissiveFactor);
+				pbr.alphaCutoff = mat.AlphaCutoff;
+				pbr.alphaMode = (AlphaMode)mat.AlphaMode;
+
+				FromFloatArray (ref pbr.emissiveFactor, mat.EmissiveFactor);
+
 				if (mat.EmissiveTexture != null) {
 					pbr.emissiveTexture = (uint)mat.EmissiveTexture.Index;
-					pbr.pbrDatas.availableAttachments |= ShaderBinding.Emissive;
+					pbr.texCoordSets.emissive = (byte)mat.EmissiveTexture.TexCoord;
+					pbr.availableAttachments |= AttachmentType.Emissive;
 				}
 				if (mat.NormalTexture != null) {
 					pbr.normalTexture = (uint)mat.NormalTexture.Index;
-					pbr.pbrDatas.availableAttachments |= ShaderBinding.Normal;
+					pbr.texCoordSets.normal = (byte)mat.NormalTexture.TexCoord;
+					pbr.availableAttachments |= AttachmentType.Normal;
 				}
 				if (mat.OcclusionTexture != null) {
 					pbr.occlusionTexture = (uint)mat.OcclusionTexture.Index;
-					pbr.pbrDatas.availableAttachments |= ShaderBinding.AmbientOcclusion;
+					pbr.texCoordSets.occlusion = (byte)mat.OcclusionTexture.TexCoord;
+					pbr.availableAttachments |= AttachmentType.AmbientOcclusion;
 				}
 
 				if (mat.PbrMetallicRoughness != null) {
 					if (mat.PbrMetallicRoughness.BaseColorTexture != null) {
+						pbr.texCoordSets.baseColor = (byte)mat.PbrMetallicRoughness.BaseColorTexture.TexCoord;
 						pbr.baseColorTexture = (uint)mat.PbrMetallicRoughness.BaseColorTexture.Index;
-						pbr.pbrDatas.availableAttachments |= ShaderBinding.Color;
+						pbr.availableAttachments |= VK.AttachmentType.Color;
 					}
-					FromFloatArray (ref pbr.pbrDatas.baseColorFactor, mat.PbrMetallicRoughness.BaseColorFactor);
+
+					FromFloatArray (ref pbr.baseColorFactor, mat.PbrMetallicRoughness.BaseColorFactor);
+
 					if (mat.PbrMetallicRoughness.MetallicRoughnessTexture != null) {
+						pbr.texCoordSets.metallicRoughness = (byte)mat.PbrMetallicRoughness.MetallicRoughnessTexture.TexCoord;
 						pbr.metallicRoughnessTexture = (uint)mat.PbrMetallicRoughness.MetallicRoughnessTexture.Index;
-						pbr.pbrDatas.availableAttachments |= ShaderBinding.MetalRoughness;
+						pbr.availableAttachments |= VK.AttachmentType.MetalRoughness;
+
 					}
-					pbr.pbrDatas.metallicFactor = mat.PbrMetallicRoughness.MetallicFactor;
-					pbr.pbrDatas.roughnessFactor = mat.PbrMetallicRoughness.RoughnessFactor;
+					pbr.metallicFactor = mat.PbrMetallicRoughness.MetallicFactor;
+					pbr.roughnessFactor = mat.PbrMetallicRoughness.RoughnessFactor;
 				}
 				materials.Add (pbr);
 				/*

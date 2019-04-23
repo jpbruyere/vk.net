@@ -29,7 +29,10 @@ using VK;
 
 using static VK.Vk;
 
-namespace VKE {
+namespace CVKL {
+	/// <summary>
+	/// Command buffer are not derived from activable, because their state is retained by the pool which create them.
+	/// </summary>
     public class CommandBuffer {
 		public enum States { Init, Record, Pending, Invalid };
 
@@ -38,7 +41,7 @@ namespace VKE {
 		States state;
 
         public VkCommandBuffer Handle => handle;
-		public Device Device => pool?.dev;//this help
+		public Device Device => pool?.Dev;//this help
 		public States State => state;
 
         internal CommandBuffer (VkDevice _dev, CommandPool _pool, VkCommandBuffer _buff)
@@ -46,6 +49,7 @@ namespace VKE {
             pool = _pool;
             handle = _buff;
         }
+
 
         public void Submit (VkQueue queue, VkSemaphore wait = default(VkSemaphore), VkSemaphore signal = default (VkSemaphore), VkFence fence = default(VkFence)) {
             VkSubmitInfo submit_info = VkSubmitInfo.New();
@@ -92,8 +96,8 @@ namespace VKE {
 				y = y,
                 height = height,
                 width = width,
-                minDepth = 0.0f,
-                maxDepth = 1.0f,
+                minDepth = minDepth,
+                maxDepth = maxDepth,
             };
             vkCmdSetViewport (handle, 0, 1, ref viewport);
         }

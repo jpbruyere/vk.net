@@ -2,10 +2,10 @@
 using System.Numerics;
 using System.Runtime.InteropServices;
 using Glfw;
-using VKE;
+using CVKL;
 using VK;
-using static VKE.Camera;
-using Buffer = VKE.Buffer;
+using static CVKL.Camera;
+using Buffer = CVKL.Buffer;
 
 namespace ModelSample {
 	class Program : VkWindow {
@@ -49,11 +49,11 @@ namespace ModelSample {
 
 			model = new Model (presentQueue, "../data/models/DamagedHelmet/glTF/DamagedHelmet.gltf");
 			model.WriteMaterialsDescriptorSets (descLayoutTextures,
-				ShaderBinding.Color,
-				ShaderBinding.Normal,
-				ShaderBinding.AmbientOcclusion,
-				ShaderBinding.MetalRoughness,
-				ShaderBinding.Emissive);
+				VK.AttachmentType.Color,
+				VK.AttachmentType.Normal,
+				VK.AttachmentType.AmbientOcclusion,
+				VK.AttachmentType.MetalRoughness,
+				VK.AttachmentType.Emissive);
 		}
 
 		void init (VkSampleCountFlags samples = VkSampleCountFlags.SampleCount4) { 

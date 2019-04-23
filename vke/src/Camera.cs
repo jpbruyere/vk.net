@@ -1,20 +1,30 @@
 ﻿using System;
 using System.Numerics;
 using System.Runtime.InteropServices;
-
 using VK;
 
 
-namespace VKE {
+namespace CVKL {
 	public class Camera {
+		public static readonly Matrix4x4 VKProjectionCorrection =
+			new Matrix4x4 (
+				1,  0,    0,    0,
+				0, -1,    0,    0,
+				0,  0, 1f/2, 1f/2,
+				0,  0,    0,    1
+			);
+
 		public enum CamType {LookAt, FirstPerson};
 
-		float fov, aspectRatio, zNear = 0.1f, zFar = 256f, zoom = 1.0f;
-		float moveSpeed = 1, rotSpeed = 0.01f, zoomSpeed = 0.01f;
+		float fov, aspectRatio, zNear = 0.1f, zFar = 128f, zoom = 1.0f;
+		float moveSpeed = 0.1f, rotSpeed = 0.01f, zoomSpeed = 0.01f;
 
 		Vector3 rotation = Vector3.Zero;
 		Vector3 position = Vector3.Zero;
 		Matrix4x4 model = Matrix4x4.Identity;
+
+		public Vector3 Position => position;
+		public Vector3 Rotation => rotation;
 
 		public CamType Type;
 		
@@ -89,17 +99,14 @@ namespace VKE {
 			}
 		}
 
-		public void Update () { 
-			Projection = Matrix4x4.CreatePerspectiveFieldOfView (fov, aspectRatio, zNear, zFar);
-			Matrix4x4 rot =
-					Matrix4x4.CreateFromAxisAngle (Vector3.UnitX, rotation.X) *
-					Matrix4x4.CreateFromAxisAngle (Vector3.UnitY, rotation.Y) *
-					Matrix4x4.CreateFromAxisAngle (Vector3.UnitZ, rotation.Z);
+		public void Update () {
+			Projection = Matrix4x4.CreatePerspectiveFieldOfView (fov, aspectRatio, zNear, zFar) * VKProjectionCorrection;
+			Matrix4x4 translation = Matrix4x4.CreateTranslation (position * new Vector3(1,1,-1)) ;
 			if (Type == CamType.LookAt) {
-				View =	Matrix4x4.CreateFromAxisAngle (Vector3.UnitX, rotation.X) *
+				View = Matrix4x4.CreateFromAxisAngle (Vector3.UnitZ, rotation.Z) *
 						Matrix4x4.CreateFromAxisAngle (Vector3.UnitY, rotation.Y) *
-						Matrix4x4.CreateFromAxisAngle (Vector3.UnitZ, rotation.Z) *
-						Matrix4x4.CreateTranslation (position);
+						Matrix4x4.CreateFromAxisAngle (Vector3.UnitX, rotation.X) *
+						translation;
 			} else {
 				View =	Matrix4x4.CreateTranslation (position) *
 						Matrix4x4.CreateFromAxisAngle (Vector3.UnitZ, rotation.Z) *

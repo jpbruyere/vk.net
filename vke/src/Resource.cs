@@ -5,7 +5,7 @@ using VK;
 
 using static VK.Vk;
 
-namespace VKE {
+namespace CVKL {
     public abstract class Resource : Activable {
         protected VkDeviceMemory vkMemory;
         protected UInt64 deviceMemSize;
@@ -26,18 +26,18 @@ namespace VKE {
             VkMemoryRequirements memReqs = getMemoryRequirements ();
             VkMemoryAllocateInfo memInfo = VkMemoryAllocateInfo.New();
             memInfo.allocationSize = memReqs.size;
-            memInfo.memoryTypeIndex = dev.GetMemoryTypeIndex (memReqs.memoryTypeBits, MemoryFlags);
+            memInfo.memoryTypeIndex = Dev.GetMemoryTypeIndex (memReqs.memoryTypeBits, MemoryFlags);
 
-            Utils.CheckResult (vkAllocateMemory (dev.VkDev, ref memInfo, IntPtr.Zero, out vkMemory));
+            Utils.CheckResult (vkAllocateMemory (Dev.VkDev, ref memInfo, IntPtr.Zero, out vkMemory));
 
             deviceMemSize = memInfo.allocationSize;
         }
 
         public void Map (ulong size = WholeSize, ulong offset = 0) {
-            Utils.CheckResult (vkMapMemory (dev.VkDev, vkMemory, offset, size, 0, ref mappedData));
+            Utils.CheckResult (vkMapMemory (Dev.VkDev, vkMemory, offset, size, 0, ref mappedData));
         }
         public void Unmap () {
-            vkUnmapMemory (dev.VkDev, vkMemory);
+            vkUnmapMemory (Dev.VkDev, vkMemory);
             mappedData = IntPtr.Zero;
         }
         public void Update (object data, ulong size, ulong offset = 0) {
@@ -55,7 +55,7 @@ namespace VKE {
                 offset = offset,
                 size = size,
             };
-            vkFlushMappedMemoryRanges (dev.VkDev, 1, ref range);
+            vkFlushMappedMemoryRanges (Dev.VkDev, 1, ref range);
         }
 
         #region IDisposable Support        
@@ -65,7 +65,7 @@ namespace VKE {
 			if (state == ActivableState.Activated) {
 				if (mappedData != IntPtr.Zero)
 					Unmap ();
-				vkFreeMemory (dev.VkDev, vkMemory, IntPtr.Zero);
+				vkFreeMemory (Dev.VkDev, vkMemory, IntPtr.Zero);
 			}
 			base.Dispose (disposing);
         }

@@ -2,9 +2,9 @@
 using System.Numerics;
 using System.Runtime.InteropServices;
 using Glfw;
-using VKE;
+using CVKL;
 using VK;
-using static VKE.Camera;
+using static CVKL.Camera;
 
 namespace modelWithVkvgStats {
 	class Program : VkWindow {
@@ -119,11 +119,11 @@ namespace modelWithVkvgStats {
 
 			model = new Model (presentQueue, "../data/models/Sponza/glTF/Sponza.gltf");
 			model.WriteMaterialsDescriptorSets (descLayoutTextures,
-				ShaderBinding.Color,
-				ShaderBinding.Normal,
-				ShaderBinding.AmbientOcclusion,
-				ShaderBinding.MetalRoughness,
-				ShaderBinding.Emissive);
+				VK.AttachmentType.Color,
+				VK.AttachmentType.Normal,
+				VK.AttachmentType.AmbientOcclusion,
+				VK.AttachmentType.MetalRoughness,
+				VK.AttachmentType.Emissive);
 		}
 
 		void init (VkSampleCountFlags samples = VkSampleCountFlags.SampleCount4) { 

@@ -28,10 +28,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.InteropServices;
+
 using VK;
 using static VK.Vk;
 	
-namespace VKE {
+namespace CVKL {
     public static class ExtensionMethods {
 		public static bool AreEquals (this byte[] b, byte[] other) {
 			if (b.Length != other.Length)
@@ -48,6 +49,7 @@ namespace VKE {
             Vector4 v4 = Vector4.Transform (new Vector4 (v, translate ? 1f : 0f), mat);
             return new Vector3 (v4.X, v4.Y, v4.Z);
         }
+
         public static IntPtr Pin (this object obj) {
 			if (handles.ContainsKey (obj)) {
 				Debug.WriteLine ("Trying to pin already pinned object: {0}", obj);

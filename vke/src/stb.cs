@@ -1,7 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
 
-namespace VKE {
+namespace CVKL {
     public static class Stb {
         public const string stblib = "stb";
 

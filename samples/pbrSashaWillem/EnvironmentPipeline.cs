@@ -4,10 +4,8 @@ using System.Numerics;
 using System.Runtime.InteropServices;
 using VK;
 
-namespace VKE {
+namespace CVKL {
 	class EnvironmentCube : GraphicPipeline {
-		DescriptorPool descriptorPool;
-		DescriptorSetLayout descLayoutMain;
 		public DescriptorSet dsSkybox;
 
 		GPUBuffer vboSkybox;
@@ -15,26 +13,18 @@ namespace VKE {
 		public Image cubemap { get; private set; }
 		public Image lutBrdf { get; private set; }
 		public Image irradianceCube { get; private set; }
-		public Image prefilterCube { get; private set; }
+		public Image prefilterCube { get;  set; }
 
-		public EnvironmentCube (Queue staggingQ, RenderPass renderPass)
+		public EnvironmentCube (DescriptorSet dsSkybox, PipelineLayout plLayout, Queue staggingQ, RenderPass renderPass)
 		: base (renderPass, "EnvCube pipeline") {
-			descriptorPool = new DescriptorPool (dev, 1,
-				new VkDescriptorPoolSize (VkDescriptorType.UniformBuffer, 1),
-				new VkDescriptorPoolSize (VkDescriptorType.CombinedImageSampler, 1)
-			);
 
-			descLayoutMain = new DescriptorSetLayout (dev,
-				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Vertex, VkDescriptorType.UniformBuffer),
-				new VkDescriptorSetLayoutBinding (1, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler));
-
-			dsSkybox = descriptorPool.Allocate (descLayoutMain);
+			this.dsSkybox = dsSkybox;
 
 			using (CommandPool cmdPool = new CommandPool (staggingQ.Dev, staggingQ.index)) {
 
 				vboSkybox = new GPUBuffer<float> (staggingQ, cmdPool, VkBufferUsageFlags.VertexBuffer, box_vertices);
 
-				cubemap = KTX.KTX.Load (staggingQ, cmdPool, cubemapPathes[4],
+				cubemap = KTX.KTX.Load (staggingQ, cmdPool, cubemapPathes[0],
 					VkImageUsageFlags.Sampled, VkMemoryPropertyFlags.DeviceLocal, true);
 				cubemap.CreateView (VkImageViewType.Cube, VkImageAspectFlags.Color, 6);
 				cubemap.CreateSampler ();
@@ -42,7 +32,7 @@ namespace VKE {
 
 				GraphicPipelineConfig cfg = GraphicPipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, renderPass.Samples);
 				cfg.RenderPass = renderPass;
-				cfg.Layout = new PipelineLayout (dev, descLayoutMain);
+				cfg.Layout = plLayout;
 				cfg.AddVertexBinding (0, 5 * sizeof (float));
 				cfg.SetVertexAttributes (0, VkFormat.R32g32b32Sfloat, VkFormat.R32g32Sfloat);
 				cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/skybox.vert.spv");
@@ -60,10 +50,10 @@ namespace VKE {
 		
 		}
 
-		public void WriteDesc (VkDescriptorBufferInfo matrixDesc) { 
-			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (descLayoutMain);
-			uboUpdate.Write (dev, dsSkybox, matrixDesc, cubemap.Descriptor);
-		}
+		//public void WriteDesc (VkDescriptorBufferInfo matrixDesc) { 
+		//	DescriptorSetWrites uboUpdate = new DescriptorSetWrites (descLayoutMain);
+		//	uboUpdate.Write (Dev, dsSkybox, matrixDesc, cubemap.Descriptor);
+		//}
 
 		public void RecordDraw (CommandBuffer cmd) {
 		 	Bind (cmd);
@@ -81,12 +71,12 @@ namespace VKE {
 			"../data/textures/uffizi_cube.ktx",
 		};
 		static float[] box_vertices = {
-			-1.0f,-1.0f,-1.0f,    0.0f, 1.0f,  // -X side
-			-1.0f,-1.0f, 1.0f,    1.0f, 1.0f,
-			-1.0f, 1.0f, 1.0f,    1.0f, 0.0f,
-			-1.0f, 1.0f, 1.0f,    1.0f, 0.0f,
-			-1.0f, 1.0f,-1.0f,    0.0f, 0.0f,
-			-1.0f,-1.0f,-1.0f,    0.0f, 1.0f,
+			-1.0f,-1.0f,-1.0f,    0.0f, 0.0f,  // -X side
+			-1.0f,-1.0f, 1.0f,    1.0f, 0.0f,
+			-1.0f, 1.0f, 1.0f,    1.0f, 1.0f,
+			-1.0f, 1.0f, 1.0f,    1.0f, 1.0f,
+			-1.0f, 1.0f,-1.0f,    0.0f, 1.0f,
+			-1.0f,-1.0f,-1.0f,    0.0f, 0.0f,
 
 			 1.0f, 1.0f,-1.0f,    1.0f, 0.0f,  // +X side
 			 1.0f, 1.0f, 1.0f,    0.0f, 0.0f,
@@ -129,7 +119,7 @@ namespace VKE {
 			const VkFormat format = VkFormat.R16g16Sfloat;
 			const int dim = 512;
 
-			lutBrdf = new Image (dev, format, VkImageUsageFlags.ColorAttachment | VkImageUsageFlags.Sampled,
+			lutBrdf = new Image (Dev, format, VkImageUsageFlags.ColorAttachment | VkImageUsageFlags.Sampled,
 				VkMemoryPropertyFlags.DeviceLocal, dim, dim);
 			lutBrdf.SetName ("lutBrdf");
 
@@ -138,8 +128,8 @@ namespace VKE {
 
 			GraphicPipelineConfig cfg = GraphicPipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, VkSampleCountFlags.SampleCount1, false);
 
-			cfg.Layout = new PipelineLayout (dev, new DescriptorSetLayout (dev));
-			cfg.RenderPass = new RenderPass (dev);
+			cfg.Layout = new PipelineLayout (Dev, new DescriptorSetLayout (Dev));
+			cfg.RenderPass = new RenderPass (Dev);
 			cfg.RenderPass.AddAttachment (format, VkImageLayout.ShaderReadOnlyOptimal);
 			cfg.RenderPass.ClearValues.Add (new VkClearValue { color = new VkClearColorValue (0, 0, 0) });
 			cfg.RenderPass.AddSubpass (new SubPass (VkImageLayout.ColorAttachmentOptimal));
@@ -167,9 +157,9 @@ namespace VKE {
 			lutBrdf.Descriptor.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
 		}
 
-		enum CBTarget { IRRADIANCE = 0, PREFILTEREDENV = 1 };
+		public enum CBTarget { IRRADIANCE = 0, PREFILTEREDENV = 1 };
 
-		Image generateCubeMap (Queue staggingQ, CommandPool cmdPool, CBTarget target) {
+		public Image generateCubeMap (Queue staggingQ, CommandPool cmdPool, CBTarget target) {
 			const float deltaPhi = (2.0f * (float)Math.PI) / 180.0f;
 			const float deltaTheta = (0.5f * (float)Math.PI) / 64.0f;
 
@@ -181,14 +171,14 @@ namespace VKE {
 				dim = 512;
 			}
 
-			uint numMips = (uint)Math.Floor (Math.Log (dim)) + 1;
+			uint numMips = (uint)Math.Floor (Math.Log (dim, 2)) + 1;
 
-			Image imgFbOffscreen = new Image (dev, format, VkImageUsageFlags.TransferSrc | VkImageUsageFlags.ColorAttachment,
+			Image imgFbOffscreen = new Image (Dev, format, VkImageUsageFlags.TransferSrc | VkImageUsageFlags.ColorAttachment,
 				VkMemoryPropertyFlags.DeviceLocal, dim, dim);
 			imgFbOffscreen.SetName ("offscreenfb");
 			imgFbOffscreen.CreateView ();
 
-			Image cmap = new Image (dev, format, VkImageUsageFlags.TransferDst | VkImageUsageFlags.Sampled,
+			Image cmap = new Image (Dev, format, VkImageUsageFlags.TransferDst | VkImageUsageFlags.Sampled,
 				VkMemoryPropertyFlags.DeviceLocal, dim, dim, VkImageType.Image2D, VkSampleCountFlags.SampleCount1, VkImageTiling.Optimal,
 				numMips, 6,  1, VkImageCreateFlags.CubeCompatible);
 			if (target == CBTarget.PREFILTEREDENV)
@@ -198,9 +188,9 @@ namespace VKE {
 			cmap.CreateView (VkImageViewType.Cube, VkImageAspectFlags.Color, 6, 0, numMips);
 			cmap.CreateSampler (VkSamplerAddressMode.ClampToEdge);
 
-			DescriptorPool dsPool = new DescriptorPool (dev, 2,	new VkDescriptorPoolSize (VkDescriptorType.CombinedImageSampler));
+			DescriptorPool dsPool = new DescriptorPool (Dev, 2,	new VkDescriptorPoolSize (VkDescriptorType.CombinedImageSampler));
 
-			DescriptorSetLayout dsLayout = new DescriptorSetLayout (dev,
+			DescriptorSetLayout dsLayout = new DescriptorSetLayout (Dev,
 				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler));
 
 			DescriptorSet dset = dsPool.Allocate (dsLayout);
@@ -208,13 +198,13 @@ namespace VKE {
 			GraphicPipelineConfig cfg = GraphicPipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, VkSampleCountFlags.SampleCount1, false);
 
 			DescriptorSetWrites dsUpdate = new DescriptorSetWrites (dsLayout);
-			dsUpdate.Write (dev, dset, cubemap.Descriptor);
+			dsUpdate.Write (Dev, dset, cubemap.Descriptor);
 
-			cfg.Layout = new PipelineLayout (dev, dsLayout);
+			cfg.Layout = new PipelineLayout (Dev, dsLayout);
 			cfg.Layout.AddPushConstants (
 				new VkPushConstantRange (VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment, (uint)Marshal.SizeOf<Matrix4x4> () + 8));
 
-			cfg.RenderPass = new RenderPass (dev);
+			cfg.RenderPass = new RenderPass (Dev);
 			cfg.RenderPass.AddAttachment (format, VkImageLayout.ColorAttachmentOptimal);
 			cfg.RenderPass.ClearValues.Add (new VkClearValue { color = new VkClearColorValue (0, 0, 0) });
 			cfg.RenderPass.AddSubpass (new SubPass (VkImageLayout.ColorAttachmentOptimal));
@@ -258,7 +248,8 @@ namespace VKE {
 					cmd.SetViewport ((float)(dim), (float)dim);
 
 					for (int m = 0; m < numMips; m++) {
-						roughness = (float)m / (numMips - 1);
+						roughness = (float)m / ((float)numMips - 1f);
+						Console.WriteLine (roughness);
 						for (int f = 0; f < 6; f++) {
 
 
@@ -336,9 +327,6 @@ namespace VKE {
 			lutBrdf.Dispose ();
 			irradianceCube.Dispose ();
 			prefilterCube.Dispose ();
-
-			descLayoutMain.Dispose ();
-			descriptorPool.Dispose ();
 
 			base.Dispose (disposing);
 		}

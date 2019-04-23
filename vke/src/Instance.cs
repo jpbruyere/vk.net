@@ -29,7 +29,7 @@ using System.Runtime.InteropServices;
 using VK;
 using static VK.Vk;
 
-namespace VKE {
+namespace CVKL {
     public class Instance : IDisposable {
         VkInstance inst;
 

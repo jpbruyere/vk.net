@@ -28,7 +28,7 @@ using System.Collections.Generic;
 using VK;
 using static VK.Vk;
 
-namespace VKE {
+namespace CVKL {
     public sealed class DescriptorSetLayout : Activable {
         internal VkDescriptorSetLayout handle;
         
@@ -56,7 +56,7 @@ namespace VKE {
 		public override void Activate () {
 			if (state != ActivableState.Activated) {
 				VkDescriptorSetLayoutCreateInfo info = new VkDescriptorSetLayoutCreateInfo (Flags, (uint)Bindings.Count, Bindings.Pin());
-	            Utils.CheckResult (vkCreateDescriptorSetLayout (dev.VkDev, ref info, IntPtr.Zero, out handle));
+	            Utils.CheckResult (vkCreateDescriptorSetLayout (Dev.VkDev, ref info, IntPtr.Zero, out handle));
 				Bindings.Unpin ();
 			}
 			base.Activate ();
@@ -71,7 +71,7 @@ namespace VKE {
 			if (!disposing)
 				System.Diagnostics.Debug.WriteLine ("VKE DescriptorSetLayout disposed by finalizer");
 			if (state == ActivableState.Activated)
-				vkDestroyDescriptorSetLayout (dev.VkDev, handle, IntPtr.Zero);
+				vkDestroyDescriptorSetLayout (Dev.VkDev, handle, IntPtr.Zero);
 			base.Dispose (disposing);
 		}
 		#endregion

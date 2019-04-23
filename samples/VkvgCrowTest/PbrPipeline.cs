@@ -3,7 +3,7 @@ using System.Numerics;
 using System.Runtime.InteropServices;
 using VK;
 
-namespace VKE {
+namespace CVKL {
 	class PBRPipeline : GraphicPipeline {	
 		public struct Matrices {
 			public Matrix4x4 projection;
@@ -89,11 +89,11 @@ namespace VKE {
 			//model = new Model (dev, presentQueue, "../data/models/icosphere.gltf");
 			//model = new Model (dev, presentQueue, cmdPool, "../data/models/cube.gltf");
 			model.WriteMaterialsDescriptorSets (descLayoutTextures,
-				ShaderBinding.Color,
-				ShaderBinding.Normal,
-				ShaderBinding.AmbientOcclusion,
-				ShaderBinding.MetalRoughness,
-				ShaderBinding.Emissive);
+				VK.AttachmentType.Color,
+				VK.AttachmentType.Normal,
+				VK.AttachmentType.AmbientOcclusion,
+				VK.AttachmentType.MetalRoughness,
+				VK.AttachmentType.Emissive);
 		}
 
 		public void RecordDraw (CommandBuffer cmd) {		
@@ -114,7 +114,7 @@ namespace VKE {
 
 
 			Matrix4x4 modelMat = Matrix4x4.Identity;
-			Model.PbrMaterial material = new Model.PbrMaterial (1, 0, Model.AlphaMode.Opaque, 0.5f, ShaderBinding.None);
+			Model.PbrMaterial material = new Model.PbrMaterial (1, 0, Model.AlphaMode.Opaque, 0.5f, VK.AttachmentType.None);
 			Model.Primitive p = model.Scenes[0].Root.Children[0].Mesh.Primitives[0];
 
 			for (int metalFact = 0; metalFact < 10; metalFact++) {

@@ -24,44 +24,60 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using VK;
 using static VK.Vk;
 
-namespace VKE {
+namespace CVKL {
 	public enum ActivableState { Init, Activated, Disposed };
-	public abstract class Activable : IDisposable { 
+	/// <summary>
+	/// Base class for most of the vulkan device's objects following the IDispose pattern. Each time an activable is used, it's reference count is incremented, and
+	/// each time it is disposed, the count is decremented. When the count reach zero, the handle is destroyed and the finalizizer is unregistered. Once disposed, the
+	/// objecte may still be reactivated.
+	/// </summary>
+	public abstract class Activable : IDisposable {
+		//count number of activation, only the first one will create a handle 
 		protected uint references;
+		//keep track of the current state of activation.
 		protected ActivableState state;
+		//With the debug marker extension, setting name to vulkan's object ease the debugging.
 		protected string name;
-
+		/// <summary>
+		/// This property has to be implemented in every vulkan object. It should return the correct debug marker info.
+		/// </summary>
+		/// <value>The debug marker info.</value>
 		protected abstract VkDebugMarkerObjectNameInfoEXT DebugMarkerInfo { get; }
-
-		public Device dev { get; private set; }
+		/// <summary>
+		/// Vulkan logical device this activable is bound to
+		/// </summary>
+		public Device Dev { get; private set; }
 
 		#region CTOR
 		protected Activable (Device dev) {
-			this.dev = dev;
+			this.Dev = dev;
 			this.name = GetType ().Name;
 		}
 		protected Activable (Device dev, string name) {
-			this.dev = dev;
+			this.Dev = dev;
 			this.name = name;
 		}
 		#endregion
-
+		/// <summary>
+		/// if debug marker extension is activated, this will set the name for debuggers
+		/// </summary>
 		public void SetName (string name) {
 			this.name = name;
 
-			if (!dev.DebugMarkersEnabled)
+			if (!Dev.DebugMarkersEnabled)
 				return;
 
 			VkDebugMarkerObjectNameInfoEXT dmo = DebugMarkerInfo;
 			dmo.pObjectName = name.Pin();
-			Utils.CheckResult (vkDebugMarkerSetObjectNameEXT (dev.VkDev, ref dmo));
+			Utils.CheckResult (vkDebugMarkerSetObjectNameEXT (Dev.VkDev, ref dmo));
 			name.Unpin ();			
 		}
+		/// <summary>
+		/// Activation of the object, the reference count is incremented.
+		/// </summary>
 		public virtual void Activate () {
 			if (state == ActivableState.Disposed) 
 				GC.ReRegisterForFinalize (this);

@@ -27,7 +27,7 @@ using System;
 using System.Runtime.InteropServices;
 using VK;
 
-namespace VKE {
+namespace CVKL {
     public class MarshaledObject<T> : IDisposable where T : struct {
         GCHandle handle;
 

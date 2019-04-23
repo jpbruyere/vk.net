@@ -4,7 +4,7 @@ using System.Numerics;
 using System.Runtime.InteropServices;
 using Glfw;
 using VK;
-using VKE;
+using CVKL;
 
 namespace deferredShadow {
 	class Program : VkWindow{	
@@ -212,11 +212,11 @@ namespace deferredShadow {
 			//model = new Model (dev, presentQueue, "../data/models/icosphere.gltf");
 			//model = new Model (dev, presentQueue, cmdPool, "../data/models/cube.gltf");
 			model.WriteMaterialsDescriptorSets (descLayoutModelTextures,
-				ShaderBinding.Color,
-				ShaderBinding.Normal,
-				ShaderBinding.AmbientOcclusion,
-				ShaderBinding.MetalRoughness,
-				ShaderBinding.Emissive);				
+				VK.AttachmentType.Color,
+				VK.AttachmentType.Normal,
+				VK.AttachmentType.AmbientOcclusion,
+				VK.AttachmentType.MetalRoughness,
+				VK.AttachmentType.Emissive);				
 		}
 
 		void buildCommandBuffers () {

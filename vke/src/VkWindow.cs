@@ -1,5 +1,5 @@
 ﻿//
-// VkEngine.cs
+// VkWindow.cs
 //
 // Author:
 //       Jean-Philippe Bruyère <jp_bruyere@hotmail.com>
@@ -30,9 +30,13 @@ using Glfw;
 using VK;
 using static VK.Vk;
 
-namespace VKE {
+namespace CVKL {
+	/// <summary>
+	/// Base class to build vulkan application.
+	/// Provide default swapchain with its command pool and buffers per image and the main present queue
+	/// </summary>
     public abstract class VkWindow : IDisposable {
-        static VkWindow currentWindow;
+		static VkWindow currentWindow;
 
 		IntPtr hWin;
 
@@ -50,18 +54,33 @@ namespace VKE {
         protected CommandBuffer[] cmds;
         protected VkSemaphore[] drawComplete;
 
-        protected bool updateViewRequested = true;
+		protected uint fps;
+		protected bool updateViewRequested = true;
 		protected double lastMouseX, lastMouseY;
+		protected bool[] MouseButton => buttons;
 
+		/// <summary>
+		/// default camera
+		/// </summary>
 		protected Camera camera = new Camera (Utils.DegreesToRadians (60f), 1f);
 
         uint width, height;
+		bool[] buttons = new bool[10];
 
+		uint frameCount;
+		Stopwatch frameChrono;
+
+		/// <summary>
+		/// Override this property to change the list of enabled extensions
+		/// </summary>
 		public virtual string[] EnabledExtensions {
 			get {
 				return new string[] {Ext.D.VK_KHR_swapchain};
 			} 
 		}
+		/// <summary>
+		/// Frequency in millisecond of the call to the Update method
+		/// </summary>
 		public long UpdateFrequency = 200;
 
         public uint Width => width;
@@ -134,15 +153,24 @@ namespace VKE {
 			for (int i = 0; i < swapChain.ImageCount; i++)
 				drawComplete[i].SetDebugMarkerName (dev, "Semaphore DrawComplete" + i);
         }
-
+		/// <summary>
+		/// override this method to modify enabled features before device creation
+		/// </summary>
+		/// <param name="features">Features.</param>
         protected virtual void configureEnabledFeatures (ref VkPhysicalDeviceFeatures features) {
         }
-
+		/// <summary>
+		/// override this method to create additional queue. Dedicated queue of the requested type will be selected first, created queues may excess
+		/// available physical queues.
+		/// </summary>
         protected virtual void createQueues () {
             presentQueue = new PresentQueue (dev, VkQueueFlags.Graphics, hSurf);
         }
 
-
+		/// <summary>
+		/// Main render method called each frame. get next swapchain image, process resize if needed, submit and present to the presentQueue.
+		/// Wait QueueIdle after presenting.
+		/// </summary>
         protected virtual void render () {
             int idx = swapChain.GetNextImage();
             if (idx < 0) {
@@ -156,9 +184,6 @@ namespace VKE {
             presentQueue.WaitIdle ();
         }
 
-        bool[] buttons = new bool[10];
-
-        protected bool[] MouseButton => buttons;
 
         protected virtual void onMouseMove (double xPos, double yPos) { 
 			double diffX = lastMouseX - xPos;
@@ -233,11 +258,10 @@ namespace VKE {
 				currentWindow.onKeyUp (key, scanCode, modifiers);
 			}
         }
-
-        Stopwatch frameChrono;
-        protected uint fps;
-        uint frameCount;
-
+        
+		/// <summary>
+		/// main window loop, exits on GLFW3 exit event
+		/// </summary>
         public virtual void Run () {
             OnResize ();
             UpdateView ();
@@ -269,8 +293,14 @@ namespace VKE {
             }
         }
         public virtual void UpdateView () {}
+		/// <summary>
+		/// custom update method called at UpdateFrequency
+		/// </summary>
 		public virtual void Update () {}
 
+		/// <summary>
+		/// called when swapchain has been resized, override this method to resize your framebuffers coupled to the swapchain
+		/// </summary>
 		protected virtual void OnResize () {}
 
 

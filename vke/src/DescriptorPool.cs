@@ -28,7 +28,7 @@ using System.Collections.Generic;
 using VK;
 using static VK.Vk;
 
-namespace VKE {
+namespace CVKL {
     public class DescriptorPool : Activable {
         internal VkDescriptorPool handle;        
         public readonly uint MaxSets;
@@ -58,7 +58,7 @@ namespace VKE {
 	            info.pPoolSizes = PoolSizes.Pin ();
 	            info.maxSets = MaxSets;
 
-	            Utils.CheckResult (vkCreateDescriptorPool (dev.VkDev, ref info, IntPtr.Zero, out handle));
+	            Utils.CheckResult (vkCreateDescriptorPool (Dev.VkDev, ref info, IntPtr.Zero, out handle));
 				PoolSizes.Unpin ();
 			}
 			base.Activate ();
@@ -78,23 +78,23 @@ namespace VKE {
             allocInfo.descriptorSetCount = (uint)descriptorSet.descriptorSetLayouts.Count;
             allocInfo.pSetLayouts = descriptorSet.descriptorSetLayouts.Pin();
 
-            Utils.CheckResult (vkAllocateDescriptorSets (dev.VkDev, ref allocInfo, out descriptorSet.handle));
+            Utils.CheckResult (vkAllocateDescriptorSets (Dev.VkDev, ref allocInfo, out descriptorSet.handle));
 
 			descriptorSet.descriptorSetLayouts.Unpin ();
         }
         public void FreeDescriptorSet (params DescriptorSet[] descriptorSets) {
             if (descriptorSets.Length == 1) {
-                Utils.CheckResult (vkFreeDescriptorSets (dev.VkDev, handle, 1, ref descriptorSets[0].handle));
+                Utils.CheckResult (vkFreeDescriptorSets (Dev.VkDev, handle, 1, ref descriptorSets[0].handle));
                 return;
             }
             using (NativeList<VkDescriptorSet> dSets = new NativeList<VkDescriptorSet> ((uint)descriptorSets.Length)) {
                 foreach (DescriptorSet ds in descriptorSets)
                     dSets.Add (ds.handle);
-                Utils.CheckResult (vkFreeDescriptorSets (dev.VkDev, handle, dSets.Count, dSets.Data));
+                Utils.CheckResult (vkFreeDescriptorSets (Dev.VkDev, handle, dSets.Count, dSets.Data));
             }
         }
         public void Reset () {
-            Utils.CheckResult (vkResetDescriptorPool (dev.VkDev, handle, 0));
+            Utils.CheckResult (vkResetDescriptorPool (Dev.VkDev, handle, 0));
         }
 
 		public override string ToString () {
@@ -106,7 +106,7 @@ namespace VKE {
 			if (!disposing)
 				System.Diagnostics.Debug.WriteLine ("VKE DescriptorPool disposed by finalizer");
 			if (state == ActivableState.Activated)
-				vkDestroyDescriptorPool (dev.VkDev, handle, IntPtr.Zero);
+				vkDestroyDescriptorPool (Dev.VkDev, handle, IntPtr.Zero);
 			base.Dispose (disposing);
 		}
 		#endregion
