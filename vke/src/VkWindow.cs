@@ -62,7 +62,7 @@ namespace CVKL {
 		/// <summary>
 		/// default camera
 		/// </summary>
-		protected Camera camera = new Camera (Utils.DegreesToRadians (60f), 1f);
+		protected Camera camera = new Camera (Utils.DegreesToRadians (45f), 1f);
 
         uint width, height;
 		bool[] buttons = new bool[10];
@@ -191,7 +191,7 @@ namespace CVKL {
 			if (MouseButton[0]) {
 				camera.Rotate ((float)-diffX,(float)diffY);
 			} else if (MouseButton[1]) {
-				camera.Zoom ((float)diffY);
+				camera.SetZoom ((float)diffY);
 			}
 
 			updateViewRequested = true;

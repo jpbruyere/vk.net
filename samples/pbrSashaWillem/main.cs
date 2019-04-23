@@ -16,9 +16,10 @@ namespace pbrSachaWillem {
 		protected override void configureEnabledFeatures (ref VkPhysicalDeviceFeatures features) {
 			base.configureEnabledFeatures (ref features);
 			features.pipelineStatisticsQuery = true;
+			//features.samplerAnisotropy = true;
 		}
 
-		VkSampleCountFlags samples = VkSampleCountFlags.SampleCount1;
+		VkSampleCountFlags samples = VkSampleCountFlags.SampleCount4;
 
 		Framebuffer[] frameBuffers;
 		PBRPipeline pbrPipeline;
@@ -31,22 +32,31 @@ namespace pbrSachaWillem {
 		#endregion
 
 		#region ui
+		DescriptorSet dsDebugImg;
+		void initDebugImg () {
+			dsDebugImg = descriptorPool.Allocate (descLayoutMain);
+			pbrPipeline.envCube.debugImg.Descriptor.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
+			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (dsDebugImg, descLayoutMain);
+			uboUpdate.Write (dev, pbrPipeline.envCube.debugImg.Descriptor);
+		}
+
 		vkvg.Device vkvgDev;
         vkvg.Surface vkvgSurf;
 		Image vkvgImage;
 
 		DescriptorPool descriptorPool;
 		DescriptorSetLayout descLayoutMain;
-		DescriptorSet dsMain;
+		DescriptorSet dsVkvgOverlay;
 		Pipeline uiPipeline;
 
 		void initUIPipeline () {
-			descriptorPool = new DescriptorPool (dev, 1, new VkDescriptorPoolSize (VkDescriptorType.CombinedImageSampler));
+			descriptorPool = new DescriptorPool (dev, 2, new VkDescriptorPoolSize (VkDescriptorType.CombinedImageSampler, 2));
 			descLayoutMain = new DescriptorSetLayout (dev,
 				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler));
-			dsMain = descriptorPool.Allocate (descLayoutMain);
 
-			GraphicPipelineConfig cfg = GraphicPipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, samples);
+			dsVkvgOverlay = descriptorPool.Allocate (descLayoutMain);
+
+			GraphicPipelineConfig cfg = GraphicPipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, samples, false);
 			cfg.RenderPass = pbrPipeline.RenderPass;
 			cfg.Layout = new PipelineLayout (dev, descLayoutMain);
 			cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/FullScreenQuad.vert.spv");
@@ -66,7 +76,7 @@ namespace pbrSachaWillem {
 			vkvgImage.CreateSampler (VkFilter.Nearest, VkFilter.Nearest, VkSamplerMipmapMode.Nearest, VkSamplerAddressMode.ClampToBorder);
 
 			vkvgImage.Descriptor.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
-			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (dsMain, descLayoutMain);
+			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (dsVkvgOverlay, descLayoutMain);
 			uboUpdate.Write (dev, vkvgImage.Descriptor);
 		}
 
@@ -77,8 +87,8 @@ namespace pbrSachaWillem {
 				ctx.Operator = vkvg.Operator.Over;
 
 				ctx.LineWidth = 1;
-				ctx.SetSource (0.1, 0.1, 0.1, 0.6);
-				ctx.Rectangle (5.5, 5.5, 320, 250);
+				ctx.SetSource (0.1, 0.1, 0.1, 0.8);
+				ctx.Rectangle (5.5, 5.5, 320, 300);
 				ctx.FillPreserve ();
 				ctx.Flush ();
 				ctx.SetSource (0.8, 0.8, 0.8);
@@ -107,8 +117,8 @@ namespace pbrSachaWillem {
 				y += dy*2;
 				ctx.MoveTo (x, y);
 				ctx.ShowText ("Pipeline Statistics");
-				ctx.MoveTo (x-2, 2.5+y);
-				ctx.LineTo (x+160, 2.5+y);
+				ctx.MoveTo (x-2, 4.5+y);
+				ctx.LineTo (x+160, 4.5+y);
 				ctx.Stroke ();
 				y += 4;
 				x += 20;
@@ -118,17 +128,24 @@ namespace pbrSachaWillem {
 					ctx.MoveTo (x, y);
 					ctx.ShowText (string.Format ($"{statPool.RequestedStats[i].ToString(),-30} :{results[i],12:0,0} "));
 				}
+				/*y += dy;
+				ctx.MoveTo (x, y);
+				ctx.ShowText (string.Format ($"{"Elapsed microsecond",-20} :{timestampQPool.ElapsedMiliseconds:0.0000} "));*/
 				y += dy;
 				ctx.MoveTo (x, y);
-				ctx.ShowText (string.Format ($"{"Elapsed microsecond",-20} :{timestampQPool.ElapsedMiliseconds:0.0000} "));
+				ctx.ShowText (string.Format ($"{"Debug draw:",-20} :{currentDebugView.ToString ()} "));
 				y += dy;
 				ctx.MoveTo (x, y);
-				ctx.ShowText (string.Format ($"{"Debug draw:",-20} :{currentDebugView.ToString()} "));
+				ctx.ShowText (string.Format ($"{"Debug Prefil Face:",-20} :{pbrPipeline.envCube.debugFace.ToString ()} "));
+				y += dy;
+				ctx.MoveTo (x, y);
+				ctx.ShowText (string.Format ($"{"Debug Prefil Mip:",-20} :{pbrPipeline.envCube.debugMip.ToString ()} "));
 			}
 		}
 		void recordDrawOverlay (CommandBuffer cmd) {
 			uiPipeline.Bind (cmd);
-			cmd.BindDescriptorSet (uiPipeline.Layout, dsMain);
+
+			cmd.BindDescriptorSet (uiPipeline.Layout, dsVkvgOverlay);
 
 			vkvgImage.SetLayout (cmd, VkImageAspectFlags.Color, VkImageLayout.ColorAttachmentOptimal, VkImageLayout.ShaderReadOnlyOptimal,
 				VkPipelineStageFlags.ColorAttachmentOutput, VkPipelineStageFlags.FragmentShader);
@@ -137,6 +154,18 @@ namespace pbrSachaWillem {
 
 			vkvgImage.SetLayout (cmd, VkImageAspectFlags.Color, VkImageLayout.ShaderReadOnlyOptimal, VkImageLayout.ColorAttachmentOptimal,
 				VkPipelineStageFlags.FragmentShader, VkPipelineStageFlags.BottomOfPipe);
+
+			if (!showDebugImg)
+				return;
+			const uint debugImgSize = 256;
+			const uint debugImgMargin = 10;
+
+			cmd.BindDescriptorSet (uiPipeline.Layout, dsDebugImg);
+
+			cmd.SetViewport (debugImgSize, debugImgSize, debugImgMargin, swapChain.Height - debugImgSize - debugImgMargin);
+			cmd.SetScissor (debugImgSize, debugImgSize, (int)debugImgMargin, (int)(swapChain.Height - debugImgSize - debugImgMargin));
+
+			cmd.Draw (3, 1, 0, 0);
 		}
 		#endregion
 
@@ -147,8 +176,7 @@ namespace pbrSachaWillem {
 				vkvg.SampleCount.Sample_4, presentQueue.index);
 
 			//UpdateFrequency = 20;
-			camera.Model = Matrix4x4.CreateScale (1.0f);// *  Matrix4x4.CreateRotationX (Utils.DegreesToRadians (180));
-			//camera.SetRotation (-0.1f,-0.4f);*/
+			camera.Model = Matrix4x4.CreateScale (1.0f);
 			camera.SetPosition (0, 0, 2);
 
 			pbrPipeline = new PBRPipeline(presentQueue,
@@ -208,6 +236,7 @@ namespace pbrSachaWillem {
 		}
 
 		DebugView currentDebugView = DebugView.none;
+		bool queryUpdatePrefilCube, showDebugImg;
 
 		#region update
 		void updateMatrices () {
@@ -218,9 +247,6 @@ namespace pbrSachaWillem {
 			pbrPipeline.matrices.model = camera.Model;
 
 			BoundingBox aabb = pbrPipeline.model.DefaultScene.AABB;
-
-			//pbrPipeline.matrices.model = Matrix4x4.Identity;
-
 			pbrPipeline.matrices.camPos = new Vector3 (
 				-camera.Position.Z * (float)Math.Sin (camera.Rotation.Y) * (float)Math.Cos (camera.Rotation.X),
 				 camera.Position.Z * (float)Math.Sin (camera.Rotation.X),
@@ -228,16 +254,7 @@ namespace pbrSachaWillem {
 			);
 
 			pbrPipeline.uboMats.Update (pbrPipeline.matrices, (uint)Marshal.SizeOf<PBRPipeline.Matrices> ());
-
-			Matrix4x4 v = pbrPipeline.matrices.view;
-			pbrPipeline.matrices.view = new Matrix4x4 (
-				v.M11, v.M12, v.M13,     0,
-				v.M21, v.M22, v.M23,     0,
-				v.M31, v.M32, v.M33,     0,
-				    0,     0,     0,     1);		
-
-			//pbrPipeline.matrices.view *= Matrix4x4.CreateTranslation (-pbrPipeline.matrices.view.Translation);
-			//pbrPipeline.matrices.model = Matrix4x4.Identity;
+			pbrPipeline.matrices.view.Translation = Vector3.Zero;
 			pbrPipeline.uboSkybox.Update (pbrPipeline.matrices, (uint)Marshal.SizeOf<PBRPipeline.Matrices> ());
 		}
 		void updateParams () {
@@ -248,11 +265,6 @@ namespace pbrSachaWillem {
 			updateMatrices ();
 			updateParams ();
 			updateViewRequested = false;
-			if (queryUpdatePrefilCube) {
-				pbrPipeline.updatePrefil (presentQueue, cmdPool);
-				buildCommandBuffers ();
-				queryUpdatePrefilCube = false;
-			}
 		}
 		public override void Update () {
 			results = statPool.GetResults ();
@@ -287,7 +299,6 @@ namespace pbrSachaWillem {
 
 			buildCommandBuffers ();
 		}
-		bool queryUpdatePrefilCube;
 
 		#region Mouse and keyboard
 		protected override void onMouseMove (double xPos, double yPos) {
@@ -296,7 +307,7 @@ namespace pbrSachaWillem {
 			if (MouseButton[0]) {
 				camera.Rotate ((float)-diffX, (float)-diffY);
 			} else if (MouseButton[1]) {
-				camera.Zoom ((float)diffY);
+				camera.SetZoom ((float)diffY);
 			}
 
 			updateViewRequested = true;
@@ -304,7 +315,32 @@ namespace pbrSachaWillem {
 
 		protected override void onKeyDown (Key key, int scanCode, Modifier modifiers) {
 			switch (key) {
+				case Key.F:
+					if (modifiers.HasFlag (Modifier.Shift)) {
+						pbrPipeline.envCube.debugFace --;
+						if (pbrPipeline.envCube.debugFace < 0)
+							pbrPipeline.envCube.debugFace = 5;
+					} else {
+						pbrPipeline.envCube.debugFace ++;
+						if (pbrPipeline.envCube.debugFace > 5)
+							pbrPipeline.envCube.debugFace = 0;
+					}
+					queryUpdatePrefilCube = updateViewRequested = true;
+					break;
+				case Key.M:
+					if (modifiers.HasFlag (Modifier.Shift)) {
+						pbrPipeline.envCube.debugMip --;
+						if (pbrPipeline.envCube.debugMip < 0)
+							pbrPipeline.envCube.debugMip = (int)pbrPipeline.envCube.prefilterCube.CreateInfo.mipLevels - 1;
+					} else {
+						pbrPipeline.envCube.debugMip ++;
+						if (pbrPipeline.envCube.debugMip > pbrPipeline.envCube.prefilterCube.CreateInfo.mipLevels)
+							pbrPipeline.envCube.debugMip = 0;
+					}
+					queryUpdatePrefilCube = updateViewRequested = true;
+					break;
 				case Key.P:
+					showDebugImg = !showDebugImg;
 					queryUpdatePrefilCube = updateViewRequested = true;
 					break;
 				case Key.Keypad0:
