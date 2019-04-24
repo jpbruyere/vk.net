@@ -151,7 +151,7 @@ void main()
     float perceptualRoughness;
     float metallic;    
     vec4 baseColor;
-    vec3 emissive;    
+    vec3 emissive = vec3(0);    
     
     baseColor = materials[materialIdx].baseColorFactor;
     
@@ -209,17 +209,23 @@ void main()
     
     const float u_OcclusionStrength = 1.0f;
     const float u_EmissiveFactor = 1.0f;
+    float ao = 1.0f;
     
     if ((materials[materialIdx].tex0 & MAP_EMISSIVE) == MAP_EMISSIVE)    
         emissive = SRGBtoLINEAR(texture(emissiveMap, inUV0)).rgb * u_EmissiveFactor;
     else if ((materials[materialIdx].tex1 & MAP_EMISSIVE) == MAP_EMISSIVE)    
         emissive = SRGBtoLINEAR(texture(emissiveMap, inUV1)).rgb * u_EmissiveFactor;
+    
+    if ((materials[materialIdx].tex0 & MAP_AO) == MAP_AO)
+        ao = texture(aoMap, inUV0).r;
+    else if ((materials[materialIdx].tex1 & MAP_AO) == MAP_AO)
+        ao = texture(aoMap, inUV1).r;
         
     vec3 n = getNormal();    
     vec3 v = normalize(ubo.camPos.xyz - inWorldPos);
     
     outColorRough = vec4 (baseColor.rgb, perceptualRoughness);
     outEmitMetal = vec4 (emissive, metallic);
-    outN = vec4 (n, 1);
+    outN = vec4 (n, ao);
     outPos = vec4 (v, linearDepth(gl_FragCoord.z));
 }

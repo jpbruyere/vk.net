@@ -14,7 +14,19 @@ namespace deferred {
 		}
 
 		VkSampleCountFlags samples = VkSampleCountFlags.SampleCount1;
+		enum DebugView {
+			none,
+			color,
+			normal,
+			pos,
+			occlusion,
+			emissive,
+			metallic,
+			roughness,
+			depth
+		}
 
+		DebugView currentDebugView = DebugView.none;
 		public struct Matrices {
 			public Matrix4x4 projection;
 			public Matrix4x4 model;
@@ -53,7 +65,7 @@ namespace deferred {
 		DescriptorSetLayout descLayoutMain, descLayoutTextures, descLayoutGBuff;
 		DescriptorSet dsMain, dsGBuff;
 
-		Pipeline gBuffPipeline, composePipeline;
+		Pipeline gBuffPipeline, composePipeline, debugPipeline;
 
 		HostBuffer uboMats;
 
@@ -166,12 +178,33 @@ namespace deferred {
 
 			composePipeline = new GraphicPipeline (cfg);
 
+			cfg.shaders[1] = new ShaderInfo (VkShaderStageFlags.Fragment, "shaders/show_gbuff.frag.spv");
+			debugPipeline = new GraphicPipeline (cfg);
+
 			envCube = new EnvironmentCube (dsMain, gBuffPipeline.Layout, presentQueue, renderPass);
 
 			matrices.prefilteredCubeMipLevels = envCube.prefilterCube.CreateInfo.mipLevels;
 			uboMats = new HostBuffer (dev, VkBufferUsageFlags.UniformBuffer, matrices, true);
 
-			model = new PbrModel (presentQueue, "../data/models/DamagedHelmet/glTF/DamagedHelmet.gltf",
+			string[] modelPathes = {
+				"../data/models/DamagedHelmet/glTF/DamagedHelmet.gltf",
+				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/Avocado/glTF/Avocado.gltf",
+				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/BarramundiFish/glTF/BarramundiFish.gltf",
+				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/BoomBoxWithAxes/glTF/BoomBoxWithAxes.gltf",
+				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/Box/glTF/Box.gltf",
+				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/EnvironmentTest/glTF/EnvironmentTest.gltf",
+				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/MetalRoughSpheres/glTF/MetalRoughSpheres.gltf",
+				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/OrientationTest/glTF/OrientationTest.gltf",
+				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/Buggy/glTF/Buggy.gltf",
+				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/2CylinderEngine/glTF-Embedded/2CylinderEngine.gltf",
+				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/FlightHelmet/glTF/FlightHelmet.gltf",
+				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/GearboxAssy/glTF/GearboxAssy.gltf",
+				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/Lantern/glTF/Lantern.gltf",
+				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/SciFiHelmet/glTF/SciFiHelmet.gltf",
+				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/Sponza/glTF/Sponza.gltf",
+			};
+
+			model = new PbrModel (presentQueue, modelPathes[10],
 				descLayoutTextures,
 				AttachmentType.Color,
 				AttachmentType.PhysicalProps,
@@ -217,7 +250,13 @@ namespace deferred {
 			renderPass.BeginSubPass (cmd);
 
 			cmd.BindDescriptorSet (composePipeline.Layout, dsGBuff, 2);
-			composePipeline.Bind (cmd);
+
+			if (currentDebugView == DebugView.none)
+				composePipeline.Bind (cmd);
+			else {
+				debugPipeline.Bind (cmd);
+				cmd.PushConstant (debugPipeline.Layout, VkShaderStageFlags.Fragment, (int)currentDebugView - 1, (uint)Marshal.SizeOf<Matrix4x4> ());
+			}
 
 			cmd.Draw (3, 1, 0, 0);
 
@@ -302,9 +341,29 @@ namespace deferred {
 		}
 
 
+		public override void Update () {
+			if (!rebuildBuffers)
+				return;
+			buildCommandBuffers ();
+			rebuildBuffers = false;
+		}
+
+
 		#region Mouse and keyboard
 		protected override void onKeyDown (Key key, int scanCode, Modifier modifiers) {
 			switch (key) {
+				case Key.Keypad0:
+				case Key.Keypad1:
+				case Key.Keypad2:
+				case Key.Keypad3:
+				case Key.Keypad4:
+				case Key.Keypad5:
+				case Key.Keypad6:
+				case Key.Keypad7:
+				case Key.Keypad8:
+					currentDebugView = (DebugView)(int)key-320;
+					rebuildBuffers = true;
+					break;
 				case Key.Up:
 					if (modifiers.HasFlag (Modifier.Shift))
 						lightPos -= Vector4.UnitZ;
@@ -382,6 +441,7 @@ namespace deferred {
 
 					gBuffPipeline.Dispose ();
 					composePipeline.Dispose ();
+					debugPipeline.Dispose ();
 
 					descLayoutMain.Dispose ();
 					descLayoutTextures.Dispose ();
