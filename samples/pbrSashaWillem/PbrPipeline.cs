@@ -5,15 +5,12 @@ using VK;
 
 namespace CVKL {
 	class PBRPipeline : GraphicPipeline {
-		[StructLayout(LayoutKind.Sequential)]
+
 		public struct Matrices {
 			public Matrix4x4 projection;
 			public Matrix4x4 model;
 			public Matrix4x4 view;
-			public Vector3 camPos;
-		}
-		[StructLayout (LayoutKind.Sequential)]
-		public struct Params {
+			public Vector4 camPos;
 			public Vector4 lightDir;
 			public float exposure;
 			public float gamma;
@@ -23,8 +20,8 @@ namespace CVKL {
 			public float debugViewEquation;
 		}
 
-		public Params parametters = new Params {
-			lightDir = Vector4.Normalize(new Vector4 (0.7f, 0.6f, 0.2f, 0.0f)),
+		public Matrices matrices = new Matrices {
+			lightDir = Vector4.Normalize (new Vector4 (0.7f, 0.6f, 0.2f, 0.0f)),
 			gamma = 2.2f,
 			exposure = 4.5f,
 			scaleIBLAmbient = 1f,
@@ -32,37 +29,32 @@ namespace CVKL {
 			debugViewEquation = 0
 		};
 
-
-		public Matrices matrices = new Matrices {
-		};
-
-		public HostBuffer uboMats, uboSkybox;
-		public HostBuffer uboParams;
+		public HostBuffer uboMats;
 
 		DescriptorPool descriptorPool;
 
 		DescriptorSetLayout descLayoutMain;
 		DescriptorSetLayout descLayoutTextures;
-		DescriptorSet dsMain, dsSkybox;
+		public DescriptorSet dsMain;
 
 		public PbrModel2 model;
 		public EnvironmentCube envCube;
 
-		public PBRPipeline (Queue staggingQ, RenderPass renderPass) :
+		public PBRPipeline (Queue staggingQ, RenderPass renderPass, Image uiImage) :
 			base (renderPass, "pbr pipeline") {
 
-			descriptorPool = new DescriptorPool (Dev, 3,
-				new VkDescriptorPoolSize (VkDescriptorType.UniformBuffer, 6),
-				new VkDescriptorPoolSize (VkDescriptorType.CombinedImageSampler, 11)
+			descriptorPool = new DescriptorPool (Dev, 2,
+				new VkDescriptorPoolSize (VkDescriptorType.UniformBuffer, 2),
+				new VkDescriptorPoolSize (VkDescriptorType.CombinedImageSampler, 9)
 			);
 
 			descLayoutMain = new DescriptorSetLayout (Dev,
 				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment, VkDescriptorType.UniformBuffer),
-				new VkDescriptorSetLayoutBinding (1, VkShaderStageFlags.Fragment, VkDescriptorType.UniformBuffer),
+				new VkDescriptorSetLayoutBinding (1, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
 				new VkDescriptorSetLayoutBinding (2, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
 				new VkDescriptorSetLayoutBinding (3, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
-				new VkDescriptorSetLayoutBinding (4, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
-				new VkDescriptorSetLayoutBinding (5, VkShaderStageFlags.Fragment, VkDescriptorType.UniformBuffer));
+				new VkDescriptorSetLayoutBinding (4, VkShaderStageFlags.Fragment, VkDescriptorType.UniformBuffer),
+				new VkDescriptorSetLayoutBinding (5, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler));//ui image
 
 			descLayoutTextures = new DescriptorSetLayout (Dev,
 				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
@@ -73,11 +65,8 @@ namespace CVKL {
 			);
 
 			dsMain = descriptorPool.Allocate (descLayoutMain);
-			dsSkybox = descriptorPool.Allocate (descLayoutMain);
 
 			GraphicPipelineConfig cfg = GraphicPipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, renderPass.Samples);
-
-
 			cfg.Layout = new PipelineLayout (Dev, descLayoutMain, descLayoutTextures);
 			cfg.Layout.AddPushConstants (
 				new VkPushConstantRange (VkShaderStageFlags.Vertex, (uint)Marshal.SizeOf<Matrix4x4> ()),
@@ -94,17 +83,10 @@ namespace CVKL {
 
 			init (cfg);
 
-			envCube = new EnvironmentCube (dsSkybox, layout, staggingQ, RenderPass);
+			envCube = new EnvironmentCube (dsMain, layout, staggingQ, RenderPass);
 
-			parametters.prefilteredCubeMipLevels = envCube.prefilterCube.CreateInfo.mipLevels;
-
-			uboMats = new HostBuffer (Dev, VkBufferUsageFlags.UniformBuffer, (ulong)Marshal.SizeOf<Matrices> ());
-			uboSkybox = new HostBuffer (Dev, VkBufferUsageFlags.UniformBuffer, (ulong)Marshal.SizeOf<Matrices> ());
-			uboParams = new HostBuffer (Dev, VkBufferUsageFlags.UniformBuffer, (ulong)Marshal.SizeOf<Params> ());
-
-			uboMats.Map ();//permanent map
-			uboSkybox.Map ();
-			uboParams.Map ();
+			matrices.prefilteredCubeMipLevels = envCube.prefilterCube.CreateInfo.mipLevels;
+			uboMats = new HostBuffer (Dev, VkBufferUsageFlags.UniformBuffer, matrices, true);
 
 			string[] modelPathes = {
 				"../data/models/DamagedHelmet/glTF/DamagedHelmet.gltf",
@@ -129,30 +111,23 @@ namespace CVKL {
 			//model = new Model (Dev, presentQueue, "../data/models/icosphere.gltf");
 			//model = new Model (Dev, presentQueue, cmdPool, "../data/models/cube.gltf");
 			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (descLayoutMain);
-			uboUpdate.Write (Dev, dsSkybox,
-				uboSkybox.Descriptor,
-				uboParams.Descriptor,
-				envCube.cubemap.Descriptor,
-				envCube.prefilterCube.Descriptor,
-				envCube.lutBrdf.Descriptor,
-				model.materialUBO.Descriptor);
 			uboUpdate.Write (Dev, dsMain,
 				uboMats.Descriptor,
-				uboParams.Descriptor,
 				envCube.irradianceCube.Descriptor,
 				envCube.prefilterCube.Descriptor,
 				envCube.lutBrdf.Descriptor,
-				model.materialUBO.Descriptor);
+				model.materialUBO.Descriptor,
+				uiImage.Descriptor);
 
 		}
 
-		public void RecordDraw (CommandBuffer cmd) {		
+		public void RecordDraw (CommandBuffer cmd) {
+			cmd.BindDescriptorSet (Layout, dsMain);
 			envCube.RecordDraw (cmd);
 			drawModel (cmd);
 		}
 		void drawModel (CommandBuffer cmd) {
 			Bind (cmd);
-			cmd.BindDescriptorSet (Layout, dsMain);
 			model.Bind (cmd);
 			model.DrawAll (cmd, Layout);
 
@@ -167,8 +142,6 @@ namespace CVKL {
 			descriptorPool.Dispose ();
 
 			uboMats.Dispose ();
-			uboSkybox.Dispose ();
-			uboParams.Dispose ();
 
 			base.Dispose (disposing);
 		}

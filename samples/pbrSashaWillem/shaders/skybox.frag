@@ -6,11 +6,19 @@ layout (set = 0, location = 0) in vec3 inUVW;
 
 layout (set = 0, location = 0) out vec4 outColor;
 
-layout (set = 0, binding = 1) uniform UBOParams {
-    vec4 _pad0;
+layout (set = 0, binding = 0) uniform UBO {
+    mat4 projection;
+    mat4 model;
+    mat4 view;
+    vec3 camPos;
+    vec4 lightDir;
     float exposure;
     float gamma;
-} uboParams;
+    float prefilteredCubeMipLevels;
+    float scaleIBLAmbient;
+    float debugViewInputs;
+    float debugViewEquation;
+} ubo;
 
 // From http://filmicworlds.com/blog/filmic-tonemapping-operators/
 vec3 Uncharted2Tonemap(vec3 color)
@@ -27,9 +35,9 @@ vec3 Uncharted2Tonemap(vec3 color)
 
 vec4 tonemap(vec4 color)
 {
-    vec3 outcol = Uncharted2Tonemap(color.rgb * uboParams.exposure);
+    vec3 outcol = Uncharted2Tonemap(color.rgb * ubo.exposure);
     outcol = outcol * (1.0f / Uncharted2Tonemap(vec3(11.2f)));  
-    return vec4(pow(outcol, vec3(1.0f / uboParams.gamma)), color.a);
+    return vec4(pow(outcol, vec3(1.0f / ubo.gamma)), color.a);
 }
 
 #define MANUAL_SRGB 1

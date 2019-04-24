@@ -25,5 +25,5 @@ void main()
 {
     outUVW = inPos;
     outUVW.y = -outUVW.y;        
-    gl_Position = ubo.projection * ubo.view * vec4(inPos, 1.0);    
+    gl_Position = ubo.projection * mat4(mat3(ubo.view)) * vec4(inPos, 1.0);    
 }

@@ -6,7 +6,6 @@ using VK;
 
 namespace CVKL {
 	class EnvironmentCube : GraphicPipeline {
-		public DescriptorSet dsSkybox;
 
 		GPUBuffer vboSkybox;
 
@@ -22,13 +21,11 @@ namespace CVKL {
 		public EnvironmentCube (DescriptorSet dsSkybox, PipelineLayout plLayout, Queue staggingQ, RenderPass renderPass)
 		: base (renderPass, "EnvCube pipeline") {
 
-			this.dsSkybox = dsSkybox;
-
 			using (CommandPool cmdPool = new CommandPool (staggingQ.Dev, staggingQ.index)) {
 
 				vboSkybox = new GPUBuffer<float> (staggingQ, cmdPool, VkBufferUsageFlags.VertexBuffer, box_vertices);
 
-				cubemap = KTX.KTX.Load (staggingQ, cmdPool, cubemapPathes[0],
+				cubemap = KTX.KTX.Load (staggingQ, cmdPool, cubemapPathes[2],
 					VkImageUsageFlags.Sampled, VkMemoryPropertyFlags.DeviceLocal, true);
 				cubemap.CreateView (VkImageViewType.Cube, VkImageAspectFlags.Color, 6, 0, cubemap.CreateInfo.mipLevels);
 				cubemap.CreateSampler (VkSamplerAddressMode.ClampToEdge);
@@ -61,7 +58,6 @@ namespace CVKL {
 
 		public void RecordDraw (CommandBuffer cmd) {
 		 	Bind (cmd);
-			cmd.BindDescriptorSet (Layout, dsSkybox);
 			cmd.BindVertexBuffer (vboSkybox);
 			cmd.Draw (36);
 		}
@@ -291,6 +287,7 @@ namespace CVKL {
 								cmap.Handle, VkImageLayout.TransferDstOptimal,
 								1, region.Pin ());
 							region.Unpin ();
+
 							//debug img
 							if (target == CBTarget.PREFILTEREDENV && m == debugMip && f == debugFace) {
 								debugImg?.Dispose ();
