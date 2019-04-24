@@ -41,40 +41,45 @@ namespace CVKL {
 	public struct BoundingBox {
 		public Vector3 min;
 		public Vector3 max;
-		public BoundingBox (Vector3 min, Vector3 max) {
+		public bool isValid;
+		public BoundingBox (Vector3 min, Vector3 max, bool isValid = false) {
 			this.min = min;
 			this.max = max;
+			this.isValid = isValid;
 		}
 		public BoundingBox getAABB (Matrix4x4 m) {
+			if (!isValid)
+				return default (BoundingBox);
 			Vector3 mini = new Vector3 (m.M41, m.M42, m.M43);
 			Vector3 maxi = mini;
 			Vector3 v0, v1;
 
 			Vector3 right = new Vector3 (m.M11, m.M12, m.M13);
-			v0 = right * mini.X;
-			v1 = right * maxi.X;
+			v0 = right * this.min.X;
+			v1 = right * this.max.X;
 			mini += Vector3.Min (v0, v1);
 			maxi += Vector3.Max (v0, v1);
 
 			Vector3 up = new Vector3 (m.M21, m.M22, m.M23);
-			v0 = up * mini.Y;
-			v1 = up * maxi.Y;
+			v0 = up * this.min.Y;
+			v1 = up * this.max.Y;
 			mini += Vector3.Min (v0, v1);
 			maxi += Vector3.Max (v0, v1);
 
 			Vector3 back = new Vector3 (m.M31, m.M32, m.M33);
-			v0 = back * mini.Z;
-			v1 = back * maxi.Z;
+			v0 = back * this.min.Z;
+			v1 = back * this.max.Z;
 			mini += Vector3.Min (v0, v1);
 			maxi += Vector3.Max (v0, v1);
 
-			return new BoundingBox (mini, maxi);
+			return new BoundingBox (mini, maxi, true);
 		}
 
 
 		public static BoundingBox operator +(BoundingBox bb1, BoundingBox bb2) {
-			return new BoundingBox (Vector3.Min (bb1.min, bb2.min), Vector3.Min (bb1.max, bb2.max));
+			return bb1.isValid ? bb2.isValid ? new BoundingBox (Vector3.Min (bb1.min, bb2.min), Vector3.Min (bb1.max, bb2.max),true) : bb1 : bb2.isValid ? bb2 : default(BoundingBox);
 		}
+		public override string ToString () => isValid ? string.Format ($" {min}->{max}") : "Invalid";
 	}
 
 
@@ -149,18 +154,11 @@ namespace CVKL {
 				Matrix4x4 curTransform = localMatrix * currentTransform;
 				BoundingBox aabb = new BoundingBox();
 
-				int firstNode = 0;
-
-				if (Mesh == null) {
-					if (Children == null)
-						return aabb;
-					aabb = Children[0].GetAABB (curTransform);
-					firstNode = 1;
-				}else
+				if (Mesh != null)
 					aabb = Mesh.bb.getAABB (curTransform);
 
 				if (Children != null) {
-					for (int i = firstNode; i < Children.Count; i++) 
+					for (int i = 0; i < Children.Count; i++) 
 						aabb += Children[i].GetAABB (curTransform);
 				}
 				return aabb;
@@ -169,7 +167,7 @@ namespace CVKL {
 
 		protected Device dev;
 
-		public VkIndexType IndexBufferType { get; private set; } = VkIndexType.Uint16;
+		public VkIndexType IndexBufferType;
 
 		protected int defaultSceneIndex;
 		public Scene DefaultScene => Scenes[defaultSceneIndex];

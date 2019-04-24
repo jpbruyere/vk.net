@@ -86,17 +86,21 @@ namespace CVKL {
 			}
 		}
 
-		public void GetVertexCount (out ulong vertexCount, out ulong indexCount) {
+		public void GetVertexCount (out ulong vertexCount, out ulong indexCount, out VkIndexType largestIndexType) {
 			vertexCount = 0;
-			indexCount = 0; 
+			indexCount = 0;
+			largestIndexType = VkIndexType.Uint16;
 			//compute size of stagging buf
 			foreach (GL.Mesh mesh in gltf.Meshes) {
 				foreach (GL.MeshPrimitive p in mesh.Primitives) {
 					int accessorIdx;
 					if (p.Attributes.TryGetValue ("POSITION", out accessorIdx))
 						vertexCount += (ulong)gltf.Accessors[accessorIdx].Count;
-					if (p.Indices != null)
+					if (p.Indices != null) {
 						indexCount += (ulong)gltf.Accessors[(int)p.Indices].Count;
+						if (gltf.Accessors[(int)p.Indices].ComponentType == GL.Accessor.ComponentTypeEnum.UNSIGNED_INT)
+							largestIndexType = VkIndexType.Uint32;
+					}
 				}
 			}
 		}
@@ -105,7 +109,9 @@ namespace CVKL {
 		//buffers must be constructed without duplications
 		public Mesh[] LoadMeshes<TVertex> (VkIndexType indexType, Buffer vbo, ulong vboOffset, Buffer ibo, ulong iboOffset) {
 			ulong vCount, iCount;
-			GetVertexCount (out vCount, out iCount);
+			VkIndexType idxType;
+			GetVertexCount (out vCount, out iCount, out idxType);
+
 			int vertexByteSize = Marshal.SizeOf<TVertex> ();
 			ulong vertSize = vCount * (ulong)vertexByteSize;
 			ulong idxSize = iCount * (indexType == VkIndexType.Uint16 ? 2ul : 4ul);
@@ -164,6 +170,7 @@ namespace CVKL {
 
 							prim.bb.min.ImportFloatArray (AccPos.Min);
 							prim.bb.max.ImportFloatArray (AccPos.Max);
+							prim.bb.isValid = true;
 
 							//Interleaving vertices
 							byte * inPosPtr = null, inNormPtr = null, inUvPtr = null, inUv1Ptr = null;
@@ -222,8 +229,9 @@ namespace CVKL {
 										stagIdxPtr += (long)acc.Count * 2;
 									} else {
 										uint* usPtr = (uint*)stagIdxPtr;
+										ushort* inPtr = (ushort*)inIdxPtr;
 										for (int i = 0; i < acc.Count; i++) 
-											usPtr[i] = inIdxPtr[i];										
+											usPtr[i] = inPtr[i];										
 										stagIdxPtr += (long)acc.Count * 4;
 									}
 								} else if (acc.ComponentType == GL.Accessor.ComponentTypeEnum.UNSIGNED_INT) {
@@ -232,8 +240,9 @@ namespace CVKL {
 										stagIdxPtr += (long)acc.Count * 4;
 									} else {
 										ushort* usPtr = (ushort*)stagIdxPtr;
+										uint* inPtr = (uint*)inIdxPtr;
 										for (int i = 0; i < acc.Count; i++) 
-											usPtr[i] = (ushort)inIdxPtr[i];
+											usPtr[i] = (ushort)inPtr[i];
 										stagIdxPtr += (long)acc.Count * 2;
 									}
 								} else if (acc.ComponentType == GL.Accessor.ComponentTypeEnum.UNSIGNED_BYTE) {
@@ -530,24 +539,6 @@ namespace CVKL {
 					pbr.workflow = Material.Workflow.PhysicalyBaseRendering;
 				}
 				materials.Add (pbr);
-				/*
-				ulong size = (ulong)(materials.Count * Marshal.SizeOf<Material> ());
-
-				uboMaterials = new GPUBuffer (dev, VkBufferUsageFlags.UniformBuffer | VkBufferUsageFlags.TransferDst, size);
-
-				using (HostBuffer stagging = new HostBuffer (dev, VkBufferUsageFlags.TransferSrc, size, materials.Data)) {
-					CommandBuffer cmd = cmdPool.AllocateCommandBuffer ();
-
-					cmd.Start ();
-					stagging.CopyTo (cmd, uboMaterials);
-					cmd.End ();
-
-					transferQ.Submit (cmd);
-
-					dev.WaitIdle ();
-					cmd.Destroy ();
-				}
-				*/
 			}
 			return materials.ToArray ();
 		}

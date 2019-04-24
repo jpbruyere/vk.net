@@ -51,7 +51,7 @@ namespace CVKL {
 			}
 		};
 		/// <summary>
-		/// Pbr data structure suitable for push constant, containing
+		/// Pbr data structure suitable for push constant or ubo, containing
 		/// availablility of attached textures and the coef of pbr inputs
 		/// </summary>
 		public struct PbrMaterial {
@@ -66,7 +66,7 @@ namespace CVKL {
 			public float roughnessFactor;
 			public float alphaMask;
 			public float alphaMaskCutoff;
-			int pad0;
+			int pad0;//see std420
 		}
 
 		Image[] textures;
@@ -84,7 +84,8 @@ namespace CVKL {
 				using (glTFLoader ctx = new glTFLoader (path, transferQ, cmdPool)) {
 					ulong vertexCount, indexCount;
 
-					ctx.GetVertexCount (out vertexCount, out indexCount);
+					ctx.GetVertexCount (out vertexCount, out indexCount, out IndexBufferType);
+
 					ulong vertSize = vertexCount * (ulong)Marshal.SizeOf<Vertex> ();
 					ulong idxSize = indexCount * (IndexBufferType == VkIndexType.Uint16 ? 2ul : 4ul);
 					ulong size = vertSize + idxSize;
@@ -95,7 +96,7 @@ namespace CVKL {
 					vbo.SetName ("vbo gltf");
 					ibo.SetName ("ibo gltf");
 
-					Meshes = new List<Mesh> (ctx.LoadMeshes<Vertex> (VkIndexType.Uint16, vbo, 0, ibo, 0));
+					Meshes = new List<Mesh> (ctx.LoadMeshes<Vertex> (IndexBufferType, vbo, 0, ibo, 0));
 					Scenes = new List<Scene> (ctx.LoadScenes (out defaultSceneIndex));
 				}
 			}
@@ -106,7 +107,7 @@ namespace CVKL {
 				using (glTFLoader ctx = new glTFLoader (path, transferQ, cmdPool)) {
 					ulong vertexCount, indexCount;
 
-					ctx.GetVertexCount (out vertexCount, out indexCount);
+					ctx.GetVertexCount (out vertexCount, out indexCount, out IndexBufferType);
 					ulong vertSize = vertexCount * (ulong)Marshal.SizeOf<Vertex> ();
 					ulong idxSize = indexCount * (IndexBufferType == VkIndexType.Uint16 ? 2ul : 4ul);
 					ulong size = vertSize + idxSize;
@@ -117,7 +118,7 @@ namespace CVKL {
 					vbo.SetName ("vbo gltf");
 					ibo.SetName ("ibo gltf");
 
-					Meshes = new List<Mesh> (ctx.LoadMeshes<Vertex> (VkIndexType.Uint16, vbo, 0, ibo, 0));
+					Meshes = new List<Mesh> (ctx.LoadMeshes<Vertex> (IndexBufferType, vbo, 0, ibo, 0));
 					textures = ctx.LoadImages ();
 
 					loadMaterials (ctx, layout, attachments);

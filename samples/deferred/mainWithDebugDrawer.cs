@@ -155,7 +155,7 @@ namespace deferredDebug {
 			cfg.Layout = new PipelineLayout (dev, descLayoutMain, descLayoutModelTextures, descLayoutGBuff);
 			cfg.Layout.AddPushConstants (
 				new VkPushConstantRange (VkShaderStageFlags.Vertex, (uint)Marshal.SizeOf<Matrix4x4> ()),
-				new VkPushConstantRange (VkShaderStageFlags.Fragment, (uint)Marshal.SizeOf<Model.PbrMaterial> (), 64)
+				new VkPushConstantRange (VkShaderStageFlags.Fragment, sizeof(int), 64)
 			);
 			cfg.RenderPass = renderPass;
 			cfg.blendAttachments.Add (new VkPipelineColorBlendAttachmentState (false));
