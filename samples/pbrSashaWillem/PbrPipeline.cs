@@ -122,7 +122,7 @@ namespace CVKL {
 
 			model = new PbrModel2 (staggingQ, modelPathes[0], descLayoutTextures,
 				AttachmentType.Color,
-				AttachmentType.MetalRoughness,
+				AttachmentType.PhysicalProps,
 				AttachmentType.Normal,
 				AttachmentType.AmbientOcclusion,
 				AttachmentType.Emissive);

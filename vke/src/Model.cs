@@ -186,22 +186,14 @@ namespace CVKL {
 		//	public UInt32 emissiveTexture;
 		//}
 
-		public struct TexCoordSets {
-			public byte baseColor;
-			public byte metallicRoughness;
-			public byte specularGlossiness;
-			public byte normal;
-			public byte occlusion;
-			public byte emissive;
-		}
-
 
 		/// <summary>
 		/// Material class with textures indices and a descriptorSet for those textures
 		/// </summary>
 		public class Material {
+			public enum Workflow { PhysicalyBaseRendering = 1, SpecularGlossinnes };
 			public string Name;
-
+			public Workflow workflow;
 			public UInt32 baseColorTexture;
             public UInt32 metallicRoughnessTexture;
             public UInt32 normalTexture;
@@ -210,7 +202,8 @@ namespace CVKL {
 
 			public Vector4 baseColorFactor;
 			public Vector4 emissiveFactor;
-			public VK.AttachmentType availableAttachments;
+			public AttachmentType availableAttachments;
+			public AttachmentType availableAttachments1;
 			public AlphaMode alphaMode;
 			public float alphaCutoff;
 			public float metallicFactor;
@@ -218,8 +211,6 @@ namespace CVKL {
 
 			public bool metallicRoughness = true;
 			public bool specularGlossiness = false;
-
-			public TexCoordSets texCoordSets;
 
 			//struct Extension {
 			//	vkglTF::Texture* specularGlossinessTexture;
@@ -232,6 +223,7 @@ namespace CVKL {
 			public Material (UInt32 _baseColorTexture = 0, UInt32 _metallicRoughnessTexture = 0,
             	UInt32 _normalTexture = 0, UInt32 _occlusionTexture = 0)
 			{
+				workflow = Workflow.PhysicalyBaseRendering;
                 baseColorTexture = _baseColorTexture;
                 metallicRoughnessTexture = _metallicRoughnessTexture;
                 normalTexture = _normalTexture;

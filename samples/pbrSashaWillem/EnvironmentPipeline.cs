@@ -33,6 +33,7 @@ namespace CVKL {
 				cubemap.CreateView (VkImageViewType.Cube, VkImageAspectFlags.Color, 6, 0, cubemap.CreateInfo.mipLevels);
 				cubemap.CreateSampler (VkSamplerAddressMode.ClampToEdge);
 				cubemap.SetName ("skybox Texture");
+				cubemap.Descriptor.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
 
 				GraphicPipelineConfig cfg = GraphicPipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, renderPass.Samples, false);
 				cfg.RenderPass = renderPass;

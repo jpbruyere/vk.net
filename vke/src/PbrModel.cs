@@ -160,8 +160,8 @@ namespace CVKL {
 								if (materials[i].availableAttachments.HasFlag (AttachmentType.AmbientOcclusion))
 									uboUpdate.AddWriteInfo (descriptorSets[i], dslb, textures[(int)mats[i].occlusionTexture].Descriptor);
 								break;
-							case AttachmentType.MetalRoughness:
-								if (materials[i].availableAttachments.HasFlag (AttachmentType.MetalRoughness))
+							case AttachmentType.PhysicalProps:
+								if (materials[i].availableAttachments.HasFlag (AttachmentType.PhysicalProps))
 									uboUpdate.AddWriteInfo (descriptorSets[i], dslb, textures[(int)mats[i].metallicRoughnessTexture].Descriptor);
 								break;
 							case AttachmentType.Metal:

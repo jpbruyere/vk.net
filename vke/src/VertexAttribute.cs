@@ -42,7 +42,7 @@ namespace VK {
 		AmbientOcclusion = 0x4,
 		Metal = 0x8,
 		Roughness = 0x10,
-		MetalRoughness = 0x20,
+		PhysicalProps = 0x20,
 		Emissive = 0x40,
 	};
 

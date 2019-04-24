@@ -60,17 +60,13 @@ namespace CVKL {
 			public Vector4 diffuseFactor;
 			public Vector4 specularFactor;
 			public float workflow;
-			public int baseColorTextureSet;
-			public int physicalDescriptorTextureSet;
-			public int normalTextureSet;
-			public int occlusionTextureSet;
-			public int emissiveTextureSet;
+			public AttachmentType TexCoord0;
+			public AttachmentType TexCoord1;
 			public float metallicFactor;
 			public float roughnessFactor;
 			public float alphaMask;
 			public float alphaMaskCutoff;
 			int pad0;
-			int pad1;
 		}
 
 		Image[] textures;
@@ -148,17 +144,18 @@ namespace CVKL {
 
 			for (int i = 0; i < mats.Length; i++) {
 				materials[i] = new PbrMaterial {
+					workflow = (float)mats[i].workflow,
  					baseColorFactor = mats[i].baseColorFactor,
 					emissiveFactor = mats[i].emissiveFactor,
 					metallicFactor = mats[i].metallicFactor,
 					roughnessFactor = mats[i].roughnessFactor,
+					TexCoord0 = mats[i].availableAttachments,
+					TexCoord1 = mats[i].availableAttachments1,
 					alphaMask = 0f,
 					alphaMaskCutoff = 0.0f,
 					diffuseFactor = new Vector4(0),
 					specularFactor = new Vector4 (0)
 				};
-
-				materials[i].workflow = 0;
 
 				descriptorSets[i] = descriptorPool.Allocate (layout);
 				descriptorSets[i].Handle.SetDebugMarkerName (dev, "descSet " + mats[i].Name);
@@ -173,43 +170,28 @@ namespace CVKL {
 							case AttachmentType.None:
 								break;
 							case AttachmentType.Color:
-								if (mats[i].availableAttachments.HasFlag (AttachmentType.Color)) {
+								if (mats[i].availableAttachments.HasFlag (AttachmentType.Color))
 									uboUpdate.AddWriteInfo (descriptorSets[i], dslb, textures[(int)mats[i].baseColorTexture].Descriptor);
-									materials[i].baseColorTextureSet = mats[i].texCoordSets.baseColor;
-								} else
-									materials[i].baseColorTextureSet = -1;
 								break;
 							case AttachmentType.Normal:
-								if (mats[i].availableAttachments.HasFlag (AttachmentType.Normal)){
+								if (mats[i].availableAttachments.HasFlag (AttachmentType.Normal))
 									uboUpdate.AddWriteInfo (descriptorSets[i], dslb, textures[(int)mats[i].normalTexture].Descriptor);
-									materials[i].normalTextureSet = mats[i].texCoordSets.normal;
-								} else
-									materials[i].normalTextureSet = -1;
 								break;
 							case AttachmentType.AmbientOcclusion:
-								if (mats[i].availableAttachments.HasFlag (AttachmentType.AmbientOcclusion)){
+								if (mats[i].availableAttachments.HasFlag (AttachmentType.AmbientOcclusion))
 									uboUpdate.AddWriteInfo (descriptorSets[i], dslb, textures[(int)mats[i].occlusionTexture].Descriptor);
-									materials[i].occlusionTextureSet = mats[i].texCoordSets.occlusion;
-								} else
-									materials[i].occlusionTextureSet = -1;
 								break;
-							case AttachmentType.MetalRoughness:
-								if (mats[i].availableAttachments.HasFlag (AttachmentType.MetalRoughness)){
+							case AttachmentType.PhysicalProps:
+								if (mats[i].availableAttachments.HasFlag (AttachmentType.PhysicalProps))
 									uboUpdate.AddWriteInfo (descriptorSets[i], dslb, textures[(int)mats[i].metallicRoughnessTexture].Descriptor);
-									materials[i].physicalDescriptorTextureSet = mats[i].texCoordSets.metallicRoughness;
-								} else
-									materials[i].physicalDescriptorTextureSet = -1;
 								break;
 							case AttachmentType.Metal:
 								break;
 							case AttachmentType.Roughness:
 								break;
 							case AttachmentType.Emissive:
-								if (mats[i].availableAttachments.HasFlag (AttachmentType.Emissive)){
+								if (mats[i].availableAttachments.HasFlag (AttachmentType.Emissive))
 									uboUpdate.AddWriteInfo (descriptorSets[i], dslb, textures[(int)mats[i].emissiveTexture].Descriptor);
-									materials[i].emissiveTextureSet = mats[i].texCoordSets.emissive;
-								} else
-									materials[i].emissiveTextureSet = -1;
 								break;
 						}
 					}
