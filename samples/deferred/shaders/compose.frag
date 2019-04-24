@@ -169,7 +169,8 @@ float convertMetallic(vec3 diffuse, vec3 specular, float maxSpecular) {
 
 void main() 
 {
-    
+    if (subpassLoad(samplerPos).a == 1.0f)
+        discard;
     
     float perceptualRoughness = subpassLoad(samplerColorRough).a;
     float metallic = subpassLoad(samplerEmitMetal).a;
