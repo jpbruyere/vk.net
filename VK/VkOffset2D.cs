@@ -1,4 +1,5 @@
-﻿using System;
+﻿/* credit to https://github.com/mellinoe */
+using System;
 using System.Collections.Generic;
 using System.Text;
 
