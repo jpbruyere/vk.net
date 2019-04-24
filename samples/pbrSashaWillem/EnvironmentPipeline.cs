@@ -348,6 +348,8 @@ namespace CVKL {
 			irradianceCube.Dispose ();
 			prefilterCube.Dispose ();
 
+			debugImg?.Dispose ();
+
 			base.Dispose (disposing);
 		}
 	}
