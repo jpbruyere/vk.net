@@ -27,13 +27,7 @@ namespace pbrSachaWillem {
 		PBRPipeline pbrPipeline;
 
 		enum DebugView {
-			none,
-			color,
-			normal,
-			occlusion,
-			emissive,
-			metallic,
-			roughness
+
 		}
 
 		DebugView currentDebugView = DebugView.none;
