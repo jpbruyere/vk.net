@@ -62,23 +62,21 @@ namespace CVKL {
             Utils.CheckResult (vkQueuePresentKHR (handle, ref present));
         }
         public void Present (SwapChain swapChain, VkSemaphore wait) {
-            unsafe {
-                VkPresentInfoKHR present = VkPresentInfoKHR.New();
+            VkPresentInfoKHR present = VkPresentInfoKHR.New();
 
-                uint idx = swapChain.currentImageIndex;
-                VkSwapchainKHR sc = swapChain.handle;
-                present.swapchainCount = 1;
-                present.pSwapchains = sc.Pin();
-                present.waitSemaphoreCount = 1;
-                present.pWaitSemaphores = wait.Pin();
-                present.pImageIndices = idx.Pin();
+            uint idx = swapChain.currentImageIndex;
+            VkSwapchainKHR sc = swapChain.handle;
+            present.swapchainCount = 1;
+            present.pSwapchains = sc.Pin();
+            present.waitSemaphoreCount = 1;
+            present.pWaitSemaphores = wait.Pin();
+            present.pImageIndices = idx.Pin();
 
-                Utils.CheckResult (vkQueuePresentKHR (handle, ref present));
+            Utils.CheckResult (vkQueuePresentKHR (handle, ref present));
 
-				sc.Unpin ();
-				wait.Unpin ();
-				idx.Unpin ();
-            }
+			sc.Unpin ();
+			wait.Unpin ();
+			idx.Unpin ();
         }
     }
 

@@ -84,6 +84,7 @@ namespace pbrSachaWillem {
 				VkImageUsageFlags.ColorAttachment, (uint)vkvgSurf.Width, (uint)vkvgSurf.Height);
 			uiImage.CreateView (VkImageViewType.ImageView2D, VkImageAspectFlags.Color);
 			uiImage.CreateSampler (VkFilter.Nearest, VkFilter.Nearest, VkSamplerMipmapMode.Nearest, VkSamplerAddressMode.ClampToBorder);
+			uiImage.Descriptor.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
 		}
 
 		void vkvgDraw () {

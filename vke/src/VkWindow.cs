@@ -98,7 +98,7 @@ namespace CVKL {
             Glfw3.WindowHint (WindowAttribute.ClientApi, 0);
             Glfw3.WindowHint (WindowAttribute.Resizable, 1);
 
-            hWin = Glfw3.CreateWindow ((int)width, (int)height, name, MonitorHandle.Zero, IntPtr.Zero);
+			hWin = Glfw3.CreateWindow ((int)width, (int)height, name, MonitorHandle.Zero, IntPtr.Zero);
 
             Glfw3.SetKeyCallback (hWin, HandleKeyDelegate);
             Glfw3.SetMouseButtonPosCallback (hWin, HandleMouseButtonDelegate);
@@ -138,7 +138,7 @@ namespace CVKL {
             //activate the device to have effective queues created accordingly to what's available
             dev.Activate (enabledFeatures, EnabledExtensions);
 
-            swapChain = new SwapChain (presentQueue as PresentQueue, width, height, VkFormat.B8g8r8a8Unorm,
+            swapChain = new SwapChain (presentQueue as PresentQueue, width, height, VkFormat.B8g8r8a8Srgb,
                 vSync ? VkPresentModeKHR.FifoKHR : VkPresentModeKHR.MailboxKHR );
 
             cmdPool = new CommandPool(dev, presentQueue.qFamIndex);

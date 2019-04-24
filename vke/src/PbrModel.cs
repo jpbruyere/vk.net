@@ -132,13 +132,6 @@ namespace CVKL {
 				descriptorSets[i] = descriptorPool.Allocate (layout);
 				descriptorSets[i].handle.SetDebugMarkerName (dev, "descSet " + mats[i].Name);
 
-				/*materials[i].availableAttachments &= ~AttachmentType.Emissive;
-				materials[i].availableAttachments &= ~AttachmentType.AmbientOcclusion;
-				materials[i].availableAttachments &= ~AttachmentType.Normal;*/
-
-				//materials[i].metallicFactor = 0.9f;
-				//materials[i].roughnessFactor = 0.2f;
-
 				VkDescriptorSetLayoutBinding dslb =
 					new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler);
 
