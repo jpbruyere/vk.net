@@ -21,7 +21,7 @@ namespace pbrSachaWillem {
 			//features.samplerAnisotropy = true;
 		}
 
-		VkSampleCountFlags samples = VkSampleCountFlags.SampleCount8;
+		VkSampleCountFlags samples = VkSampleCountFlags.SampleCount4;
 
 		Framebuffer[] frameBuffers;
 		PBRPipeline pbrPipeline;

@@ -122,7 +122,7 @@ namespace modelWithVkvgStats {
 				VK.AttachmentType.Color,
 				VK.AttachmentType.Normal,
 				VK.AttachmentType.AmbientOcclusion,
-				VK.AttachmentType.MetalRoughness,
+				VK.AttachmentType.PhysicalProps,
 				VK.AttachmentType.Emissive);
 		}
 

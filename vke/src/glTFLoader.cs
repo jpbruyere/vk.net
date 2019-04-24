@@ -486,37 +486,48 @@ namespace CVKL {
 
 				if (mat.EmissiveTexture != null) {
 					pbr.emissiveTexture = (uint)mat.EmissiveTexture.Index;
-					pbr.texCoordSets.emissive = (byte)mat.EmissiveTexture.TexCoord;
-					pbr.availableAttachments |= AttachmentType.Emissive;
+					if (mat.EmissiveTexture.TexCoord == 1)
+						pbr.availableAttachments1 |= AttachmentType.Emissive;
+					else
+						pbr.availableAttachments |= AttachmentType.Emissive;
 				}
 				if (mat.NormalTexture != null) {
 					pbr.normalTexture = (uint)mat.NormalTexture.Index;
-					pbr.texCoordSets.normal = (byte)mat.NormalTexture.TexCoord;
-					pbr.availableAttachments |= AttachmentType.Normal;
+					if (mat.NormalTexture.TexCoord == 1)
+						pbr.availableAttachments1 |= AttachmentType.Normal;
+					else
+						pbr.availableAttachments |= AttachmentType.Normal;
 				}
 				if (mat.OcclusionTexture != null) {
 					pbr.occlusionTexture = (uint)mat.OcclusionTexture.Index;
-					pbr.texCoordSets.occlusion = (byte)mat.OcclusionTexture.TexCoord;
-					pbr.availableAttachments |= AttachmentType.AmbientOcclusion;
+					if (mat.OcclusionTexture.TexCoord == 1)
+						pbr.availableAttachments1 |= AttachmentType.AmbientOcclusion;
+					else
+						pbr.availableAttachments |= AttachmentType.AmbientOcclusion;
 				}
 
 				if (mat.PbrMetallicRoughness != null) {
 					if (mat.PbrMetallicRoughness.BaseColorTexture != null) {
-						pbr.texCoordSets.baseColor = (byte)mat.PbrMetallicRoughness.BaseColorTexture.TexCoord;
 						pbr.baseColorTexture = (uint)mat.PbrMetallicRoughness.BaseColorTexture.Index;
-						pbr.availableAttachments |= VK.AttachmentType.Color;
+						if (mat.PbrMetallicRoughness.BaseColorTexture.TexCoord == 1)
+							pbr.availableAttachments1 |= AttachmentType.Color;
+						else
+							pbr.availableAttachments |= AttachmentType.Color;
 					}
 
 					FromFloatArray (ref pbr.baseColorFactor, mat.PbrMetallicRoughness.BaseColorFactor);
 
 					if (mat.PbrMetallicRoughness.MetallicRoughnessTexture != null) {
-						pbr.texCoordSets.metallicRoughness = (byte)mat.PbrMetallicRoughness.MetallicRoughnessTexture.TexCoord;
 						pbr.metallicRoughnessTexture = (uint)mat.PbrMetallicRoughness.MetallicRoughnessTexture.Index;
-						pbr.availableAttachments |= VK.AttachmentType.MetalRoughness;
-
+						if (mat.PbrMetallicRoughness.MetallicRoughnessTexture.TexCoord == 1)
+							pbr.availableAttachments1 |= AttachmentType.PhysicalProps;
+						else
+							pbr.availableAttachments |= AttachmentType.PhysicalProps;
 					}
 					pbr.metallicFactor = mat.PbrMetallicRoughness.MetallicFactor;
 					pbr.roughnessFactor = mat.PbrMetallicRoughness.RoughnessFactor;
+
+					pbr.workflow = Material.Workflow.PhysicalyBaseRendering;
 				}
 				materials.Add (pbr);
 				/*

@@ -35,18 +35,22 @@ struct Material {
     vec4 diffuseFactor;
     vec4 specularFactor;
     float workflow;
-    int baseColorTextureSet;
-    int physicalDescriptorTextureSet;
-    int normalTextureSet;   
-    int occlusionTextureSet;
-    int emissiveTextureSet;
+    uint tex0;
+    uint tex1;
     float metallicFactor;   
     float roughnessFactor;  
     float alphaMask;    
     float alphaMaskCutoff;
     int pad0;
-    int pad1;
 };
+
+const uint MAP_COLOR = 0x1;
+const uint MAP_NORMAL = 0x2;
+const uint MAP_AO = 0x4;
+const uint MAP_METAL = 0x8;
+const uint MAP_ROUGHNESS = 0x10;
+const uint MAP_METALROUGHNESS = 0x20;
+const uint MAP_EMISSIVE = 0x40;
 
 layout (set = 0, binding = 5) uniform UBOMaterials {
     Material materials[16];
@@ -94,8 +98,8 @@ struct PBRInfo
 const float M_PI = 3.141592653589793;
 const float c_MinRoughness = 0.04;
 
-const float PBR_WORKFLOW_METALLIC_ROUGHNESS = 0.0;
-const float PBR_WORKFLOW_SPECULAR_GLOSINESS = 1.0f;
+const float PBR_WORKFLOW_METALLIC_ROUGHNESS = 1.0;
+const float PBR_WORKFLOW_SPECULAR_GLOSINESS = 2.0f;
 
 #define MANUAL_SRGB 1
 
@@ -137,9 +141,15 @@ vec4 SRGBtoLINEAR(vec4 srgbIn)
 // or from the interpolated mesh normal and tangent attributes.
 vec3 getNormal()
 {
+    vec3 tangentNormal;
     // Perturb normal, see http://www.thetenthplanet.de/archives/1180
-    vec3 tangentNormal = texture(normalMap, materials[materialIdx].normalTextureSet == 0 ? inUV0 : inUV1).xyz * 2.0 - 1.0;
-
+    if ((materials[materialIdx].tex0 & MAP_NORMAL) == MAP_NORMAL)
+        tangentNormal = texture(normalMap, inUV0).xyz * 2.0 - 1.0;
+    else if ((materials[materialIdx].tex1 & MAP_NORMAL) == MAP_NORMAL)
+        tangentNormal = texture(normalMap, inUV1).xyz * 2.0 - 1.0;
+    else
+        return normalize(inNormal);
+        
     vec3 q1 = dFdx(inWorldPos);
     vec3 q2 = dFdy(inWorldPos);
     vec2 st1 = dFdx(inUV0);
@@ -235,55 +245,47 @@ void main()
     float perceptualRoughness;
     float metallic;
     vec3 diffuseColor;
-    vec4 baseColor;
+    vec4 baseColor;    
 
     vec3 f0 = vec3(0.04);
-
-    if (materials[materialIdx].alphaMask == 1.0f) {
-        if (materials[materialIdx].baseColorTextureSet > -1) {
-            baseColor = SRGBtoLINEAR(texture(colorMap, materials[materialIdx].baseColorTextureSet == 0 ? inUV0 : inUV1)) * materials[materialIdx].baseColorFactor;
-        } else {
-            baseColor = materials[materialIdx].baseColorFactor;
-        }
-        if (baseColor.a < materials[materialIdx].alphaMaskCutoff) {
-            discard;
-        }
-    }
-
+    
+    baseColor = materials[materialIdx].baseColorFactor;
+    
     if (materials[materialIdx].workflow == PBR_WORKFLOW_METALLIC_ROUGHNESS) {
-        // Metallic and Roughness material properties are packed together
-        // In glTF, these factors can be specified by fixed scalar values
-        // or from a metallic-roughness map
         perceptualRoughness = materials[materialIdx].roughnessFactor;
-        metallic = materials[materialIdx].metallicFactor;
-        if (materials[materialIdx].physicalDescriptorTextureSet > -1) {
-            // Roughness is stored in the 'g' channel, metallic is stored in the 'b' channel.
-            // This layout intentionally reserves the 'r' channel for (optional) occlusion map data
-            vec4 mrSample = texture(physicalDescriptorMap, materials[materialIdx].physicalDescriptorTextureSet == 0 ? inUV0 : inUV1);
-            perceptualRoughness = mrSample.g * perceptualRoughness;
-            metallic = mrSample.b * metallic;
-        } else {
-            perceptualRoughness = clamp(perceptualRoughness, c_MinRoughness, 1.0);
-            metallic = clamp(metallic, 0.0, 1.0);
-        }
-        // Roughness is authored as perceptual roughness; as is convention,
-        // convert to material roughness by squaring the perceptual roughness [2].
+        metallic = materials[materialIdx].metallicFactor;        
+        // Roughness is stored in the 'g' channel, metallic is stored in the 'b' channel.
+        // This layout intentionally reserves the 'r' channel for (optional) occlusion map data
+        if ((materials[materialIdx].tex0 & MAP_METALROUGHNESS) == MAP_METALROUGHNESS){
+            perceptualRoughness *= texture(physicalDescriptorMap, inUV0).g;
+            metallic *= texture(physicalDescriptorMap, inUV0).b;
+        }else if ((materials[materialIdx].tex1 & MAP_METALROUGHNESS) == MAP_METALROUGHNESS){
+            perceptualRoughness *= texture(physicalDescriptorMap, inUV1).g;
+            metallic *= texture(physicalDescriptorMap, inUV1).b;
+        }               
+        perceptualRoughness = clamp(perceptualRoughness, c_MinRoughness, 1.0);
+        metallic = clamp(metallic, 0.0, 1.0);        
 
         // The albedo may be defined from a base texture or a flat color
-        if (materials[materialIdx].baseColorTextureSet > -1) {
-            baseColor = SRGBtoLINEAR(texture(colorMap, materials[materialIdx].baseColorTextureSet == 0 ? inUV0 : inUV1)) * materials[materialIdx].baseColorFactor;
-        } else {
-            baseColor = materials[materialIdx].baseColorFactor;
-        }
+        if ((materials[materialIdx].tex0 & MAP_COLOR) == MAP_COLOR)        
+            baseColor *= SRGBtoLINEAR(texture(colorMap, inUV0));
+        else if ((materials[materialIdx].tex1 & MAP_COLOR) == MAP_COLOR)
+            baseColor *= SRGBtoLINEAR(texture(colorMap, inUV1));        
+    }
+    
+    if (materials[materialIdx].alphaMask == 1.0f) {            
+        if (baseColor.a < materials[materialIdx].alphaMaskCutoff) 
+            discard;        
     }
 
     if (materials[materialIdx].workflow == PBR_WORKFLOW_SPECULAR_GLOSINESS) {
         // Values from specular glossiness workflow are converted to metallic roughness
-        if (materials[materialIdx].physicalDescriptorTextureSet > -1) {
-            perceptualRoughness = 1.0 - texture(physicalDescriptorMap, materials[materialIdx].physicalDescriptorTextureSet == 0 ? inUV0 : inUV1).a;
-        } else {
+        if ((materials[materialIdx].tex0 & MAP_METALROUGHNESS) == MAP_METALROUGHNESS)
+            perceptualRoughness = 1.0 - texture(physicalDescriptorMap, inUV0).a;            
+        else if ((materials[materialIdx].tex1 & MAP_METALROUGHNESS) == MAP_METALROUGHNESS)
+            perceptualRoughness = 1.0 - texture(physicalDescriptorMap, inUV1).a;            
+        else
             perceptualRoughness = 0.0;
-        }
 
         const float epsilon = 1e-6;
 
@@ -317,7 +319,7 @@ void main()
     vec3 specularEnvironmentR0 = specularColor.rgb;
     vec3 specularEnvironmentR90 = vec3(1.0, 1.0, 1.0) * reflectance90;
 
-    vec3 n = (materials[materialIdx].normalTextureSet > -1) ? getNormal() : normalize(inNormal);
+    vec3 n = getNormal();
     vec3 v = normalize(ubo.camPos - inWorldPos);    // Vector from surface point to camera
     vec3 l = normalize(uboParams.lightDir.xyz);     // Vector from surface point to light
     vec3 h = normalize(l+v);                        // Half vector between both l and v
@@ -362,17 +364,18 @@ void main()
     color += getIBLContribution(pbrInputs, n, reflection);
 
     const float u_OcclusionStrength = 1.0f;
-    // Apply optional PBR terms for additional (optional) shading
-    if (materials[materialIdx].occlusionTextureSet > -1) {
-        float ao = texture(aoMap, (materials[materialIdx].occlusionTextureSet == 0 ? inUV0 : inUV1)).r;
-        color = mix(color, color * ao, u_OcclusionStrength);
-    }
-
     const float u_EmissiveFactor = 1.0f;
-    if (materials[materialIdx].emissiveTextureSet > -1) {
-        vec3 emissive = SRGBtoLINEAR(texture(emissiveMap, materials[materialIdx].emissiveTextureSet == 0 ? inUV0 : inUV1)).rgb * u_EmissiveFactor;
-        color += emissive;
-    }
+    
+    // Apply optional PBR terms for additional (optional) shading
+    if ((materials[materialIdx].tex0 & MAP_AO) == MAP_AO)
+        color = mix(color, color * texture(aoMap, inUV0).r, u_OcclusionStrength);
+    else if ((materials[materialIdx].tex1 & MAP_AO) == MAP_AO)
+        color = mix(color, color * texture(aoMap, inUV1).r, u_OcclusionStrength);    
+    
+    if ((materials[materialIdx].tex0 & MAP_EMISSIVE) == MAP_EMISSIVE)    
+        color += SRGBtoLINEAR(texture(emissiveMap, inUV0)).rgb * u_EmissiveFactor;             
+    else if ((materials[materialIdx].tex1 & MAP_EMISSIVE) == MAP_EMISSIVE)    
+        color += SRGBtoLINEAR(texture(emissiveMap, inUV1)).rgb * u_EmissiveFactor;             
     
     outColor = vec4(color, baseColor.a);
 
@@ -381,9 +384,14 @@ void main()
         int index = int(uboParams.debugViewInputs);
         switch (index) {
             case 1:
-                outColor.rgba = materials[materialIdx].baseColorTextureSet > -1 ? texture(colorMap, materials[materialIdx].baseColorTextureSet == 0 ? inUV0 : inUV1) : vec4(1.0f);
+                if ((materials[materialIdx].tex0 & MAP_COLOR) == MAP_COLOR)        
+                    outColor.rgba = texture(colorMap, inUV0);
+                else if ((materials[materialIdx].tex1 & MAP_COLOR) == MAP_COLOR)
+                    outColor.rgba = texture(colorMap, inUV1);
+                else
+                    outColor.rgba = vec4(1.0f);                
                 break;
-            case 2:
+            /*case 2:
                 outColor.rgb = (materials[materialIdx].normalTextureSet > -1) ? texture(normalMap, materials[materialIdx].normalTextureSet == 0 ? inUV0 : inUV1).rgb : normalize(inNormal);
                 break;
             case 3:
@@ -397,7 +405,7 @@ void main()
                 break;
             case 6:
                 outColor.rgb = texture(physicalDescriptorMap, inUV0).ggg;
-                break;
+                break;*/
         }
         outColor = SRGBtoLINEAR(outColor);
     }
