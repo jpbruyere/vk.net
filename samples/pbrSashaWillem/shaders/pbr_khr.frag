@@ -317,7 +317,7 @@ void main()
     // For very low reflectance range on highly diffuse objects (below 4%), incrementally reduce grazing reflecance to 0%.
     float reflectance90 = clamp(reflectance * 25.0, 0.0, 1.0);
     vec3 specularEnvironmentR0 = specularColor.rgb;
-    vec3 specularEnvironmentR90 = vec3(1.0, 1.0, 1.0) * reflectance90;
+    vec3 specularEnvironmentR90 = vec3(1.0) * reflectance90;
 
     vec3 n = getNormal();
     vec3 v = normalize(ubo.camPos - inWorldPos);    // Vector from surface point to camera
