@@ -77,7 +77,7 @@ namespace CVKL {
             createInfos.surface = presentQueue.Surface;
             createInfos.imageExtent = new VkExtent2D (width, height);
             createInfos.imageArrayLayers = 1;
-            createInfos.imageUsage = VkImageUsageFlags.ColorAttachment | VkImageUsageFlags.TransferDst;
+            createInfos.imageUsage = VkImageUsageFlags.ColorAttachment;
             createInfos.imageSharingMode = VkSharingMode.Exclusive;
             createInfos.compositeAlpha = VkCompositeAlphaFlagsKHR.OpaqueKHR;
             createInfos.presentMode = presentMode;

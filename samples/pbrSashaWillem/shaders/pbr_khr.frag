@@ -3,6 +3,7 @@
 // Supports both metallic roughness and specular glossiness inputs
 
 #version 450
+#extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
 
 struct Material {
