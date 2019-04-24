@@ -44,22 +44,27 @@ namespace CVKL {
                     prefix = "?";
                     break;
                 case VkDebugReportFlagsEXT.InformationEXT:
-                    prefix = "INFO";
+					Console.ForegroundColor = ConsoleColor.Gray;
+					prefix = "INFO";
                     break;
                 case VkDebugReportFlagsEXT.WarningEXT:
-                    prefix = "WARN";
+					Console.ForegroundColor = ConsoleColor.DarkYellow;
+					prefix = "WARN";
                     break;
                 case VkDebugReportFlagsEXT.PerformanceWarningEXT:
-                    prefix = "PERF";
+					Console.ForegroundColor = ConsoleColor.Yellow;
+					prefix = "PERF";
                     break;
                 case VkDebugReportFlagsEXT.ErrorEXT:
-                    prefix = "EROR";
-                    break;
+					Console.ForegroundColor = ConsoleColor.DarkRed;
+					prefix = "EROR";
+					break;
                 case VkDebugReportFlagsEXT.DebugEXT:
-                    prefix = "DBUG";
+					Console.ForegroundColor = ConsoleColor.Red;
+					prefix = "DBUG";
                     break;
             }
-			Console.ForegroundColor = ConsoleColor.Red;
+
             Console.WriteLine ("{0} {1}: {2}",prefix, messageCode, Marshal.PtrToStringAnsi(pMessage));
 			Console.ForegroundColor = ConsoleColor.White;
             return VkBool32.False;

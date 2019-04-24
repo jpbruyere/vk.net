@@ -466,7 +466,7 @@ namespace pbrSachaWillem {
 
 					pbrPipeline.Dispose ();
 
-#if Debug
+#if DEBUG
 					uiPipeline.Dispose ();
 					descLayoutMain.Dispose ();
 					descriptorPool.Dispose ();
