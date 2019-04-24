@@ -6,6 +6,9 @@
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
 
+#define MANUAL_SRGB 0
+#define DEBUG 0
+
 struct Material {
     vec4 baseColorFactor;
     vec4 emissiveFactor;
@@ -44,8 +47,10 @@ layout (set = 0, binding = 0) uniform UBO {
     float gamma;
     float prefilteredCubeMipLevels;
     float scaleIBLAmbient;
+#if DEBUG
     float debugViewInputs;
     float debugViewEquation;
+#endif
 } ubo;
 
 layout (set = 0, binding = 4) uniform UBOMaterials {
@@ -96,8 +101,6 @@ const float c_MinRoughness = 0.04;
 
 const float PBR_WORKFLOW_METALLIC_ROUGHNESS = 1.0;
 const float PBR_WORKFLOW_SPECULAR_GLOSINESS = 2.0f;
-
-#define MANUAL_SRGB 1
 
 vec3 Uncharted2Tonemap(vec3 color)
 {
@@ -374,7 +377,7 @@ void main()
         color += SRGBtoLINEAR(texture(emissiveMap, inUV1)).rgb * u_EmissiveFactor;             
     
     outColor = vec4(color, baseColor.a);
-
+#if DEBUG
     // Shader inputs debug visualization
     if (ubo.debugViewInputs > 0.0) {
         int index = int(ubo.debugViewInputs);
@@ -453,5 +456,5 @@ void main()
                 break;              
         }
     }
-
+#endif
 }

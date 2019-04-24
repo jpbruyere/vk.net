@@ -182,12 +182,13 @@ namespace pbrSachaWillem {
 
 
 		Vector4 lightPos = new Vector4 (1, 0, 0, 0);
+		BoundingBox modelAABB;
 
 		Program () {
 
 			//UpdateFrequency = 20;
-			camera.Model = Matrix4x4.CreateScale (1.0f);
-			camera.SetPosition (0, 0, 3);
+
+			camera.SetPosition (0, 0, 5);
 
 			vkvgDev = new vkvg.Device (instance.Handle, phy.Handle, dev.VkDev.Handle, presentQueue.qFamIndex,
 				vkvg.SampleCount.Sample_4, presentQueue.index);
@@ -198,6 +199,10 @@ namespace pbrSachaWillem {
 				new RenderPass (dev, swapChain.ColorFormat, dev.GetSuitableDepthFormat (), samples), uiImage);
 
 			initUIPipeline ();
+
+			modelAABB = pbrPipeline.model.DefaultScene.AABB;
+
+			camera.Model = Matrix4x4.CreateScale (1f/ Math.Max (Math.Max (modelAABB.max.X, modelAABB.max.Y), modelAABB.max.Z));
 
 #if PIPELINE_STATS
 			statPool = new PipelineStatisticsQueryPool (dev,
@@ -214,8 +219,7 @@ namespace pbrSachaWillem {
 		void buildCommandBuffers () {
 			for (int i = 0; i < swapChain.ImageCount; ++i) {
 				cmds[i]?.Free ();
-				cmds[i] = cmdPool.AllocateCommandBuffer ();
-				cmds[i].Start ();
+				cmds[i] = cmdPool.AllocateAndStart ();
 #if PIPELINE_STATS
 				statPool.Begin (cmds[i]);
 				recordDraw (cmds[i], frameBuffers[i]);
@@ -251,7 +255,7 @@ namespace pbrSachaWillem {
 			pbrPipeline.matrices.view = camera.View;
 			pbrPipeline.matrices.model = camera.Model;
 
-			//BoundingBox aabb = pbrPipeline.model.DefaultScene.AABB;
+
 			pbrPipeline.matrices.camPos = new Vector4 (
 				-camera.Position.Z * (float)Math.Sin (camera.Rotation.Y) * (float)Math.Cos (camera.Rotation.X),
 				 camera.Position.Z * (float)Math.Sin (camera.Rotation.X),

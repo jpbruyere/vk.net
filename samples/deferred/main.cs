@@ -17,32 +17,40 @@ namespace deferred {
 
 		public struct Matrices {
 			public Matrix4x4 projection;
-			public Matrix4x4 view;
 			public Matrix4x4 model;
-			public Vector4 lightPos;
-			public float gamma;
+			public Matrix4x4 view;
+			public Vector4 camPos;
+			public Vector4 lightDir;
 			public float exposure;
+			public float gamma;
+			public float prefilteredCubeMipLevels;
+			public float scaleIBLAmbient;
+			public float debugViewInputs;
+			public float debugViewEquation;
 		}
 
 		public Matrices matrices = new Matrices {
-			lightPos = new Vector4 (1.0f, 0.0f, 0.0f, 1.0f),
-			gamma = 1.0f,
-			exposure = 2.0f,
+			lightDir = Vector4.Normalize (new Vector4 (0.7f, 0.6f, 0.2f, 0.0f)),
+			gamma = 2.2f,
+			exposure = 4.5f,
+			scaleIBLAmbient = 1f,
+			debugViewInputs = 0,
+			debugViewEquation = 0
 		};
 
 		Program () {
-			camera.Model = Matrix4x4.CreateRotationX (Utils.DegreesToRadians (-90)) * Matrix4x4.CreateRotationY (Utils.DegreesToRadians (180));
-			camera.SetRotation (-0.1f,-0.4f);
-			camera.SetPosition (0, 0, -3);
+			camera.SetPosition (0, 0, 5);
 
 			init ();
+
+			camera.Model = Matrix4x4.CreateScale (1f / Math.Max (Math.Max (modelAABB.max.X, modelAABB.max.Y), modelAABB.max.Z));
 		}
 
 		Framebuffer[] frameBuffers;
 		Image gbColorRough, gbEmitMetal, gbN, gbPos;
 
 		DescriptorPool descriptorPool;
-		DescriptorSetLayout descLayoutMain, descLayoutModelTextures, descLayoutGBuff;
+		DescriptorSetLayout descLayoutMain, descLayoutTextures, descLayoutGBuff;
 		DescriptorSet dsMain, dsGBuff;
 
 		Pipeline gBuffPipeline, composePipeline;
@@ -51,8 +59,11 @@ namespace deferred {
 
 		RenderPass renderPass;
 
-		Model model;
+		PbrModel model;
 		EnvironmentCube envCube;
+
+		Vector4 lightPos = new Vector4 (1, 0, 0, 0);
+		BoundingBox modelAABB;
 
 		void init () {
 			renderPass = new RenderPass (dev);
@@ -105,9 +116,10 @@ namespace deferred {
 				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment, VkDescriptorType.UniformBuffer),
 				new VkDescriptorSetLayoutBinding (1, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
 				new VkDescriptorSetLayoutBinding (2, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
-				new VkDescriptorSetLayoutBinding (3, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler));
+				new VkDescriptorSetLayoutBinding (3, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
+				new VkDescriptorSetLayoutBinding (4, VkShaderStageFlags.Fragment, VkDescriptorType.UniformBuffer));
 
-			descLayoutModelTextures = new DescriptorSetLayout (dev,
+			descLayoutTextures = new DescriptorSetLayout (dev,
 				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
 				new VkDescriptorSetLayoutBinding (1, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
 				new VkDescriptorSetLayoutBinding (2, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
@@ -125,22 +137,23 @@ namespace deferred {
 			dsGBuff = descriptorPool.Allocate (descLayoutGBuff);
 
 			GraphicPipelineConfig cfg = GraphicPipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, samples);
-			cfg.Layout = new PipelineLayout (dev, descLayoutMain, descLayoutModelTextures, descLayoutGBuff);
+			cfg.Layout = new PipelineLayout (dev, descLayoutMain, descLayoutTextures, descLayoutGBuff);
 			cfg.Layout.AddPushConstants (
 				new VkPushConstantRange (VkShaderStageFlags.Vertex, (uint)Marshal.SizeOf<Matrix4x4> ()),
-				new VkPushConstantRange (VkShaderStageFlags.Fragment, (uint)Marshal.SizeOf<Model.PbrMaterial> (), 64)
+				new VkPushConstantRange (VkShaderStageFlags.Fragment, sizeof (int), 64)
 			);
 			cfg.RenderPass = renderPass;
 			cfg.blendAttachments.Add (new VkPipelineColorBlendAttachmentState (false));
 			cfg.blendAttachments.Add (new VkPipelineColorBlendAttachmentState (false));
 			cfg.blendAttachments.Add (new VkPipelineColorBlendAttachmentState (false));
 
-			cfg.AddVertexBinding<Model.Vertex> (0);
-			cfg.SetVertexAttributes (0, VkFormat.R32g32b32Sfloat, VkFormat.R32g32b32Sfloat, VkFormat.R32g32Sfloat);
-			cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/pbrtest.vert.spv");
+			cfg.AddVertexBinding<PbrModel.Vertex> (0);
+			cfg.SetVertexAttributes (0, VkFormat.R32g32b32Sfloat, VkFormat.R32g32b32Sfloat, VkFormat.R32g32Sfloat, VkFormat.R32g32Sfloat);
+			cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/GBuffPbr.vert.spv");
 			cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/GBuffPbr.frag.spv");
 
 			gBuffPipeline = new GraphicPipeline (cfg);
+
 			cfg.blendAttachments.Clear ();
 			cfg.blendAttachments.Add (new VkPipelineColorBlendAttachmentState (false));
 			cfg.ResetShadersAndVerticesInfos ();
@@ -149,34 +162,35 @@ namespace deferred {
 			cfg.depthStencilState.depthTestEnable = false;
 			cfg.depthStencilState.depthWriteEnable = false;
 			cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/FullScreenQuad.vert.spv");
-			cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/pbrtest.frag.spv");
+			cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/compose.frag.spv");
+
 			composePipeline = new GraphicPipeline (cfg);
 
-			envCube = new EnvironmentCube (presentQueue, renderPass);
+			envCube = new EnvironmentCube (dsMain, gBuffPipeline.Layout, presentQueue, renderPass);
 
-			uboMats = new HostBuffer (dev, VkBufferUsageFlags.UniformBuffer, (ulong)Marshal.SizeOf<Matrices> () * 2);
-			uboMats.Map ();//permanent map
+			matrices.prefilteredCubeMipLevels = envCube.prefilterCube.CreateInfo.mipLevels;
+			uboMats = new HostBuffer (dev, VkBufferUsageFlags.UniformBuffer, matrices, true);
 
-			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (descLayoutMain);
-			uboUpdate.Write (dev, dsMain, uboMats.Descriptor,
-				envCube.lutBrdf.Descriptor,
-				envCube.irradianceCube.Descriptor,
-				envCube.prefilterCube.Descriptor);
-			uboMats.Descriptor.offset = (ulong)Marshal.SizeOf<Matrices> ();
-			envCube.WriteDesc (uboMats.Descriptor);
-
-			model = new Model (presentQueue, "../data/models/DamagedHelmet/glTF/DamagedHelmet.gltf");
+			model = new PbrModel (presentQueue, "../data/models/DamagedHelmet/glTF/DamagedHelmet.gltf",
+				descLayoutTextures,
+				AttachmentType.Color,
+				AttachmentType.PhysicalProps,
+				AttachmentType.Normal,
+				AttachmentType.AmbientOcclusion,
+				AttachmentType.Emissive);
 			//model = new Model (presentQueue, "../data/models/chess.gltf");
 			//model = new Model (presentQueue, "../data/models/Sponza/glTF/Sponza.gltf");
 			//model = new Model (dev, presentQueue, "../data/models/icosphere.gltf");
 			//model = new Model (dev, presentQueue, cmdPool, "../data/models/cube.gltf");
-			model.WriteMaterialsDescriptorSets (descLayoutModelTextures,
-				VK.AttachmentType.Color,
-				VK.AttachmentType.Normal,
-				VK.AttachmentType.AmbientOcclusion,
-				VK.AttachmentType.PhysicalProps,
-				VK.AttachmentType.Emissive);
+			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (descLayoutMain);
+			uboUpdate.Write (dev, dsMain,
+				uboMats.Descriptor,
+				envCube.irradianceCube.Descriptor,
+				envCube.prefilterCube.Descriptor,
+				envCube.lutBrdf.Descriptor,
+				model.materialUBO.Descriptor);
 
+			modelAABB = model.DefaultScene.AABB;
 		}
 
 		void buildCommandBuffers () {
@@ -210,24 +224,30 @@ namespace deferred {
 			renderPass.End (cmd);
 		}
 
-#region update
-		void updateMatrices () {
+		#region update
+		public override void UpdateView () {
 			camera.AspectRatio = (float)swapChain.Width / swapChain.Height;
 
+			matrices.lightDir = lightPos;
 			matrices.projection = camera.Projection;
 			matrices.view = camera.View;
 			matrices.model = camera.Model;
-			uboMats.Update (matrices, (uint)Marshal.SizeOf<Matrices> ());
-			matrices.view *= Matrix4x4.CreateTranslation (-matrices.view.Translation);
-			matrices.model = Matrix4x4.Identity;
-			uboMats.Update (matrices, (uint)Marshal.SizeOf<Matrices> (), (uint)Marshal.SizeOf<Matrices> ());
-		}
 
-		public override void UpdateView () {
-			updateMatrices ();
+
+			matrices.camPos = new Vector4 (
+				-camera.Position.Z * (float)Math.Sin (camera.Rotation.Y) * (float)Math.Cos (camera.Rotation.X),
+				 camera.Position.Z * (float)Math.Sin (camera.Rotation.X),
+				 camera.Position.Z * (float)Math.Cos (camera.Rotation.Y) * (float)Math.Cos (camera.Rotation.X),
+				 0
+			);
+			//matrices.debugViewInputs = (float)currentDebugView;
+
+			uboMats.Update (matrices, (uint)Marshal.SizeOf<Matrices> ());
+
 			updateViewRequested = false;
 		}
-#endregion
+
+		#endregion
 
 
 
@@ -263,7 +283,7 @@ namespace deferred {
 		}
 
 		protected override void OnResize () {
-			updateMatrices ();
+			UpdateView ();
 
 			if (frameBuffers != null)
 				for (int i = 0; i < swapChain.ImageCount; ++i)
@@ -285,19 +305,55 @@ namespace deferred {
 		#region Mouse and keyboard
 		protected override void onKeyDown (Key key, int scanCode, Modifier modifiers) {
 			switch (key) {
-				case Key.F1:
+				case Key.Up:
+					if (modifiers.HasFlag (Modifier.Shift))
+						lightPos -= Vector4.UnitZ;
+					else
+						camera.Move (0, 0, 1);
+					break;
+				case Key.Down:
+					if (modifiers.HasFlag (Modifier.Shift))
+						lightPos += Vector4.UnitZ;
+					else
+						camera.Move (0, 0, -1);
+					break;
+				case Key.Left:
+					if (modifiers.HasFlag (Modifier.Shift))
+						lightPos -= Vector4.UnitX;
+					else
+						camera.Move (1, 0, 0);
+					break;
+				case Key.Right:
+					if (modifiers.HasFlag (Modifier.Shift))
+						lightPos += Vector4.UnitX;
+					else
+						camera.Move (-1, 0, 0);
+					break;
+				case Key.PageUp:
+					if (modifiers.HasFlag (Modifier.Shift))
+						lightPos += Vector4.UnitY;
+					else
+						camera.Move (0, 1, 0);
+					break;
+				case Key.PageDown:
+					if (modifiers.HasFlag (Modifier.Shift))
+						lightPos -= Vector4.UnitY;
+					else
+						camera.Move (0, -1, 0);
+					break;
+				case Key.F2:
 					if (modifiers.HasFlag (Modifier.Shift))
 						matrices.exposure -= 0.3f;
 					else
 						matrices.exposure += 0.3f;
 					break;
-				case Key.F2:
+				case Key.F3:
 					if (modifiers.HasFlag (Modifier.Shift))
 						matrices.gamma -= 0.1f;
 					else
 						matrices.gamma += 0.1f;
 					break;
-				case Key.F3:
+				case Key.F4:
 					if (camera.Type == Camera.CamType.FirstPerson)
 						camera.Type = Camera.CamType.LookAt;
 					else
@@ -328,7 +384,7 @@ namespace deferred {
 					composePipeline.Dispose ();
 
 					descLayoutMain.Dispose ();
-					descLayoutModelTextures.Dispose ();
+					descLayoutTextures.Dispose ();
 					descLayoutGBuff.Dispose ();
 
 					uboMats.Dispose ();
