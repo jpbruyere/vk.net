@@ -5,30 +5,6 @@
 #version 450
 #extension GL_ARB_shading_language_420pack : enable
 
-layout (location = 0) in vec3 inWorldPos;
-layout (location = 1) in vec3 inNormal;
-layout (location = 2) in vec2 inUV0;
-layout (location = 3) in vec2 inUV1;
-
-// Scene bindings
-
-layout (set = 0, binding = 0) uniform UBO {
-    mat4 projection;
-    mat4 model;
-    mat4 view;
-    vec3 camPos;
-} ubo;
-
-layout (set = 0, binding = 1) uniform UBOParams {
-    vec4 lightDir;
-    float exposure;
-    float gamma;
-    float prefilteredCubeMipLevels;
-    float scaleIBLAmbient;
-    float debugViewInputs;
-    float debugViewEquation;
-} uboParams;
-
 struct Material {
     vec4 baseColorFactor;
     vec4 emissiveFactor;
@@ -52,13 +28,32 @@ const uint MAP_ROUGHNESS = 0x10;
 const uint MAP_METALROUGHNESS = 0x20;
 const uint MAP_EMISSIVE = 0x40;
 
-layout (set = 0, binding = 5) uniform UBOMaterials {
+layout (location = 0) in vec3 inWorldPos;
+layout (location = 1) in vec3 inNormal;
+layout (location = 2) in vec2 inUV0;
+layout (location = 3) in vec2 inUV1;
+
+layout (set = 0, binding = 0) uniform UBO {
+    mat4 projection;
+    mat4 model;
+    mat4 view;
+    vec4 camPos;
+    vec4 lightDir;
+    float exposure;
+    float gamma;
+    float prefilteredCubeMipLevels;
+    float scaleIBLAmbient;
+    float debugViewInputs;
+    float debugViewEquation;
+} ubo;
+
+layout (set = 0, binding = 4) uniform UBOMaterials {
     Material materials[16];
 };
 
-layout (set = 0, binding = 2) uniform samplerCube samplerIrradiance;
-layout (set = 0, binding = 3) uniform samplerCube prefilteredMap;
-layout (set = 0, binding = 4) uniform sampler2D samplerBRDFLUT;
+layout (set = 0, binding = 1) uniform samplerCube samplerIrradiance;
+layout (set = 0, binding = 2) uniform samplerCube prefilteredMap;
+layout (set = 0, binding = 3) uniform sampler2D samplerBRDFLUT;
 
 // Material bindings
 
@@ -117,9 +112,9 @@ vec3 Uncharted2Tonemap(vec3 color)
 
 vec4 tonemap(vec4 color)
 {
-    vec3 outcol = Uncharted2Tonemap(color.rgb * uboParams.exposure);
+    vec3 outcol = Uncharted2Tonemap(color.rgb * ubo.exposure);
     outcol = outcol * (1.0f / Uncharted2Tonemap(vec3(11.2f)));  
-    return vec4(pow(outcol, vec3(1.0f / uboParams.gamma)), color.a);
+    return vec4(pow(outcol, vec3(1.0f / ubo.gamma)), color.a);
 }
 
 vec4 SRGBtoLINEAR(vec4 srgbIn)
@@ -168,7 +163,7 @@ vec3 getNormal()
 // See our README.md on Environment Maps [3] for additional discussion.
 vec3 getIBLContribution(PBRInfo pbrInputs, vec3 n, vec3 reflection)
 {
-    float lod = (pbrInputs.perceptualRoughness * uboParams.prefilteredCubeMipLevels);
+    float lod = (pbrInputs.perceptualRoughness * ubo.prefilteredCubeMipLevels);
     // retrieve a scale and bias to F0. See [1], Figure 3
     vec3 brdf = (texture(samplerBRDFLUT, vec2(pbrInputs.NdotV, 1.0 - pbrInputs.perceptualRoughness))).rgb;
     vec3 diffuseLight = SRGBtoLINEAR(tonemap(texture(samplerIrradiance, n))).rgb;
@@ -180,8 +175,8 @@ vec3 getIBLContribution(PBRInfo pbrInputs, vec3 n, vec3 reflection)
 
     // For presentation, this allows us to disable IBL terms
     // For presentation, this allows us to disable IBL terms
-    diffuse *= uboParams.scaleIBLAmbient;
-    specular *= uboParams.scaleIBLAmbient;
+    diffuse *= ubo.scaleIBLAmbient;
+    specular *= ubo.scaleIBLAmbient;
 
     return diffuse + specular;
 }
@@ -320,11 +315,11 @@ void main()
     vec3 specularEnvironmentR90 = vec3(1.0) * reflectance90;
 
     vec3 n = getNormal();
-    vec3 v = normalize(ubo.camPos - inWorldPos);    // Vector from surface point to camera
-    vec3 l = normalize(uboParams.lightDir.xyz);     // Vector from surface point to light
+    vec3 v = normalize(ubo.camPos.xyz - inWorldPos);    // Vector from surface point to camera
+    vec3 l = normalize(ubo.lightDir.xyz);     // Vector from surface point to light
     vec3 h = normalize(l+v);                        // Half vector between both l and v
     vec3 reflection = -normalize(reflect(v, n));
-    //reflection.y *= -1.0f;
+    reflection.y *= -1.0f;
 
     float NdotL = clamp(dot(n, l), 0.001, 1.0);
     float NdotV = clamp(abs(dot(n, v)), 0.001, 1.0);
@@ -380,8 +375,8 @@ void main()
     outColor = vec4(color, baseColor.a);
 
     // Shader inputs debug visualization
-    if (uboParams.debugViewInputs > 0.0) {
-        int index = int(uboParams.debugViewInputs);
+    if (ubo.debugViewInputs > 0.0) {
+        int index = int(ubo.debugViewInputs);
         switch (index) {
             case 1:
                 if ((materials[materialIdx].tex0 & MAP_COLOR) == MAP_COLOR)        
@@ -391,29 +386,54 @@ void main()
                 else
                     outColor.rgba = vec4(1.0f);                
                 break;
-            /*case 2:
-                outColor.rgb = (materials[materialIdx].normalTextureSet > -1) ? texture(normalMap, materials[materialIdx].normalTextureSet == 0 ? inUV0 : inUV1).rgb : normalize(inNormal);
+            case 2:
+                if ((materials[materialIdx].tex0 & MAP_NORMAL) == MAP_NORMAL)        
+                    outColor.rgb = texture(normalMap, inUV0).rgb;
+                else if ((materials[materialIdx].tex1 & MAP_NORMAL) == MAP_NORMAL)
+                    outColor.rgb = texture(normalMap, inUV1).rgb;
+                else
+                    outColor.rgb = normalize(inNormal);                
                 break;
             case 3:
-                outColor.rgb = (materials[materialIdx].occlusionTextureSet > -1) ? texture(aoMap, materials[materialIdx].occlusionTextureSet == 0 ? inUV0 : inUV1).rrr : vec3(0.0f);
+                if ((materials[materialIdx].tex0 & MAP_AO) == MAP_AO)        
+                    outColor.rgb = texture(aoMap, inUV0).rrr;
+                else if ((materials[materialIdx].tex1 & MAP_AO) == MAP_AO)
+                    outColor.rgb = texture(aoMap, inUV1).rrr;
+                else
+                    outColor.rgb = vec3(0);
                 break;
             case 4:
-                outColor.rgb = (materials[materialIdx].emissiveTextureSet > -1) ? texture(emissiveMap, materials[materialIdx].emissiveTextureSet == 0 ? inUV0 : inUV1).rgb : vec3(0.0f);
+                if ((materials[materialIdx].tex0 & MAP_EMISSIVE) == MAP_EMISSIVE)        
+                    outColor.rgb = texture(emissiveMap, inUV0).rgb;
+                else if ((materials[materialIdx].tex1 & MAP_EMISSIVE) == MAP_EMISSIVE)
+                    outColor.rgb = texture(emissiveMap, inUV1).rgb;
+                else
+                    outColor.rgb = vec3(0);
                 break;
             case 5:
-                outColor.rgb = texture(physicalDescriptorMap, inUV0).bbb;
+                if ((materials[materialIdx].tex0 & MAP_METALROUGHNESS) == MAP_METALROUGHNESS)        
+                    outColor.rgb = texture(physicalDescriptorMap, inUV0).bbb;
+                else if ((materials[materialIdx].tex1 & MAP_METALROUGHNESS) == MAP_METALROUGHNESS)
+                    outColor.rgb = texture(physicalDescriptorMap, inUV1).bbb;
+                else
+                    outColor.rgb = vec3(0);
                 break;
             case 6:
-                outColor.rgb = texture(physicalDescriptorMap, inUV0).ggg;
-                break;*/
+                if ((materials[materialIdx].tex0 & MAP_METALROUGHNESS) == MAP_METALROUGHNESS)        
+                    outColor.rgb = texture(physicalDescriptorMap, inUV0).ggg;
+                else if ((materials[materialIdx].tex1 & MAP_METALROUGHNESS) == MAP_METALROUGHNESS)
+                    outColor.rgb = texture(physicalDescriptorMap, inUV1).ggg;
+                else
+                    outColor.rgb = vec3(0);
+                break;
         }
         outColor = SRGBtoLINEAR(outColor);
     }
 
     // PBR equation debug visualization
     // "none", "Diff (l,n)", "F (l,h)", "G (l,v,h)", "D (h)", "Specular"
-    if (uboParams.debugViewEquation > 0.0) {
-        int index = int(uboParams.debugViewEquation);
+    if (ubo.debugViewEquation > 0.0) {
+        int index = int(ubo.debugViewEquation);
         switch (index) {
             case 1:
                 outColor.rgb = diffuseContrib;

@@ -15,9 +15,7 @@ namespace pbrSachaWillem {
 
 		protected override void configureEnabledFeatures (ref VkPhysicalDeviceFeatures features) {
 			base.configureEnabledFeatures (ref features);
-#if DEBUG
 			features.pipelineStatisticsQuery = true;
-#endif
 			//features.samplerAnisotropy = true;
 		}
 
@@ -37,7 +35,7 @@ namespace pbrSachaWillem {
 		}
 
 		DebugView currentDebugView = DebugView.none;
-#if DEBUG
+
 		PipelineStatisticsQueryPool statPool;
 		TimestampQueryPool timestampQPool;
 		ulong[] results;
@@ -46,34 +44,34 @@ namespace pbrSachaWillem {
 		bool queryUpdatePrefilCube, showDebugImg, showUI;
 
 
+		Image uiImage;
+
 		#region ui
-		DescriptorSet dsDebugImg;
-		void initDebugImg () {
-			dsDebugImg = descriptorPool.Allocate (descLayoutMain);
-			pbrPipeline.envCube.debugImg.Descriptor.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
-			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (dsDebugImg, descLayoutMain);
-			uboUpdate.Write (dev, pbrPipeline.envCube.debugImg.Descriptor);
-		}
+		//DescriptorSet dsDebugImg;
+		//void initDebugImg () {
+		//	dsDebugImg = descriptorPool.Allocate (descLayoutMain);
+		//	pbrPipeline.envCube.debugImg.Descriptor.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
+		//	DescriptorSetWrites uboUpdate = new DescriptorSetWrites (dsDebugImg, descLayoutMain);
+		//	uboUpdate.Write (dev, pbrPipeline.envCube.debugImg.Descriptor);
+		//}
 
 		vkvg.Device vkvgDev;
         vkvg.Surface vkvgSurf;
-		Image vkvgImage;
 
-		DescriptorPool descriptorPool;
-		DescriptorSetLayout descLayoutMain;
-		DescriptorSet dsVkvgOverlay;
+
+		//DescriptorSetLayout descLayoutMain;
 		Pipeline uiPipeline;
 
 		void initUIPipeline () {
-			descriptorPool = new DescriptorPool (dev, 2, new VkDescriptorPoolSize (VkDescriptorType.CombinedImageSampler, 2));
-			descLayoutMain = new DescriptorSetLayout (dev,
-				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler));
+			//descriptorPool = new DescriptorPool (dev, 2, new VkDescriptorPoolSize (VkDescriptorType.CombinedImageSampler, 2));
+			//descLayoutMain = new DescriptorSetLayout (dev,
+			//	new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler));
 
-			dsVkvgOverlay = descriptorPool.Allocate (descLayoutMain);
+			//dsVkvgOverlay = descriptorPool.Allocate (descLayoutMain);
 
 			GraphicPipelineConfig cfg = GraphicPipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, samples, false);
 			cfg.RenderPass = pbrPipeline.RenderPass;
-			cfg.Layout = new PipelineLayout (dev, descLayoutMain);
+			cfg.Layout = pbrPipeline.Layout;
 			cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/FullScreenQuad.vert.spv");
 			cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/simpletexture.frag.spv");
 			cfg.blendAttachments[0] = new VkPipelineColorBlendAttachmentState (true);
@@ -82,17 +80,13 @@ namespace pbrSachaWillem {
 
 		}
 		void initUISurface () {
-			vkvgImage?.Dispose ();
+			uiImage?.Dispose ();
 			vkvgSurf?.Dispose ();
 			vkvgSurf = new vkvg.Surface (vkvgDev, (int)swapChain.Width, (int)swapChain.Height);
-			vkvgImage = new Image (dev, new VkImage ((ulong)vkvgSurf.VkImage.ToInt64 ()), VkFormat.B8g8r8a8Unorm,
+			uiImage = new Image (dev, new VkImage ((ulong)vkvgSurf.VkImage.ToInt64 ()), VkFormat.B8g8r8a8Unorm,
 				VkImageUsageFlags.ColorAttachment, (uint)vkvgSurf.Width, (uint)vkvgSurf.Height);
-			vkvgImage.CreateView (VkImageViewType.ImageView2D, VkImageAspectFlags.Color);
-			vkvgImage.CreateSampler (VkFilter.Nearest, VkFilter.Nearest, VkSamplerMipmapMode.Nearest, VkSamplerAddressMode.ClampToBorder);
-
-			vkvgImage.Descriptor.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
-			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (dsVkvgOverlay, descLayoutMain);
-			uboUpdate.Write (dev, vkvgImage.Descriptor);
+			uiImage.CreateView (VkImageViewType.ImageView2D, VkImageAspectFlags.Color);
+			uiImage.CreateSampler (VkFilter.Nearest, VkFilter.Nearest, VkSamplerMipmapMode.Nearest, VkSamplerAddressMode.ClampToBorder);
 		}
 
 		void vkvgDraw () {
@@ -122,10 +116,10 @@ namespace pbrSachaWillem {
 				ctx.SetSource (0.8, 0.8, 0.8);
 				y += dy;
 				ctx.MoveTo (x, y);
-				ctx.ShowText (string.Format ($"Exposure:{pbrPipeline.parametters.exposure,5} "));
+				ctx.ShowText (string.Format ($"Exposure:{pbrPipeline.matrices.exposure,5} "));
 				y += dy;
 				ctx.MoveTo (x, y);
-				ctx.ShowText (string.Format ($"Gamma:   {pbrPipeline.parametters.gamma,5} "));
+				ctx.ShowText (string.Format ($"Gamma:   {pbrPipeline.matrices.gamma,5} "));
 				y += dy;
 				ctx.MoveTo (x, y);
 				ctx.ShowText (string.Format ($"Light pos:   {lightPos.ToString()} "));
@@ -163,30 +157,28 @@ namespace pbrSachaWillem {
 		void recordDrawOverlay (CommandBuffer cmd) {
 			uiPipeline.Bind (cmd);
 
-			cmd.BindDescriptorSet (uiPipeline.Layout, dsVkvgOverlay);
-
-			vkvgImage.SetLayout (cmd, VkImageAspectFlags.Color, VkImageLayout.ColorAttachmentOptimal, VkImageLayout.ShaderReadOnlyOptimal,
+			uiImage.SetLayout (cmd, VkImageAspectFlags.Color, VkImageLayout.ColorAttachmentOptimal, VkImageLayout.ShaderReadOnlyOptimal,
 				VkPipelineStageFlags.ColorAttachmentOutput, VkPipelineStageFlags.FragmentShader);
 
 			cmd.Draw (3, 1, 0, 0);
 
-			vkvgImage.SetLayout (cmd, VkImageAspectFlags.Color, VkImageLayout.ShaderReadOnlyOptimal, VkImageLayout.ColorAttachmentOptimal,
+			uiImage.SetLayout (cmd, VkImageAspectFlags.Color, VkImageLayout.ShaderReadOnlyOptimal, VkImageLayout.ColorAttachmentOptimal,
 				VkPipelineStageFlags.FragmentShader, VkPipelineStageFlags.BottomOfPipe);
 
-			if (!showDebugImg)
-				return;
-			const uint debugImgSize = 256;
-			const uint debugImgMargin = 10;
+			//if (!showDebugImg)
+			//	return;
+			//const uint debugImgSize = 256;
+			//const uint debugImgMargin = 10;
 
-			cmd.BindDescriptorSet (uiPipeline.Layout, dsDebugImg);
+			//cmd.BindDescriptorSet (uiPipeline.Layout, dsDebugImg);
 
-			cmd.SetViewport (debugImgSize, debugImgSize, debugImgMargin, swapChain.Height - debugImgSize - debugImgMargin);
-			cmd.SetScissor (debugImgSize, debugImgSize, (int)debugImgMargin, (int)(swapChain.Height - debugImgSize - debugImgMargin));
+			//cmd.SetViewport (debugImgSize, debugImgSize, debugImgMargin, swapChain.Height - debugImgSize - debugImgMargin);
+			//cmd.SetScissor (debugImgSize, debugImgSize, (int)debugImgMargin, (int)(swapChain.Height - debugImgSize - debugImgMargin));
 
-			cmd.Draw (3, 1, 0, 0);
+			//cmd.Draw (3, 1, 0, 0);
 		}
 		#endregion
-#endif
+
 
 		Vector4 lightPos = new Vector4 (1, 0, 0, 0);
 
@@ -196,12 +188,13 @@ namespace pbrSachaWillem {
 			camera.Model = Matrix4x4.CreateScale (1.0f);
 			camera.SetPosition (0, 0, 3);
 
-			pbrPipeline = new PBRPipeline(presentQueue,
-				new RenderPass (dev, swapChain.ColorFormat, dev.GetSuitableDepthFormat (), samples));
-
-#if DEBUG
 			vkvgDev = new vkvg.Device (instance.Handle, phy.Handle, dev.VkDev.Handle, presentQueue.qFamIndex,
 				vkvg.SampleCount.Sample_4, presentQueue.index);
+
+			initUISurface ();
+
+			pbrPipeline = new PBRPipeline(presentQueue,
+				new RenderPass (dev, swapChain.ColorFormat, dev.GetSuitableDepthFormat (), samples), uiImage);
 
 			initUIPipeline ();
 
@@ -213,8 +206,6 @@ namespace pbrSachaWillem {
 				VkQueryPipelineStatisticFlags.FragmentShaderInvocations);
 
 			timestampQPool = new TimestampQueryPool (dev);
-#endif
-
 		}
 
 		#region commands
@@ -223,13 +214,10 @@ namespace pbrSachaWillem {
 				cmds[i]?.Free ();
 				cmds[i] = cmdPool.AllocateCommandBuffer ();
 				cmds[i].Start ();
-#if DEBUG
+
 				statPool.Begin (cmds[i]);
 				recordDraw (cmds[i], frameBuffers[i]);
 				statPool.End (cmds[i]);
-#else
-				recordDraw (cmds[i], frameBuffers[i]);
-#endif
 
 				cmds[i].End ();
 			}
@@ -241,46 +229,39 @@ namespace pbrSachaWillem {
 			cmd.SetScissor (fb.Width, fb.Height);
 
 			pbrPipeline.RecordDraw (cmd);
-#if DEBUG
+
 			if (showUI)
 				recordDrawOverlay (cmd);
-#endif
+
 			pbrPipeline.RenderPass.End (cmd);
 		}
 #endregion
 
 
 #region update
-		void updateMatrices () {
+		public override void UpdateView () {
 			camera.AspectRatio = (float)swapChain.Width / swapChain.Height;
 
+			pbrPipeline.matrices.lightDir = lightPos;
 			pbrPipeline.matrices.projection = camera.Projection;
 			pbrPipeline.matrices.view = camera.View;
 			pbrPipeline.matrices.model = camera.Model;
 
 			//BoundingBox aabb = pbrPipeline.model.DefaultScene.AABB;
-			pbrPipeline.matrices.camPos = new Vector3 (
+			pbrPipeline.matrices.camPos = new Vector4 (
 				-camera.Position.Z * (float)Math.Sin (camera.Rotation.Y) * (float)Math.Cos (camera.Rotation.X),
 				 camera.Position.Z * (float)Math.Sin (camera.Rotation.X),
-				 camera.Position.Z * (float)Math.Cos (camera.Rotation.Y) * (float)Math.Cos (camera.Rotation.X)
+				 camera.Position.Z * (float)Math.Cos (camera.Rotation.Y) * (float)Math.Cos (camera.Rotation.X),
+				 0
 			);
+			pbrPipeline.matrices.debugViewInputs = (float)currentDebugView;
 
 			pbrPipeline.uboMats.Update (pbrPipeline.matrices, (uint)Marshal.SizeOf<PBRPipeline.Matrices> ());
-			pbrPipeline.matrices.view.Translation = Vector3.Zero;
-			pbrPipeline.uboSkybox.Update (pbrPipeline.matrices, (uint)Marshal.SizeOf<PBRPipeline.Matrices> ());
-		}
-		void updateParams () {
-			pbrPipeline.parametters.lightDir = lightPos;
-			pbrPipeline.parametters.debugViewInputs = (float)currentDebugView;
-			pbrPipeline.uboParams.Update (pbrPipeline.parametters, (uint)Marshal.SizeOf<PBRPipeline.Params> ());
-		}
-		public override void UpdateView () {
-			updateMatrices ();
-			updateParams ();
+
 			updateViewRequested = false;
 		}
+
 		public override void Update () {
-#if DEBUG
 			results = statPool.GetResults ();
 			if (rebuildBuffers) {
 				buildCommandBuffers ();
@@ -288,18 +269,18 @@ namespace pbrSachaWillem {
 			}
 			if (showUI)
 				vkvgDraw ();
-#endif
-
 		}
 #endregion
 
 		 
 		protected override void OnResize () {
-#if DEBUG
 			initUISurface ();
-#endif
-			updateMatrices ();
-			updateParams ();
+
+			uiImage.Descriptor.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
+			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (pbrPipeline.dsMain, pbrPipeline.Layout.DescriptorSetLayouts[0].Bindings[5]);
+			uboUpdate.Write (dev, uiImage.Descriptor);
+
+			UpdateView ();
 
 			if (frameBuffers != null)
 				for (int i = 0; i < swapChain.ImageCount; ++i)
@@ -338,7 +319,6 @@ namespace pbrSachaWillem {
 
 		protected override void onKeyDown (Key key, int scanCode, Modifier modifiers) {
 			switch (key) {
-#if DEBUG
 				case Key.F:
 					if (modifiers.HasFlag (Modifier.Shift)) {
 						pbrPipeline.envCube.debugFace --;
@@ -367,7 +347,6 @@ namespace pbrSachaWillem {
 					showDebugImg = !showDebugImg;
 					queryUpdatePrefilCube = updateViewRequested = true;
 					break;
-#endif
 				case Key.Keypad0:
 					currentDebugView = DebugView.none;
 					break;
@@ -431,15 +410,15 @@ namespace pbrSachaWillem {
 					break;
 				case Key.F2:
 					if (modifiers.HasFlag (Modifier.Shift))
-						pbrPipeline.parametters.exposure -= 0.3f;
+						pbrPipeline.matrices.exposure -= 0.3f;
 					else
-						pbrPipeline.parametters.exposure += 0.3f;
+						pbrPipeline.matrices.exposure += 0.3f;
 					break;
 				case Key.F3:
 					if (modifiers.HasFlag (Modifier.Shift))
-						pbrPipeline.parametters.gamma -= 0.1f;
+						pbrPipeline.matrices.gamma -= 0.1f;
 					else
-						pbrPipeline.parametters.gamma += 0.1f;
+						pbrPipeline.matrices.gamma += 0.1f;
 					break;
 				case Key.F4:
 					if (camera.Type == Camera.CamType.FirstPerson)
@@ -466,18 +445,14 @@ namespace pbrSachaWillem {
 
 					pbrPipeline.Dispose ();
 
-#if DEBUG
 					uiPipeline.Dispose ();
-					descLayoutMain.Dispose ();
-					descriptorPool.Dispose ();
 
-					vkvgImage?.Dispose ();
+					uiImage?.Dispose ();
 					vkvgSurf?.Dispose ();
 					vkvgDev.Dispose ();
 
 					timestampQPool?.Dispose ();
 					statPool?.Dispose ();
-#endif
 				}
 			}
 
