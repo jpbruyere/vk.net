@@ -14,7 +14,7 @@
     <WarningLevel>4</WarningLevel>
     <Optimize>false</Optimize>    
     <CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
-    <DefineConstants>DEBUG;RENDERDOC;</DefineConstants>
+    <DefineConstants>DEBUG;_RENDERDOC;</DefineConstants>
     <LangVersion>7.2</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">

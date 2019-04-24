@@ -15,8 +15,10 @@ namespace pbrSachaWillem {
 
 		protected override void configureEnabledFeatures (ref VkPhysicalDeviceFeatures features) {
 			base.configureEnabledFeatures (ref features);
+#if PIPELINE_STATS
 			features.pipelineStatisticsQuery = true;
-			//features.samplerAnisotropy = true;
+#endif
+			features.samplerAnisotropy = true;
 		}
 
 		VkSampleCountFlags samples = VkSampleCountFlags.SampleCount4;
@@ -36,9 +38,11 @@ namespace pbrSachaWillem {
 
 		DebugView currentDebugView = DebugView.none;
 
+#if PIPELINE_STATS
 		PipelineStatisticsQueryPool statPool;
 		TimestampQueryPool timestampQPool;
 		ulong[] results;
+#endif
 
 
 		bool queryUpdatePrefilCube, showDebugImg, showUI;
@@ -46,7 +50,7 @@ namespace pbrSachaWillem {
 
 		Image uiImage;
 
-		#region ui
+#region ui
 		//DescriptorSet dsDebugImg;
 		//void initDebugImg () {
 		//	dsDebugImg = descriptorPool.Allocate (descLayoutMain);
@@ -57,17 +61,10 @@ namespace pbrSachaWillem {
 
 		vkvg.Device vkvgDev;
         vkvg.Surface vkvgSurf;
-
-
-		//DescriptorSetLayout descLayoutMain;
+        
 		Pipeline uiPipeline;
 
 		void initUIPipeline () {
-			//descriptorPool = new DescriptorPool (dev, 2, new VkDescriptorPoolSize (VkDescriptorType.CombinedImageSampler, 2));
-			//descLayoutMain = new DescriptorSetLayout (dev,
-			//	new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler));
-
-			//dsVkvgOverlay = descriptorPool.Allocate (descLayoutMain);
 
 			GraphicPipelineConfig cfg = GraphicPipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, samples, false);
 			cfg.RenderPass = pbrPipeline.RenderPass;
@@ -123,6 +120,8 @@ namespace pbrSachaWillem {
 				y += dy;
 				ctx.MoveTo (x, y);
 				ctx.ShowText (string.Format ($"Light pos:   {lightPos.ToString()} "));
+
+#if PIPELINE_STATS
 				if (results == null)
 					return;
 
@@ -143,6 +142,7 @@ namespace pbrSachaWillem {
 				/*y += dy;
 				ctx.MoveTo (x, y);
 				ctx.ShowText (string.Format ($"{"Elapsed microsecond",-20} :{timestampQPool.ElapsedMiliseconds:0.0000} "));*/
+#endif
 				y += dy;
 				ctx.MoveTo (x, y);
 				ctx.ShowText (string.Format ($"{"Debug draw (numpad 0->6)",-30} : {currentDebugView.ToString ()} "));
@@ -177,7 +177,7 @@ namespace pbrSachaWillem {
 
 			//cmd.Draw (3, 1, 0, 0);
 		}
-		#endregion
+#endregion
 
 
 		Vector4 lightPos = new Vector4 (1, 0, 0, 0);
@@ -198,6 +198,7 @@ namespace pbrSachaWillem {
 
 			initUIPipeline ();
 
+#if PIPELINE_STATS
 			statPool = new PipelineStatisticsQueryPool (dev,
 				VkQueryPipelineStatisticFlags.InputAssemblyVertices |
 				VkQueryPipelineStatisticFlags.InputAssemblyPrimitives |
@@ -206,18 +207,21 @@ namespace pbrSachaWillem {
 				VkQueryPipelineStatisticFlags.FragmentShaderInvocations);
 
 			timestampQPool = new TimestampQueryPool (dev);
+#endif
 		}
 
-		#region commands
 		void buildCommandBuffers () {
 			for (int i = 0; i < swapChain.ImageCount; ++i) {
 				cmds[i]?.Free ();
 				cmds[i] = cmdPool.AllocateCommandBuffer ();
 				cmds[i].Start ();
-
+#if PIPELINE_STATS
 				statPool.Begin (cmds[i]);
 				recordDraw (cmds[i], frameBuffers[i]);
 				statPool.End (cmds[i]);
+#else
+				recordDraw (cmds[i], frameBuffers[i]);
+#endif
 
 				cmds[i].End ();
 			}
@@ -235,7 +239,6 @@ namespace pbrSachaWillem {
 
 			pbrPipeline.RenderPass.End (cmd);
 		}
-#endregion
 
 
 #region update
@@ -262,7 +265,9 @@ namespace pbrSachaWillem {
 		}
 
 		public override void Update () {
+#if PIPELINE_STATS
 			results = statPool.GetResults ();
+#endif
 			if (rebuildBuffers) {
 				buildCommandBuffers ();
 				rebuildBuffers = false;
@@ -451,8 +456,10 @@ namespace pbrSachaWillem {
 					vkvgSurf?.Dispose ();
 					vkvgDev.Dispose ();
 
+#if PIPELINE_STATS
 					timestampQPool?.Dispose ();
 					statPool?.Dispose ();
+#endif
 				}
 			}
 
