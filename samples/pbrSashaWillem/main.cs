@@ -43,7 +43,7 @@ namespace pbrSachaWillem {
 		ulong[] results;
 
 
-		bool queryUpdatePrefilCube, showDebugImg;
+		bool queryUpdatePrefilCube, showDebugImg, showUI;
 
 
 		#region ui
@@ -126,6 +126,9 @@ namespace pbrSachaWillem {
 				y += dy;
 				ctx.MoveTo (x, y);
 				ctx.ShowText (string.Format ($"Gamma:   {pbrPipeline.parametters.gamma,5} "));
+				y += dy;
+				ctx.MoveTo (x, y);
+				ctx.ShowText (string.Format ($"Light pos:   {lightPos.ToString()} "));
 				if (results == null)
 					return;
 
@@ -185,7 +188,7 @@ namespace pbrSachaWillem {
 		#endregion
 #endif
 
-		Vector3 lightPos = new Vector3 (1, 0, 0);
+		Vector4 lightPos = new Vector4 (1, 0, 0, 0);
 
 		Program () {
 
@@ -239,7 +242,8 @@ namespace pbrSachaWillem {
 
 			pbrPipeline.RecordDraw (cmd);
 #if DEBUG
-			recordDrawOverlay (cmd);
+			if (showUI)
+				recordDrawOverlay (cmd);
 #endif
 			pbrPipeline.RenderPass.End (cmd);
 		}
@@ -266,6 +270,7 @@ namespace pbrSachaWillem {
 			pbrPipeline.uboSkybox.Update (pbrPipeline.matrices, (uint)Marshal.SizeOf<PBRPipeline.Matrices> ());
 		}
 		void updateParams () {
+			pbrPipeline.parametters.lightDir = lightPos;
 			pbrPipeline.parametters.debugViewInputs = (float)currentDebugView;
 			pbrPipeline.uboParams.Update (pbrPipeline.parametters, (uint)Marshal.SizeOf<PBRPipeline.Params> ());
 		}
@@ -277,13 +282,18 @@ namespace pbrSachaWillem {
 		public override void Update () {
 #if DEBUG
 			results = statPool.GetResults ();
-			vkvgDraw ();
+			if (rebuildBuffers) {
+				buildCommandBuffers ();
+				rebuildBuffers = false;
+			}
+			if (showUI)
+				vkvgDraw ();
 #endif
 
 		}
 #endregion
 
-
+		 
 		protected override void OnResize () {
 #if DEBUG
 			initUISurface ();
@@ -381,53 +391,57 @@ namespace pbrSachaWillem {
 					break;
 				case Key.Up:
 					if (modifiers.HasFlag (Modifier.Shift))
-						lightPos -= Vector3.UnitZ;
+						lightPos -= Vector4.UnitZ;
 					else
 						camera.Move (0, 0, 1);
 					break;
 				case Key.Down:
 					if (modifiers.HasFlag (Modifier.Shift))
-						lightPos += Vector3.UnitZ;
+						lightPos += Vector4.UnitZ;
 					else
 						camera.Move (0, 0, -1);
 					break;
 				case Key.Left:
 					if (modifiers.HasFlag (Modifier.Shift))
-						lightPos -= Vector3.UnitX;
+						lightPos -= Vector4.UnitX;
 					else
 						camera.Move (1, 0, 0);
 					break;
 				case Key.Right:
 					if (modifiers.HasFlag (Modifier.Shift))
-						lightPos += Vector3.UnitX;
+						lightPos += Vector4.UnitX;
 					else
 						camera.Move (-1, 0, 0);
 					break;
 				case Key.PageUp:
 					if (modifiers.HasFlag (Modifier.Shift))
-						lightPos += Vector3.UnitY;
+						lightPos += Vector4.UnitY;
 					else
 						camera.Move (0, 1, 0);
 					break;
 				case Key.PageDown:
 					if (modifiers.HasFlag (Modifier.Shift))
-						lightPos -= Vector3.UnitY;
+						lightPos -= Vector4.UnitY;
 					else
 						camera.Move (0, -1, 0);
 					break;
 				case Key.F1:
+					showUI = !showUI;
+					rebuildBuffers = true;
+					break;
+				case Key.F2:
 					if (modifiers.HasFlag (Modifier.Shift))
 						pbrPipeline.parametters.exposure -= 0.3f;
 					else
 						pbrPipeline.parametters.exposure += 0.3f;
 					break;
-				case Key.F2:
+				case Key.F3:
 					if (modifiers.HasFlag (Modifier.Shift))
 						pbrPipeline.parametters.gamma -= 0.1f;
 					else
 						pbrPipeline.parametters.gamma += 0.1f;
 					break;
-				case Key.F3:
+				case Key.F4:
 					if (camera.Type == Camera.CamType.FirstPerson)
 						camera.Type = Camera.CamType.LookAt;
 					else
