@@ -78,7 +78,9 @@ namespace deferred {
 		BoundingBox modelAABB;
 
 		void init () {
+
 			renderPass = new RenderPass (dev);
+
 			renderPass.AddAttachment (swapChain.ColorFormat, VkImageLayout.PresentSrcKHR, VkSampleCountFlags.SampleCount1);
 			renderPass.AddAttachment (dev.GetSuitableDepthFormat(), VkImageLayout.DepthStencilAttachmentOptimal, samples);
 			renderPass.AddAttachment (VkFormat.R8g8b8a8Unorm, VkImageLayout.ColorAttachmentOptimal);
@@ -93,15 +95,20 @@ namespace deferred {
 			renderPass.ClearValues.Add (new VkClearValue { color = new VkClearColorValue (0.0f, 0.0f, 0.0f) });
 			renderPass.ClearValues.Add (new VkClearValue { color = new VkClearColorValue (0.0f, 0.0f, 0.0f) });
 
-			SubPass[] subpass = { new SubPass (), new SubPass () };
-			subpass[0].AddColorReference (	new VkAttachmentReference (2, VkImageLayout.ColorAttachmentOptimal),
+			SubPass[] subpass = { new SubPass (), new SubPass (), new SubPass() };
+			//skybox
+			subpass[0].AddColorReference (0, VkImageLayout.ColorAttachmentOptimal);
+			//models
+			subpass[1].AddColorReference (	new VkAttachmentReference (2, VkImageLayout.ColorAttachmentOptimal),
 									new VkAttachmentReference (3, VkImageLayout.ColorAttachmentOptimal),
 									new VkAttachmentReference (4, VkImageLayout.ColorAttachmentOptimal),
 									new VkAttachmentReference (5, VkImageLayout.ColorAttachmentOptimal));
-			subpass[0].SetDepthReference (1, VkImageLayout.DepthStencilAttachmentOptimal);
+			subpass[1].SetDepthReference (1, VkImageLayout.DepthStencilAttachmentOptimal);
+			subpass[1].AddPreservedReference (0);
 
-			subpass[1].AddColorReference (0, VkImageLayout.ColorAttachmentOptimal);
-			subpass[1].AddInputReference (	new VkAttachmentReference (2, VkImageLayout.ShaderReadOnlyOptimal),
+			//compose
+			subpass[2].AddColorReference (0, VkImageLayout.ColorAttachmentOptimal);
+			subpass[2].AddInputReference (	new VkAttachmentReference (2, VkImageLayout.ShaderReadOnlyOptimal),
 									new VkAttachmentReference (3, VkImageLayout.ShaderReadOnlyOptimal),
 									new VkAttachmentReference (4, VkImageLayout.ShaderReadOnlyOptimal),
 									new VkAttachmentReference (5, VkImageLayout.ShaderReadOnlyOptimal));
@@ -111,11 +118,14 @@ namespace deferred {
                 VkPipelineStageFlags.BottomOfPipe, VkPipelineStageFlags.ColorAttachmentOutput,
                 VkAccessFlags.MemoryRead, VkAccessFlags.ColorAttachmentRead | VkAccessFlags.ColorAttachmentWrite);
 			renderPass.AddDependency (0, 1,
-                VkPipelineStageFlags.ColorAttachmentOutput, VkPipelineStageFlags.FragmentShader,
-                VkAccessFlags.ColorAttachmentWrite, VkAccessFlags.ShaderRead);
-            	renderPass.AddDependency (1, Vk.SubpassExternal,
-                VkPipelineStageFlags.ColorAttachmentOutput, VkPipelineStageFlags.BottomOfPipe,
-                VkAccessFlags.ColorAttachmentRead | VkAccessFlags.ColorAttachmentWrite, VkAccessFlags.MemoryRead);
+				VkPipelineStageFlags.ColorAttachmentOutput, VkPipelineStageFlags.FragmentShader,
+				VkAccessFlags.ColorAttachmentWrite, VkAccessFlags.ShaderRead);
+			renderPass.AddDependency (1, 2,
+				VkPipelineStageFlags.ColorAttachmentOutput, VkPipelineStageFlags.FragmentShader,
+				VkAccessFlags.ColorAttachmentWrite, VkAccessFlags.ShaderRead);
+			renderPass.AddDependency (2, Vk.SubpassExternal,
+	                VkPipelineStageFlags.ColorAttachmentOutput, VkPipelineStageFlags.BottomOfPipe,
+	                VkAccessFlags.ColorAttachmentRead | VkAccessFlags.ColorAttachmentWrite, VkAccessFlags.MemoryRead);
 
 			 
 			descriptorPool = new DescriptorPool (dev, 3,
@@ -155,6 +165,7 @@ namespace deferred {
 				new VkPushConstantRange (VkShaderStageFlags.Fragment, sizeof (int), 64)
 			);
 			cfg.RenderPass = renderPass;
+			cfg.SubpassIndex = 1;
 			cfg.blendAttachments.Add (new VkPipelineColorBlendAttachmentState (false));
 			cfg.blendAttachments.Add (new VkPipelineColorBlendAttachmentState (false));
 			cfg.blendAttachments.Add (new VkPipelineColorBlendAttachmentState (false));
@@ -169,7 +180,7 @@ namespace deferred {
 			cfg.blendAttachments.Clear ();
 			cfg.blendAttachments.Add (new VkPipelineColorBlendAttachmentState (false));
 			cfg.ResetShadersAndVerticesInfos ();
-			cfg.SubpassIndex = 1;
+			cfg.SubpassIndex = 2;
 			cfg.Layout = gBuffPipeline.Layout;
 			cfg.depthStencilState.depthTestEnable = false;
 			cfg.depthStencilState.depthWriteEnable = false;
@@ -179,6 +190,7 @@ namespace deferred {
 			composePipeline = new GraphicPipeline (cfg);
 
 			cfg.shaders[1] = new ShaderInfo (VkShaderStageFlags.Fragment, "shaders/show_gbuff.frag.spv");
+			cfg.SubpassIndex = 2;
 			debugPipeline = new GraphicPipeline (cfg);
 
 			envCube = new EnvironmentCube (dsMain, gBuffPipeline.Layout, presentQueue, renderPass);
@@ -204,7 +216,7 @@ namespace deferred {
 				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/Sponza/glTF/Sponza.gltf",
 			};
 
-			model = new PbrModel (presentQueue, modelPathes[10],
+			model = new PbrModel (presentQueue, modelPathes[0],
 				descLayoutTextures,
 				AttachmentType.Color,
 				AttachmentType.PhysicalProps,
@@ -243,6 +255,10 @@ namespace deferred {
 			cmd.SetScissor (fb.Width, fb.Height);
 
 			cmd.BindDescriptorSet (gBuffPipeline.Layout, dsMain);
+
+			envCube.RecordDraw (cmd);
+			renderPass.BeginSubPass (cmd);
+
 			gBuffPipeline.Bind (cmd);
 			model.Bind (cmd);
 			model.DrawAll (cmd, gBuffPipeline.Layout);
