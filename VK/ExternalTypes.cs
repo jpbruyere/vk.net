@@ -1,4 +1,5 @@
-﻿using System;
+﻿/* credit to https://github.com/mellinoe */
+using System;
 
 namespace VK
 {

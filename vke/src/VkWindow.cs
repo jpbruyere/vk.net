@@ -55,7 +55,7 @@ namespace CVKL {
         protected VkSemaphore[] drawComplete;
 
 		protected uint fps;
-		protected bool updateViewRequested = true;
+		protected bool updateViewRequested = true, rebuildBuffers = false;
 		protected double lastMouseX, lastMouseY;
 		protected bool[] MouseButton => buttons;
 
