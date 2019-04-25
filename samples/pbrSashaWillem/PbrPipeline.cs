@@ -107,7 +107,7 @@ namespace CVKL {
 			};
 
 
-			model = new PbrModel2 (staggingQ, modelPathes[2], descLayoutTextures,
+			model = new PbrModel2 (staggingQ, modelPathes[0], descLayoutTextures,
 				AttachmentType.Color,
 				AttachmentType.PhysicalProps,
 				AttachmentType.Normal,
