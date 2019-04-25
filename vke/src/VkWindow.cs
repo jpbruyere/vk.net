@@ -189,9 +189,9 @@ namespace CVKL {
 			double diffX = lastMouseX - xPos;
 			double diffY = lastMouseY - yPos;
 			if (MouseButton[0]) {
-				camera.Rotate ((float)-diffX,(float)diffY);
+				camera.Rotate ((float)-diffX,(float)-diffY);
 			} else if (MouseButton[1]) {
-				camera.SetZoom ((float)diffY);
+				camera.Move (0,0,(float)diffY);
 			}
 
 			updateViewRequested = true;

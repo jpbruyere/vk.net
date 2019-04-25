@@ -44,7 +44,9 @@ namespace CVKL {
 			=> new VkDebugMarkerObjectNameInfoEXT(VkDebugReportObjectTypeEXT.RenderPassEXT, handle.Handle);
 
 		#region CTORS
-		public RenderPass (Device device) : base(device) { }
+		public RenderPass (Device device, VkSampleCountFlags samples = VkSampleCountFlags.SampleCount1) : base(device) {
+			Samples = samples;
+		}
 
 		/// <summary>
 		/// Create renderpass with a single color attachment and a resolve one if needed

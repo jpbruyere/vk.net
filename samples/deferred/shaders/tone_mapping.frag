@@ -12,8 +12,7 @@ layout (set = 0, binding = 0) uniform UBO {
     float gamma;    
 } ubo;
 
-
-layout (input_attachment_index = 0, set = 2, binding = 4) uniform subpassInput samplerHDR;
+layout (input_attachment_index = 0, set = 2, binding = 4) uniform subpassInputMS samplerHDR;
 
 layout (location = 0) in vec2 inUV;
 layout (location = 0) out vec4 outColor;
@@ -53,7 +52,7 @@ vec3 SRGBtoLINEAR(vec3 srgbIn)
 
 void main() 
 {    
-    vec4 color = subpassLoad(samplerHDR);    
+    vec4 color = subpassLoad(samplerHDR, gl_SampleID);    
     outColor = vec4(SRGBtoLINEAR(tonemap(color.rgb)), color.a);
 
 }
