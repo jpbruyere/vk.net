@@ -34,7 +34,7 @@ namespace CVKL {
 		public uint SubpassIndex;
         public PipelineLayout Layout;
 		public RenderPass RenderPass;
-
+		public PipelineCache Cache;
 		public VkPipelineBindPoint bindPoint = VkPipelineBindPoint.Graphics;
         public VkPipelineInputAssemblyStateCreateInfo inputAssemblyState = VkPipelineInputAssemblyStateCreateInfo.New();
         public VkPipelineRasterizationStateCreateInfo rasterizationState = VkPipelineRasterizationStateCreateInfo.New();

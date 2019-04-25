@@ -35,15 +35,14 @@ namespace CVKL {
 		public VkSampleCountFlags Samples => RenderPass.Samples;
 
 		#region CTORS
-		protected GraphicPipeline (RenderPass renderPass, string name = "graphic pipeline") : base(renderPass.Dev, name) { 
+		protected GraphicPipeline (RenderPass renderPass, PipelineCache cache = null, string name = "graphic pipeline") : base(renderPass.Dev, cache, name) { 
 			RenderPass = renderPass;
-
 			handle.SetDebugMarkerName (Dev, name);
 		}
 		/// <summary>
 		/// Create a new Pipeline with supplied RenderPass
 		/// </summary>
-		public GraphicPipeline (GraphicPipelineConfig cfg, string name = "graphic pipeline") : this (cfg.RenderPass, name)
+		public GraphicPipeline (GraphicPipelineConfig cfg, string name = "graphic pipeline") : this (cfg.RenderPass, cfg.Cache, name)
 		{
 			layout = cfg.Layout;
 
@@ -58,6 +57,7 @@ namespace CVKL {
 			if (state != ActivableState.Activated) {
 				Layout.Activate ();
 				RenderPass.Activate ();
+				Cache?.Activate ();
 
 				List<VkPipelineShaderStageCreateInfo> shaderStages = new List<VkPipelineShaderStageCreateInfo> ();
 				foreach (ShaderInfo shader in cfg.shaders)
@@ -92,7 +92,7 @@ namespace CVKL {
 				info.pStages = shaderStages.Pin ();
 				info.subpass = cfg.SubpassIndex;
 
-				Utils.CheckResult (vkCreateGraphicsPipelines (Dev.VkDev, VkPipelineCache.Null, 1, ref info, IntPtr.Zero, out handle));
+				Utils.CheckResult (vkCreateGraphicsPipelines (Dev.VkDev, Cache == null ? VkPipelineCache.Null : Cache.handle, 1, ref info, IntPtr.Zero, out handle));
 
 				for (int i = 0; i < cfg.shaders.Count; i++)
 					Dev.DestroyShaderModule (shaderStages[i].module);
@@ -124,7 +124,7 @@ namespace CVKL {
 
 		protected override void Dispose (bool disposing) {
 			if (disposing) {
-				if (state == ActivableState.Activated)
+				if (state == ActivableState.Activated) 
 					RenderPass.Dispose ();
 			}else
 				System.Diagnostics.Debug.WriteLine ("GraphicPipeline disposed by finalizer");

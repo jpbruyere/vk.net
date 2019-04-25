@@ -79,6 +79,7 @@ namespace deferred {
 		DescriptorSetLayout descLayoutMain, descLayoutTextures, descLayoutGBuff;
 		DescriptorSet dsMain, dsGBuff;
 
+		PipelineCache pipelineCache;
 		Pipeline gBuffPipeline, composePipeline, toneMappingPipeline, debugPipeline;
 
 		HostBuffer uboMats;
@@ -97,6 +98,8 @@ namespace deferred {
 		const int SP_TONE_MAPPING 	= 3;
 
 		Program () {
+			pipelineCache = new PipelineCache (dev);
+
 			camera = new Camera (Utils.DegreesToRadians (45f), 1f, 0.1f, 16f);
 
 			init ();
@@ -205,7 +208,7 @@ namespace deferred {
 				cfg.multisampleState.sampleShadingEnable = true;
 				cfg.multisampleState.minSampleShading = 0.5f;
 			}
-
+			cfg.Cache = pipelineCache;
 			cfg.Layout = new PipelineLayout (dev, descLayoutMain, descLayoutTextures, descLayoutGBuff);
 			cfg.Layout.AddPushConstants (
 				new VkPushConstantRange (VkShaderStageFlags.Vertex, (uint)Marshal.SizeOf<Matrix4x4> ()),
@@ -544,6 +547,10 @@ namespace deferred {
 						camera.Type = Camera.CamType.FirstPerson;
 					Console.WriteLine ($"camera type = {camera.Type}");
 					break;
+				case Key.S:
+					pipelineCache.Save ();
+					Console.WriteLine ($"Pipeline Cache saved.");
+					break;
 				default:
 					base.onKeyDown (key, scanCode, modifiers);
 					return;
@@ -579,6 +586,7 @@ namespace deferred {
 					envCube.Dispose ();
 
 					descriptorPool.Dispose ();
+					pipelineCache.Dispose ();
 				}
 			}
 

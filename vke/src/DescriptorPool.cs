@@ -29,7 +29,7 @@ using VK;
 using static VK.Vk;
 
 namespace CVKL {
-    public class DescriptorPool : Activable {
+    public sealed class DescriptorPool : Activable {
         internal VkDescriptorPool handle;        
         public readonly uint MaxSets;
 
@@ -72,7 +72,7 @@ namespace CVKL {
             Allocate (ds);
             return ds;
         }
-        public unsafe void Allocate (DescriptorSet descriptorSet) {
+        public void Allocate (DescriptorSet descriptorSet) {
             VkDescriptorSetAllocateInfo allocInfo = VkDescriptorSetAllocateInfo.New();
             allocInfo.descriptorPool = handle;
             allocInfo.descriptorSetCount = (uint)descriptorSet.descriptorSetLayouts.Count;
@@ -104,7 +104,7 @@ namespace CVKL {
 		#region IDisposable Support
 		protected override void Dispose (bool disposing) {
 			if (!disposing)
-				System.Diagnostics.Debug.WriteLine ("VKE DescriptorPool disposed by finalizer");
+				System.Diagnostics.Debug.WriteLine ($"CVKL DescriptorPool '{name}' disposed by finalizer");
 			if (state == ActivableState.Activated)
 				vkDestroyDescriptorPool (Dev.VkDev, handle, IntPtr.Zero);
 			base.Dispose (disposing);

@@ -31,6 +31,7 @@ namespace CVKL {
 	public abstract class Pipeline : Activable {
         protected VkPipeline handle;
 		protected PipelineLayout layout;
+		protected PipelineCache Cache;
 
 		public VkPipeline Handle => handle;
 		public PipelineLayout Layout => layout;
@@ -38,7 +39,8 @@ namespace CVKL {
 		protected readonly VkPipelineBindPoint bindPoint;
 
 		#region CTORS
-		protected Pipeline (Device dev, string name = "custom pipeline") : base(dev, name) {
+		protected Pipeline (Device dev, PipelineCache cache = null, string name = "custom pipeline") : base(dev, name) {
+			this.Cache = cache;
 		}
 		#endregion
 
@@ -52,6 +54,7 @@ namespace CVKL {
 			if (state == ActivableState.Activated) {
 				if (disposing) {
 					layout.Dispose ();
+					Cache?.Dispose ();
 				} else
 					System.Diagnostics.Debug.WriteLine ($"Pipeline '{name}' disposed by finalizer");
 

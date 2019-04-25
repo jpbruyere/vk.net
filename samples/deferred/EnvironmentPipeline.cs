@@ -17,8 +17,8 @@ namespace CVKL {
 		public int debugMip = 0;
 		public int debugFace = 0;
 
-		public EnvironmentCube (DescriptorSet dsSkybox, PipelineLayout plLayout, Queue staggingQ, RenderPass renderPass)
-		: base (renderPass, "EnvCube pipeline") {
+		public EnvironmentCube (DescriptorSet dsSkybox, PipelineLayout plLayout, Queue staggingQ, RenderPass renderPass, PipelineCache cache = null)
+		: base (renderPass, cache, "EnvCube pipeline") {
 
 			using (CommandPool cmdPool = new CommandPool (staggingQ.Dev, staggingQ.index)) {
 
