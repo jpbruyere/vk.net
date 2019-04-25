@@ -5,6 +5,9 @@
 #define MANUAL_SRGB 0
 #define DEBUG 0
 
+layout (constant_id = 0) const float NEAR_PLANE = 0.1f;
+layout (constant_id = 1) const float FAR_PLANE = 256.0f;
+
 struct Material {
     vec4 baseColorFactor;
     vec4 emissiveFactor;
@@ -136,9 +139,6 @@ float convertMetallic(vec3 diffuse, vec3 specular, float maxSpecular) {
     float D = max(b * b - 4.0 * a * c, 0.0);
     return clamp((-b + sqrt(D)) / (2.0 * a), 0.0, 1.0);
 }
-
-layout (constant_id = 0) const float NEAR_PLANE = 0.1f;
-layout (constant_id = 1) const float FAR_PLANE = 256.0f;
 
 float linearDepth(float depth)
 {

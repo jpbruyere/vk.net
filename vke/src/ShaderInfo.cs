@@ -31,11 +31,13 @@ namespace CVKL {
 		public VkShaderStageFlags StageFlags;
 		public string SpirvPath;
 		public FixedUtf8String EntryPoint;
+		public SpecializationInfo SpecializationInfo;
 
-		public ShaderInfo (VkShaderStageFlags _stageFlags, string _spirvPath, string _entryPoint = "main") {
+		public ShaderInfo (VkShaderStageFlags _stageFlags, string _spirvPath, SpecializationInfo specializationInfo = null, string _entryPoint = "main") {
 			StageFlags = _stageFlags;
 			SpirvPath = _spirvPath;
 			EntryPoint = new FixedUtf8String (_entryPoint);
+			this.SpecializationInfo = specializationInfo;
 		}
 
 		public VkPipelineShaderStageCreateInfo GetStageCreateInfo (Device dev) {
@@ -44,7 +46,8 @@ namespace CVKL {
 				stage = StageFlags,
 				pName = EntryPoint,
 				module = dev.LoadSPIRVShader (SpirvPath),
-			};			
+				pSpecializationInfo = (SpecializationInfo == null) ? IntPtr.Zero : SpecializationInfo.InfosPtr
+			};
 		}
 
 		#region IDisposable Support

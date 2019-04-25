@@ -14,7 +14,6 @@ namespace CVKL {
 		public Image irradianceCube { get; private set; }
 		public Image prefilterCube { get; set; }
 
-		public Image debugImg;
 		public int debugMip = 0;
 		public int debugFace = 0;
 
@@ -50,11 +49,6 @@ namespace CVKL {
 			}
 
 		}
-
-		//public void WriteDesc (VkDescriptorBufferInfo matrixDesc) { 
-		//	DescriptorSetWrites uboUpdate = new DescriptorSetWrites (descLayoutMain);
-		//	uboUpdate.Write (Dev, dsSkybox, matrixDesc, cubemap.Descriptor);
-		//}
 
 		public void RecordDraw (CommandBuffer cmd) {
 			Bind (cmd);
@@ -265,7 +259,7 @@ namespace CVKL {
 								cmd.PushConstant (pl.Layout, VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment, deltaTheta, (uint)Marshal.SizeOf<Matrix4x4> () + 4);
 							} else {
 								cmd.PushConstant (pl.Layout, VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment, roughness, (uint)Marshal.SizeOf<Matrix4x4> ());
-								cmd.PushConstant (pl.Layout, VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment, 32u, (uint)Marshal.SizeOf<Matrix4x4> () + 4);
+								cmd.PushConstant (pl.Layout, VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment, 512u, (uint)Marshal.SizeOf<Matrix4x4> () + 4);
 							}
 
 							cmd.BindDescriptorSet (pl.Layout, dset);
@@ -287,27 +281,6 @@ namespace CVKL {
 								cmap.Handle, VkImageLayout.TransferDstOptimal,
 								1, region.Pin ());
 							region.Unpin ();
-
-							/*
-							//debug img
-							if (target == CBTarget.PREFILTEREDENV && m == debugMip && f == debugFace) {
-								debugImg?.Dispose ();
-								debugImg = new Image (Dev, VkFormat.R16g16b16a16Sfloat, VkImageUsageFlags.Sampled | VkImageUsageFlags.TransferDst, VkMemoryPropertyFlags.DeviceLocal,
-									(uint)viewPortSize, (uint)viewPortSize);
-								debugImg.CreateView ();
-								debugImg.CreateSampler ();
-								region.dstSubresource.baseArrayLayer = 0;
-								region.dstSubresource.mipLevel = 0;
-								debugImg.SetLayout (cmd, VkImageAspectFlags.Color,
-									VkImageLayout.Undefined, VkImageLayout.TransferDstOptimal);
-								Vk.vkCmdCopyImage (cmd.Handle,
-									imgFbOffscreen.Handle, VkImageLayout.TransferSrcOptimal,
-									debugImg.Handle, VkImageLayout.TransferDstOptimal,
-									1, region.Pin ());
-								debugImg.SetLayout (cmd, VkImageAspectFlags.Color,
-									VkImageLayout.TransferDstOptimal, VkImageLayout.ShaderReadOnlyOptimal);
-								region.Unpin ();
-							}*/
 
 							imgFbOffscreen.SetLayout (cmd, VkImageAspectFlags.Color,
 								VkImageLayout.TransferSrcOptimal, VkImageLayout.ColorAttachmentOptimal);
@@ -345,8 +318,6 @@ namespace CVKL {
 			lutBrdf.Dispose ();
 			irradianceCube.Dispose ();
 			prefilterCube.Dispose ();
-
-			debugImg?.Dispose ();
 
 			base.Dispose (disposing);
 		}

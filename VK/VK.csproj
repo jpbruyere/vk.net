@@ -29,7 +29,12 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
- <Target Name="rewrite" AfterTargets="CoreBuild">
+  <ItemGroup>
+    <Compile Include="..\vk.generator\bin\**\*.cs">
+      <Link>generated\%(Filename)%(Extension)</Link>
+    </Compile>
+  </ItemGroup>    
+  <Target Name="rewrite" AfterTargets="CoreBuild">
     <Exec Condition="$(OS) == 'Windows_NT'" Command="$(SolutionDir)build/$(TargetFramework)rewrite/vk.rewrite.exe $(OutputPath)VK.dll" />
     <Exec Condition="$(OS) != 'Windows_NT'" Command="mono ../vk.rewrite/bin/Release/vk.rewrite.exe $(OutputPath)VK.dll" ConsoleToMSBuild="true" EchoOff="true">
         <Output TaskParameter="ConsoleOutput" PropertyName="OutputOfExec" />
