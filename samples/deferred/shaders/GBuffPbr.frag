@@ -79,7 +79,7 @@ layout (push_constant) uniform PushCsts {
 
 layout (location = 0) out vec4 outColorRough;
 layout (location = 1) out vec4 outEmitMetal;
-layout (location = 2) out vec4 outN;
+layout (location = 2) out vec4 outN_AO;
 layout (location = 3) out vec4 outPos;
 
 vec4 SRGBtoLINEAR(vec4 srgbIn)
@@ -226,6 +226,6 @@ void main()
     
     outColorRough = vec4 (baseColor.rgb, perceptualRoughness);
     outEmitMetal = vec4 (emissive, metallic);
-    outN = vec4 (n, ao);
+    outN_AO = vec4 (n, ao);
     outPos = vec4 (v, linearDepth(gl_FragCoord.z));
 }
