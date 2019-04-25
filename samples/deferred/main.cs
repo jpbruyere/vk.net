@@ -36,6 +36,7 @@ namespace deferred {
 		}
 
 		DebugView currentDebugView = DebugView.none;
+
 		public struct Matrices {
 			public Matrix4x4 projection;
 			public Matrix4x4 model;
@@ -46,8 +47,13 @@ namespace deferred {
 			public float gamma;
 			public float prefilteredCubeMipLevels;
 			public float scaleIBLAmbient;
-			public float debugViewInputs;
+			public uint lightsCount;
 			public float debugViewEquation;
+		}
+
+		public struct Light {
+			public Vector4 position;
+			public Vector4 color;
 		}
 
 		public Matrices matrices = new Matrices {
@@ -55,8 +61,15 @@ namespace deferred {
 			gamma = 1.2f,
 			exposure = 2.0f,
 			scaleIBLAmbient = 1.0f,
-			debugViewInputs = 0,
+			lightsCount = 1,
 			debugViewEquation = 0
+		};
+
+		Light[] lights = {
+			new Light {
+				position = new Vector4(1,1,1,0),
+				color = new Vector4(1)
+			}
 		};
 
 		Framebuffer[] frameBuffers;
@@ -84,7 +97,10 @@ namespace deferred {
 		const int SP_TONE_MAPPING 	= 3;
 
 		Program () {
+			camera = new Camera (Utils.DegreesToRadians (45f), 1f, 0.1f, 16f);
+
 			init ();
+
 			camera.SetPosition (0, 0, 3);
 			camera.Model = Matrix4x4.CreateScale (1f / Math.Max (Math.Max (modelAABB.max.X, modelAABB.max.Y), modelAABB.max.Z));
 			//camera.Model = Matrix4x4.CreateScale (0.02f);
@@ -204,10 +220,16 @@ namespace deferred {
 
 			cfg.AddVertexBinding<PbrModel.Vertex> (0);
 			cfg.SetVertexAttributes (0, VkFormat.R32g32b32Sfloat, VkFormat.R32g32b32Sfloat, VkFormat.R32g32Sfloat, VkFormat.R32g32Sfloat);
-			cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/GBuffPbr.vert.spv");
-			cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/GBuffPbr.frag.spv");
 
-			gBuffPipeline = new GraphicPipeline (cfg);
+			using (SpecializationInfo constants = new SpecializationInfo (
+						new SpecializationConstant<float> (0, camera.NearPlane),
+						new SpecializationConstant<float> (1, camera.FarPlane))) {
+
+				cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/GBuffPbr.vert.spv");
+				cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/GBuffPbr.frag.spv", constants);
+
+				gBuffPipeline = new GraphicPipeline (cfg);
+			}
 
 			//COMPOSE PIPELINE
 			cfg.blendAttachments.Clear ();
@@ -345,7 +367,6 @@ namespace deferred {
 				 camera.Position.Z * (float)Math.Cos (camera.Rotation.Y) * (float)Math.Cos (camera.Rotation.X),
 				 0
 			);
-			//matrices.debugViewInputs = (float)currentDebugView;
 
 			uboMats.Update (matrices, (uint)Marshal.SizeOf<Matrices> ());
 

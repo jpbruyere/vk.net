@@ -25,6 +25,8 @@ namespace CVKL {
 
 		public Vector3 Position => position;
 		public Vector3 Rotation => rotation;
+		public float NearPlane => zNear;
+		public float FarPlane => zFar;
 
 		public CamType Type;
 		
@@ -46,9 +48,11 @@ namespace CVKL {
 			get { return Matrix4x4.CreatePerspectiveFieldOfView (fov, aspectRatio, zNear, zFar); }
 		}
 
-		public Camera (float fieldOfView, float aspectRatio) {
+		public Camera (float fieldOfView, float aspectRatio, float nearPlane = 0.1f, float farPlane = 256f) {
 			fov = fieldOfView;
 			this.aspectRatio = aspectRatio;
+			zNear = nearPlane;
+			zFar = farPlane;
 			Update ();
 		}
 
