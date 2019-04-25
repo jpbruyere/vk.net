@@ -21,10 +21,10 @@ layout (set = 0, binding = 0) uniform UBO {
 const float M_PI = 3.141592653589793;
 const float c_MinRoughness = 0.04;
 
-layout (input_attachment_index = 0, set = 2, binding = 0) uniform subpassInput samplerColorRough;
-layout (input_attachment_index = 1, set = 2, binding = 1) uniform subpassInput samplerEmitMetal;
-layout (input_attachment_index = 2, set = 2, binding = 2) uniform subpassInput samplerN_AO;
-layout (input_attachment_index = 3, set = 2, binding = 3) uniform subpassInput samplerPos;
+layout (input_attachment_index = 0, set = 2, binding = 0) uniform subpassInputMS samplerColorRough;
+layout (input_attachment_index = 1, set = 2, binding = 1) uniform subpassInputMS samplerEmitMetal;
+layout (input_attachment_index = 2, set = 2, binding = 2) uniform subpassInputMS samplerN_AO;
+layout (input_attachment_index = 3, set = 2, binding = 3) uniform subpassInputMS samplerPos;
 
 layout (set = 0, binding = 1) uniform samplerCube samplerIrradiance;
 layout (set = 0, binding = 2) uniform samplerCube prefilteredMap;
@@ -132,14 +132,14 @@ float convertMetallic(vec3 diffuse, vec3 specular, float maxSpecular) {
 
 void main() 
 {
-    if (subpassLoad(samplerPos).a == 1.0f)
+    if (subpassLoad(samplerPos, gl_SampleID).a == 1.0f)
         discard;
     
-    float perceptualRoughness = subpassLoad(samplerColorRough).a;
-    float metallic = subpassLoad(samplerEmitMetal).a;
+    float perceptualRoughness = subpassLoad(samplerColorRough, gl_SampleID).a;
+    float metallic = subpassLoad(samplerEmitMetal, gl_SampleID).a;
     vec3 diffuseColor;
-    vec4 baseColor = vec4(subpassLoad(samplerColorRough).rgb, 1);    
-    vec3 emissive = subpassLoad (samplerEmitMetal).rgb;        
+    vec4 baseColor = vec4(subpassLoad(samplerColorRough, gl_SampleID).rgb, 1);    
+    vec3 emissive = subpassLoad (samplerEmitMetal, gl_SampleID).rgb;        
 
     vec3 f0 = vec3(0.04);
     
@@ -159,8 +159,8 @@ void main()
     vec3 specularEnvironmentR0 = specularColor.rgb;
     vec3 specularEnvironmentR90 = vec3(1.0) * reflectance90;
 
-    vec3 n = subpassLoad(samplerN_AO).rgb;
-    vec3 v = subpassLoad(samplerPos).rgb;    // Vector from surface point to camera
+    vec3 n = subpassLoad(samplerN_AO, gl_SampleID).rgb;
+    vec3 v = subpassLoad(samplerPos, gl_SampleID).rgb;    // Vector from surface point to camera
     vec3 l = normalize(ubo.lightDir.xyz);     // Vector from surface point to light
     vec3 h = normalize(l+v);                        // Half vector between both l and v
     vec3 reflection = -normalize(reflect(v, n));
@@ -207,7 +207,7 @@ void main()
     const float u_EmissiveFactor = 1.0f;
     
     //AO is in the alpha channel of the normalAttachment    
-    color = mix(color, color * subpassLoad(samplerN_AO).a, u_OcclusionStrength);
+    color = mix(color, color * subpassLoad(samplerN_AO, gl_SampleID).a, u_OcclusionStrength);
     color += emissive;             
     
     outColor = vec4(color, baseColor.a);
