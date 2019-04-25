@@ -18,7 +18,8 @@ namespace deferred {
 			features.samplerAnisotropy = true;
 			features.sampleRateShading = true;
 		}
-		VkSampleCountFlags samples = VkSampleCountFlags.SampleCount8;
+		VkSampleCountFlags samples = VkSampleCountFlags.SampleCount4;
+		VkFormat hdrFormat = VkFormat.R32g32b32a32Sfloat;
 
 		enum DebugView {
 			none,
@@ -29,7 +30,9 @@ namespace deferred {
 			emissive,
 			metallic,
 			roughness,
-			depth
+			depth,
+			prefill,
+			irradiance
 		}
 
 		DebugView currentDebugView = DebugView.none;
@@ -38,7 +41,7 @@ namespace deferred {
 			public Matrix4x4 model;
 			public Matrix4x4 view;
 			public Vector4 camPos;
-			public Vector4 lightDir;
+			public Vector4 lightPos;
 			public float exposure;
 			public float gamma;
 			public float prefilteredCubeMipLevels;
@@ -48,21 +51,13 @@ namespace deferred {
 		}
 
 		public Matrices matrices = new Matrices {
-			lightDir = Vector4.Normalize (new Vector4 (0.7f, 0.6f, 0.2f, 0.0f)),
+			lightPos = Vector4.Normalize (new Vector4 (0.7f, 0.6f, 0.2f, 0.0f)),
 			gamma = 1.2f,
-			exposure = 2.5f,
-			scaleIBLAmbient = 1f,
+			exposure = 2.0f,
+			scaleIBLAmbient = 1.0f,
 			debugViewInputs = 0,
 			debugViewEquation = 0
 		};
-
-		Program () {
-			camera.SetPosition (0, 0, 5);
-
-			init ();
-
-			camera.Model = Matrix4x4.CreateScale (1f / Math.Max (Math.Max (modelAABB.max.X, modelAABB.max.Y), modelAABB.max.Z));
-		}
 
 		Framebuffer[] frameBuffers;
 		Image gbColorRough, gbEmitMetal, gbN_AO, gbPos, hdrImg;
@@ -88,17 +83,24 @@ namespace deferred {
 		const int SP_COMPOSE 		= 2;
 		const int SP_TONE_MAPPING 	= 3;
 
+		Program () {
+			init ();
+			camera.SetPosition (0, 0, 3);
+			camera.Model = Matrix4x4.CreateScale (1f / Math.Max (Math.Max (modelAABB.max.X, modelAABB.max.Y), modelAABB.max.Z));
+			//camera.Model = Matrix4x4.CreateScale (0.02f);
+		}
+
 		void init () {
 
 			renderPass = new RenderPass (dev, samples);
 
 			renderPass.AddAttachment (swapChain.ColorFormat, VkImageLayout.PresentSrcKHR, VkSampleCountFlags.SampleCount1);//swapchain image
 			renderPass.AddAttachment (dev.GetSuitableDepthFormat(), VkImageLayout.DepthStencilAttachmentOptimal, samples);
-			renderPass.AddAttachment (VkFormat.R8g8b8a8Unorm, VkImageLayout.ColorAttachmentOptimal, samples);//GBuff0 and final color before resolve
-			renderPass.AddAttachment (VkFormat.R8g8b8a8Unorm, VkImageLayout.ColorAttachmentOptimal, samples);//GBuff1 
-			renderPass.AddAttachment (VkFormat.R16g16b16a16Sfloat, VkImageLayout.ColorAttachmentOptimal, samples);//GBuff2
-			renderPass.AddAttachment (VkFormat.R16g16b16a16Sfloat, VkImageLayout.ColorAttachmentOptimal, samples);//GBuff3
-			renderPass.AddAttachment (VkFormat.R16g16b16a16Sfloat, VkImageLayout.ColorAttachmentOptimal, samples);//hdr color
+			renderPass.AddAttachment (swapChain.ColorFormat, VkImageLayout.ColorAttachmentOptimal, samples);//GBuff0 (color + roughness) and final color before resolve
+			renderPass.AddAttachment (VkFormat.R8g8b8a8Unorm, VkImageLayout.ColorAttachmentOptimal, samples);//GBuff1 (emit + metal)
+			renderPass.AddAttachment (VkFormat.R16g16b16a16Sfloat, VkImageLayout.ColorAttachmentOptimal, samples);//GBuff2 (normals + AO)
+			renderPass.AddAttachment (VkFormat.R16g16b16a16Sfloat, VkImageLayout.ColorAttachmentOptimal, samples);//GBuff3 (Pos + depth)
+			renderPass.AddAttachment (hdrFormat, VkImageLayout.ColorAttachmentOptimal, samples);//hdr color
 
 			renderPass.ClearValues.Add (new VkClearValue { color = new VkClearColorValue (0.0f, 0.0f, 0.0f) });
             	renderPass.ClearValues.Add (new VkClearValue { depthStencil = new VkClearDepthStencilValue (1.0f, 0) });
@@ -126,7 +128,7 @@ namespace deferred {
 									new VkAttachmentReference (4, VkImageLayout.ShaderReadOnlyOptimal),
 									new VkAttachmentReference (5, VkImageLayout.ShaderReadOnlyOptimal));
 	         	//tone mapping
-			subpass[SP_TONE_MAPPING].AddColorReference ((samples == VkSampleCountFlags.SampleCount1) ? 0u : 4u, VkImageLayout.ColorAttachmentOptimal);
+			subpass[SP_TONE_MAPPING].AddColorReference ((samples == VkSampleCountFlags.SampleCount1) ? 0u : 2u, VkImageLayout.ColorAttachmentOptimal);
 			subpass[SP_TONE_MAPPING].AddInputReference (new VkAttachmentReference (6, VkImageLayout.ShaderReadOnlyOptimal));
 			if (samples != VkSampleCountFlags.SampleCount1) 
 				subpass[SP_TONE_MAPPING].AddResolveReference (0, VkImageLayout.ColorAttachmentOptimal);
@@ -252,6 +254,8 @@ namespace deferred {
 				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/Lantern/glTF/Lantern.gltf",
 				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/SciFiHelmet/glTF/SciFiHelmet.gltf",
 				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/Sponza/glTF/Sponza.gltf",
+				"/mnt/devel/vkChess/data/chess.gltf",
+				"/home/jp/gltf/camaro/scene.gltf"
 			};
 
 			model = new PbrModel (presentQueue, modelPathes[0],
@@ -310,7 +314,9 @@ namespace deferred {
 				composePipeline.Bind (cmd);
 			else {
 				debugPipeline.Bind (cmd);
-				cmd.PushConstant (debugPipeline.Layout, VkShaderStageFlags.Fragment, (int)currentDebugView - 1, (uint)Marshal.SizeOf<Matrix4x4> ());
+				uint debugValue = (uint)currentDebugView - 1;
+				debugValue += (uint)((envCube.debugFace << 8) + (envCube.debugMip << 16));
+				cmd.PushConstant (debugPipeline.Layout, VkShaderStageFlags.Fragment, debugValue, (uint)Marshal.SizeOf<Matrix4x4> ());
 			}
 
 			cmd.Draw (3, 1, 0, 0);
@@ -326,7 +332,8 @@ namespace deferred {
 		public override void UpdateView () {
 			camera.AspectRatio = (float)swapChain.Width / swapChain.Height;
 
-			matrices.lightDir = lightPos;
+			matrices.lightPos = lightPos;
+
 			matrices.projection = camera.Projection;
 			matrices.view = camera.View;
 			matrices.model = camera.Model;
@@ -347,8 +354,6 @@ namespace deferred {
 
 		#endregion
 
-
-
 		void createGBuff () {
 			gbColorRough?.Dispose ();
 			gbEmitMetal?.Dispose ();
@@ -356,11 +361,11 @@ namespace deferred {
 			gbPos?.Dispose ();
 			hdrImg?.Dispose ();
 
-			gbColorRough = new Image (dev, VkFormat.R8g8b8a8Unorm, VkImageUsageFlags.InputAttachment | VkImageUsageFlags.ColorAttachment, VkMemoryPropertyFlags.DeviceLocal, swapChain.Width, swapChain.Height, VkImageType.Image2D, samples);
+			gbColorRough = new Image (dev, swapChain.ColorFormat, VkImageUsageFlags.InputAttachment | VkImageUsageFlags.ColorAttachment, VkMemoryPropertyFlags.DeviceLocal, swapChain.Width, swapChain.Height, VkImageType.Image2D, samples);
 			gbEmitMetal = new Image (dev, VkFormat.R8g8b8a8Unorm, VkImageUsageFlags.InputAttachment | VkImageUsageFlags.ColorAttachment, VkMemoryPropertyFlags.DeviceLocal, swapChain.Width, swapChain.Height, VkImageType.Image2D, samples);
 			gbN_AO = new Image (dev, VkFormat.R16g16b16a16Sfloat, VkImageUsageFlags.InputAttachment | VkImageUsageFlags.ColorAttachment, VkMemoryPropertyFlags.DeviceLocal, swapChain.Width, swapChain.Height, VkImageType.Image2D, samples);
 			gbPos = new Image (dev, VkFormat.R16g16b16a16Sfloat, VkImageUsageFlags.InputAttachment | VkImageUsageFlags.ColorAttachment, VkMemoryPropertyFlags.DeviceLocal, swapChain.Width, swapChain.Height, VkImageType.Image2D, samples);
-			hdrImg = new Image (dev, VkFormat.R16g16b16a16Sfloat, VkImageUsageFlags.InputAttachment | VkImageUsageFlags.ColorAttachment, VkMemoryPropertyFlags.DeviceLocal, swapChain.Width, swapChain.Height, VkImageType.Image2D, samples);
+			hdrImg = new Image (dev, hdrFormat, VkImageUsageFlags.InputAttachment | VkImageUsageFlags.ColorAttachment, VkMemoryPropertyFlags.DeviceLocal, swapChain.Width, swapChain.Height, VkImageType.Image2D, samples);
 
 			gbColorRough.CreateView ();
 			gbColorRough.CreateSampler ();
@@ -422,6 +427,30 @@ namespace deferred {
 		#region Mouse and keyboard
 		protected override void onKeyDown (Key key, int scanCode, Modifier modifiers) {
 			switch (key) {
+				case Key.F:
+					if (modifiers.HasFlag (Modifier.Shift)) {
+						envCube.debugFace--;
+						if (envCube.debugFace < 0)
+							envCube.debugFace = 5;
+					} else {
+						envCube.debugFace++;
+						if (envCube.debugFace > 5)
+							envCube.debugFace = 0;
+					}
+					rebuildBuffers = true;
+					break;
+				case Key.M:
+					if (modifiers.HasFlag (Modifier.Shift)) {
+						envCube.debugMip--;
+						if (envCube.debugMip < 0)
+							envCube.debugMip = (int)envCube.prefilterCube.CreateInfo.mipLevels - 1;
+					} else {
+						envCube.debugMip++;
+						if (envCube.debugMip > envCube.prefilterCube.CreateInfo.mipLevels)
+							envCube.debugMip = 0;
+					}
+					rebuildBuffers = true;
+					break;
 				case Key.Keypad0:
 				case Key.Keypad1:
 				case Key.Keypad2:
@@ -431,7 +460,12 @@ namespace deferred {
 				case Key.Keypad6:
 				case Key.Keypad7:
 				case Key.Keypad8:
+				case Key.Keypad9:
 					currentDebugView = (DebugView)(int)key-320;
+					rebuildBuffers = true;
+					break;
+				case Key.KeypadDivide:
+					currentDebugView = DebugView.irradiance;
 					rebuildBuffers = true;
 					break;
 				case Key.Up:

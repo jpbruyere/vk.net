@@ -15,7 +15,7 @@ namespace CVKL {
 		public Image prefilterCube { get; set; }
 
 		public Image debugImg;
-		public int debugMip = -1;
+		public int debugMip = 0;
 		public int debugFace = 0;
 
 		public EnvironmentCube (DescriptorSet dsSkybox, PipelineLayout plLayout, Queue staggingQ, RenderPass renderPass)
@@ -288,6 +288,7 @@ namespace CVKL {
 								1, region.Pin ());
 							region.Unpin ();
 
+							/*
 							//debug img
 							if (target == CBTarget.PREFILTEREDENV && m == debugMip && f == debugFace) {
 								debugImg?.Dispose ();
@@ -306,7 +307,7 @@ namespace CVKL {
 								debugImg.SetLayout (cmd, VkImageAspectFlags.Color,
 									VkImageLayout.TransferDstOptimal, VkImageLayout.ShaderReadOnlyOptimal);
 								region.Unpin ();
-							}
+							}*/
 
 							imgFbOffscreen.SetLayout (cmd, VkImageAspectFlags.Color,
 								VkImageLayout.TransferSrcOptimal, VkImageLayout.ColorAttachmentOptimal);

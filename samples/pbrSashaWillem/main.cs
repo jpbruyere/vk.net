@@ -202,7 +202,7 @@ namespace pbrSachaWillem {
 
 			modelAABB = pbrPipeline.model.DefaultScene.AABB;
 
-			camera.Model = Matrix4x4.CreateScale (1f/ Math.Max (Math.Max (modelAABB.max.X, modelAABB.max.Y), modelAABB.max.Z));
+			//camera.Model = Matrix4x4.CreateScale (1f/ Math.Max (Math.Max (modelAABB.max.X, modelAABB.max.Y), modelAABB.max.Z));
 
 #if PIPELINE_STATS
 			statPool = new PipelineStatisticsQueryPool (dev,
