@@ -40,8 +40,8 @@ namespace CVKL {
 		public PbrModel2 model;
 		public EnvironmentCube envCube;
 
-		public PBRPipeline (Queue staggingQ, RenderPass renderPass, Image uiImage) :
-			base (renderPass, "pbr pipeline") {
+		public PBRPipeline (Queue staggingQ, RenderPass renderPass, Image uiImage, PipelineCache pipelineCache = null) :
+			base (renderPass, pipelineCache, "pbr pipeline") {
 
 			descriptorPool = new DescriptorPool (Dev, 2,
 				new VkDescriptorPoolSize (VkDescriptorType.UniformBuffer, 2),

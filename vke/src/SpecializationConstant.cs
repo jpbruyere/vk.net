@@ -28,7 +28,10 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using VK;
 
-namespace CVKL {	
+namespace CVKL {
+	/// <summary>
+	/// Hold shader specialization constant value and type
+	/// </summary>
 	public class SpecializationConstant<T> : SpecializationConstant {
 		T val;
 		IntPtr ptr = IntPtr.Zero;
@@ -48,9 +51,15 @@ namespace CVKL {
 		public unsafe override void WriteTo (IntPtr ptr) {
 			this.ptr = ptr;
 
-			if (typeof(T) == typeof(float)) {
-				float val = Convert.ToSingle(Value);
-				System.Buffer.MemoryCopy (&val, ptr.ToPointer (), 4, 4);
+			if (typeof (T) == typeof (float)) {
+				float v = Convert.ToSingle (Value);
+				System.Buffer.MemoryCopy (&v, ptr.ToPointer (), 4, 4);
+			} else if (typeof (T) == typeof (int) || typeof (T) == typeof (uint)) {
+				Marshal.WriteInt32 (ptr, Convert.ToInt32 (val));
+			} else if (typeof (T) == typeof (long) || typeof (T) == typeof (ulong)) {
+				Marshal.WriteInt64 (ptr, Convert.ToInt64 (val));
+			} else if (typeof (T) == typeof (byte)) {
+				Marshal.WriteByte (ptr, Convert.ToByte (val));
 			}
 		}
 	}
@@ -63,6 +72,9 @@ namespace CVKL {
 		public abstract void WriteTo (IntPtr ptr);
 	}
 
+	/// <summary>
+	/// Specialization constant infos, must be disposed after pipeline creation
+	/// </summary>
 	public class SpecializationInfo : IDisposable {
 		IntPtr pData;
 		VkSpecializationMapEntry[] entries;

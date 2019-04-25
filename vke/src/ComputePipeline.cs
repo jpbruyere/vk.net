@@ -33,12 +33,12 @@ namespace CVKL {
 		public string SpirVPath;
     
 		#region CTORS
-		public ComputePipeline (Device dev, string name = "compute pipeline") : base (dev, name) { 
+		public ComputePipeline (Device dev, PipelineCache cache = null, string name = "compute pipeline") : base (dev, cache, name) { 
 		}
 		/// <summary>
-		/// Create a new Pipeline with supplied RenderPass
+		/// Create a new Pipeline with supplied PipelineLayout
 		/// </summary>
-		public ComputePipeline (PipelineLayout layout, string spirvPath, string name = "pipeline") : base(layout.Dev, name)
+		public ComputePipeline (PipelineLayout layout, string spirvPath, PipelineCache cache = null, string name = "pipeline") : base(layout.Dev, cache, name)
 		{
 			SpirVPath = spirvPath;
 			this.layout = layout;
@@ -50,6 +50,7 @@ namespace CVKL {
 		public override void Activate () {
 			if (state != ActivableState.Activated) {
 				layout.Activate ();
+				Cache?.Activate ();
 
 				using (ShaderInfo shader = new ShaderInfo (VkShaderStageFlags.Compute, SpirVPath)) {
 					VkComputePipelineCreateInfo info = VkComputePipelineCreateInfo.New ();
@@ -58,7 +59,7 @@ namespace CVKL {
 					info.basePipelineHandle = 0;
 					info.basePipelineIndex = 0;
 
-					Utils.CheckResult (Vk.vkCreateComputePipelines (Dev.VkDev, VkPipelineCache.Null, 1, ref info, IntPtr.Zero, out handle));
+					Utils.CheckResult (Vk.vkCreateComputePipelines (Dev.VkDev, Cache == null ? VkPipelineCache.Null : Cache.handle, 1, ref info, IntPtr.Zero, out handle));
 
 					Dev.DestroyShaderModule (info.stage.module);
 				}
