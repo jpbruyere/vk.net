@@ -7,7 +7,7 @@ layout (set = 0, binding = 0) uniform UBO {
     mat4 model;
     mat4 view;
     vec4 camPos;
-    vec4 lightDir;
+    vec4 lightPos;
     float exposure;
     float gamma;
     float prefilteredCubeMipLevels;
@@ -17,6 +17,17 @@ layout (set = 0, binding = 0) uniform UBO {
     float debugViewEquation;
 #endif
 } ubo;
+
+#define MAX_LIGHT 4
+
+struct Light {
+    vec4 position;
+    vec4 color;
+};
+
+layout (set = 0, binding = 5) uniform UBOLights {
+    Light lights[MAX_LIGHT];
+};
 
 const float M_PI = 3.141592653589793;
 const float c_MinRoughness = 0.04;
@@ -161,7 +172,7 @@ void main()
 
     vec3 n = subpassLoad(samplerN_AO, gl_SampleID).rgb;
     vec3 v = subpassLoad(samplerPos, gl_SampleID).rgb;    // Vector from surface point to camera
-    vec3 l = normalize(ubo.lightDir.xyz);     // Vector from surface point to light
+    vec3 l = normalize(ubo.lightPos.xyz);     // Vector from surface point to light
     vec3 h = normalize(l+v);                        // Half vector between both l and v
     vec3 reflection = -normalize(reflect(v, n));
     reflection.y *= -1.0f;

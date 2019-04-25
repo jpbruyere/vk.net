@@ -27,10 +27,31 @@ const uint emissive     = 4;
 const uint metallic     = 5;
 const uint roughness    = 6;
 const uint depth        = 7;
-            
+const uint prefill      = 8;
+const uint irradiance   = 9;
+
+vec4 sampleCubeMap (samplerCube sc, uint face, uint lod) {
+    vec2 uv = 2.0 * inUV - vec2(1.0);
+    switch (face) {
+        case 0:
+            return vec4 (textureLod (sc, vec3(1, uv.t, uv.s), lod).rgb, 1);
+        case 1:
+            return vec4 (textureLod (sc, vec3(-1, uv.t, uv.s), lod).rgb, 1);
+        case 2:
+            return vec4 (textureLod (sc, vec3(uv.s, 1, -uv.t), lod).rgb, 1);
+        case 3:
+            return vec4 (textureLod (sc, vec3(uv.s, -1, uv.t), lod).rgb, 1);
+        case 4:
+            return vec4 (textureLod (sc, vec3(uv, 1), lod).rgb, 1);
+        case 5:
+            return vec4 (textureLod (sc, vec3(-uv.s, uv.t, -1), lod).rgb, 1);
+   }
+}
+
 void main() 
 {
-    switch (imgIdx) {
+    uint imgNum = bitfieldExtract (imgIdx, 0, 8);
+    switch (imgNum) {
         case color:
             outColor = vec4(subpassLoad(samplerColorRough, gl_SampleID).rgb, 1);
             break;
@@ -54,6 +75,12 @@ void main()
             break;
         case depth:
             outColor = vec4(subpassLoad(samplerPos, gl_SampleID).aaa, 1);
+            break;
+        default:
+            if (imgNum == prefill)
+                outColor = sampleCubeMap (prefilteredMap, bitfieldExtract (imgIdx, 8, 8), bitfieldExtract (imgIdx, 16, 8));            
+            else if (imgNum == irradiance)
+                outColor = sampleCubeMap (samplerIrradiance, bitfieldExtract (imgIdx, 8, 8), bitfieldExtract (imgIdx, 16, 8));            
             break;
     }
 }
