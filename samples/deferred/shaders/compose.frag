@@ -23,7 +23,7 @@ const float c_MinRoughness = 0.04;
 
 layout (input_attachment_index = 0, set = 2, binding = 0) uniform subpassInput samplerColorRough;
 layout (input_attachment_index = 1, set = 2, binding = 1) uniform subpassInput samplerEmitMetal;
-layout (input_attachment_index = 2, set = 2, binding = 2) uniform subpassInput samplerN;
+layout (input_attachment_index = 2, set = 2, binding = 2) uniform subpassInput samplerN_AO;
 layout (input_attachment_index = 3, set = 2, binding = 3) uniform subpassInput samplerPos;
 
 layout (set = 0, binding = 1) uniform samplerCube samplerIrradiance;
@@ -53,40 +53,6 @@ struct PBRInfo
     vec3 specularColor;           // color contribution from specular lighting
 };
 
-vec3 Uncharted2Tonemap(vec3 color)
-{
-    float A = 0.15;
-    float B = 0.50;
-    float C = 0.10;
-    float D = 0.20;
-    float E = 0.02;
-    float F = 0.30;
-    float W = 11.2;
-    return ((color*(A*color+C*B)+D*E)/(color*(A*color+B)+D*F))-E/F;
-}
-
-vec4 tonemap(vec4 color)
-{
-    vec3 outcol = Uncharted2Tonemap(color.rgb * ubo.exposure);
-    outcol = outcol * (1.0f / Uncharted2Tonemap(vec3(11.2f)));  
-    return vec4(pow(outcol, vec3(1.0f / ubo.gamma)), color.a);
-}
-
-vec4 SRGBtoLINEAR(vec4 srgbIn)
-{
-    #ifdef MANUAL_SRGB
-    #ifdef SRGB_FAST_APPROXIMATION
-    vec3 linOut = pow(srgbIn.xyz,vec3(2.2));
-    #else //SRGB_FAST_APPROXIMATION
-    vec3 bLess = step(vec3(0.04045),srgbIn.xyz);
-    vec3 linOut = mix( srgbIn.xyz/vec3(12.92), pow((srgbIn.xyz+vec3(0.055))/vec3(1.055),vec3(2.4)), bLess );
-    #endif //SRGB_FAST_APPROXIMATION
-    return vec4(linOut,srgbIn.w);;
-    #else //MANUAL_SRGB
-    return srgbIn;
-    #endif //MANUAL_SRGB
-}
-
 // Calculation of the lighting contribution from an optional Image Based Light source.
 // Precomputed Environment Maps are required uniform inputs and are computed as outlined in [1].
 // See our README.md on Environment Maps [3] for additional discussion.
@@ -95,9 +61,9 @@ vec3 getIBLContribution(PBRInfo pbrInputs, vec3 n, vec3 reflection)
     float lod = (pbrInputs.perceptualRoughness * ubo.prefilteredCubeMipLevels);
     // retrieve a scale and bias to F0. See [1], Figure 3
     vec3 brdf = (texture(samplerBRDFLUT, vec2(pbrInputs.NdotV, 1.0 - pbrInputs.perceptualRoughness))).rgb;
-    vec3 diffuseLight = SRGBtoLINEAR(tonemap(texture(samplerIrradiance, n))).rgb;
+    vec3 diffuseLight = texture(samplerIrradiance, n).rgb;
 
-    vec3 specularLight = SRGBtoLINEAR(tonemap(textureLod(prefilteredMap, reflection, lod))).rgb;
+    vec3 specularLight = textureLod(prefilteredMap, reflection, lod).rgb;
 
     vec3 diffuse = diffuseLight * pbrInputs.diffuseColor;
     vec3 specular = specularLight * (pbrInputs.specularColor * brdf.x + brdf.y);
@@ -164,9 +130,6 @@ float convertMetallic(vec3 diffuse, vec3 specular, float maxSpecular) {
     return clamp((-b + sqrt(D)) / (2.0 * a), 0.0, 1.0);
 }
 
-
-
-
 void main() 
 {
     if (subpassLoad(samplerPos).a == 1.0f)
@@ -196,7 +159,7 @@ void main()
     vec3 specularEnvironmentR0 = specularColor.rgb;
     vec3 specularEnvironmentR90 = vec3(1.0) * reflectance90;
 
-    vec3 n = subpassLoad(samplerN).rgb;
+    vec3 n = subpassLoad(samplerN_AO).rgb;
     vec3 v = subpassLoad(samplerPos).rgb;    // Vector from surface point to camera
     vec3 l = normalize(ubo.lightDir.xyz);     // Vector from surface point to light
     vec3 h = normalize(l+v);                        // Half vector between both l and v
@@ -244,7 +207,7 @@ void main()
     const float u_EmissiveFactor = 1.0f;
     
     //AO is in the alpha channel of the normalAttachment    
-    color = mix(color, color * subpassLoad(samplerN).a, u_OcclusionStrength);
+    color = mix(color, color * subpassLoad(samplerN_AO).a, u_OcclusionStrength);
     color += emissive;             
     
     outColor = vec4(color, baseColor.a);

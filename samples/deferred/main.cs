@@ -59,13 +59,13 @@ namespace deferred {
 		}
 
 		Framebuffer[] frameBuffers;
-		Image gbColorRough, gbEmitMetal, gbN, gbPos;
+		Image gbColorRough, gbEmitMetal, gbN, gbPos, hdrImg;
 
 		DescriptorPool descriptorPool;
 		DescriptorSetLayout descLayoutMain, descLayoutTextures, descLayoutGBuff;
 		DescriptorSet dsMain, dsGBuff;
 
-		Pipeline gBuffPipeline, composePipeline, debugPipeline;
+		Pipeline gBuffPipeline, composePipeline, toneMappingPipeline, debugPipeline;
 
 		HostBuffer uboMats;
 
@@ -81,12 +81,13 @@ namespace deferred {
 
 			renderPass = new RenderPass (dev);
 
-			renderPass.AddAttachment (swapChain.ColorFormat, VkImageLayout.PresentSrcKHR, VkSampleCountFlags.SampleCount1);
+			renderPass.AddAttachment (swapChain.ColorFormat, VkImageLayout.PresentSrcKHR, VkSampleCountFlags.SampleCount1);//swapchain image
 			renderPass.AddAttachment (dev.GetSuitableDepthFormat(), VkImageLayout.DepthStencilAttachmentOptimal, samples);
 			renderPass.AddAttachment (VkFormat.R8g8b8a8Unorm, VkImageLayout.ColorAttachmentOptimal);
 			renderPass.AddAttachment (VkFormat.R8g8b8a8Unorm, VkImageLayout.ColorAttachmentOptimal);
 			renderPass.AddAttachment (VkFormat.R16g16b16a16Sfloat, VkImageLayout.ColorAttachmentOptimal);
 			renderPass.AddAttachment (VkFormat.R16g16b16a16Sfloat, VkImageLayout.ColorAttachmentOptimal);
+			renderPass.AddAttachment (VkFormat.R16g16b16a16Sfloat, VkImageLayout.ColorAttachmentOptimal);//hdr color
 
 			renderPass.ClearValues.Add (new VkClearValue { color = new VkClearColorValue (0.0f, 0.0f, 0.0f) });
             	renderPass.ClearValues.Add (new VkClearValue { depthStencil = new VkClearDepthStencilValue (1.0f, 0) });
@@ -94,10 +95,11 @@ namespace deferred {
 			renderPass.ClearValues.Add (new VkClearValue { color = new VkClearColorValue (0.0f, 0.0f, 0.0f) });
 			renderPass.ClearValues.Add (new VkClearValue { color = new VkClearColorValue (0.0f, 0.0f, 0.0f) });
 			renderPass.ClearValues.Add (new VkClearValue { color = new VkClearColorValue (0.0f, 0.0f, 0.0f) });
+			renderPass.ClearValues.Add (new VkClearValue { color = new VkClearColorValue (0.0f, 0.0f, 0.0f) });
 
-			SubPass[] subpass = { new SubPass (), new SubPass (), new SubPass() };
+			SubPass[] subpass = { new SubPass (), new SubPass (), new SubPass(), new SubPass() };
 			//skybox
-			subpass[0].AddColorReference (0, VkImageLayout.ColorAttachmentOptimal);
+			subpass[0].AddColorReference (6, VkImageLayout.ColorAttachmentOptimal);
 			//models
 			subpass[1].AddColorReference (	new VkAttachmentReference (2, VkImageLayout.ColorAttachmentOptimal),
 									new VkAttachmentReference (3, VkImageLayout.ColorAttachmentOptimal),
@@ -107,11 +109,14 @@ namespace deferred {
 			subpass[1].AddPreservedReference (0);
 
 			//compose
-			subpass[2].AddColorReference (0, VkImageLayout.ColorAttachmentOptimal);
-			subpass[2].AddInputReference (	new VkAttachmentReference (2, VkImageLayout.ShaderReadOnlyOptimal),
+			subpass[2].AddColorReference (6, VkImageLayout.ColorAttachmentOptimal);
+			subpass[2].AddInputReference (new VkAttachmentReference (2, VkImageLayout.ShaderReadOnlyOptimal),
 									new VkAttachmentReference (3, VkImageLayout.ShaderReadOnlyOptimal),
 									new VkAttachmentReference (4, VkImageLayout.ShaderReadOnlyOptimal),
 									new VkAttachmentReference (5, VkImageLayout.ShaderReadOnlyOptimal));
+	         	//tone mapping
+			subpass[3].AddColorReference (0, VkImageLayout.ColorAttachmentOptimal);
+			subpass[3].AddInputReference (new VkAttachmentReference (6, VkImageLayout.ShaderReadOnlyOptimal));
 			renderPass.AddSubpass (subpass);
 
 			renderPass.AddDependency (Vk.SubpassExternal, 0,
@@ -123,7 +128,10 @@ namespace deferred {
 			renderPass.AddDependency (1, 2,
 				VkPipelineStageFlags.ColorAttachmentOutput, VkPipelineStageFlags.FragmentShader,
 				VkAccessFlags.ColorAttachmentWrite, VkAccessFlags.ShaderRead);
-			renderPass.AddDependency (2, Vk.SubpassExternal,
+			renderPass.AddDependency (2, 3,
+				VkPipelineStageFlags.ColorAttachmentOutput, VkPipelineStageFlags.FragmentShader,
+				VkAccessFlags.ColorAttachmentWrite, VkAccessFlags.ShaderRead);
+			renderPass.AddDependency (3, Vk.SubpassExternal,
 	                VkPipelineStageFlags.ColorAttachmentOutput, VkPipelineStageFlags.BottomOfPipe,
 	                VkAccessFlags.ColorAttachmentRead | VkAccessFlags.ColorAttachmentWrite, VkAccessFlags.MemoryRead);
 
@@ -131,7 +139,7 @@ namespace deferred {
 			descriptorPool = new DescriptorPool (dev, 3,
 				new VkDescriptorPoolSize (VkDescriptorType.UniformBuffer, 2),
 				new VkDescriptorPoolSize (VkDescriptorType.CombinedImageSampler, 3),
-				new VkDescriptorPoolSize (VkDescriptorType.InputAttachment, 4)
+				new VkDescriptorPoolSize (VkDescriptorType.InputAttachment, 5)
 			);
 
 			descLayoutMain = new DescriptorSetLayout (dev,
@@ -153,7 +161,8 @@ namespace deferred {
 				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Fragment, VkDescriptorType.InputAttachment),
 				new VkDescriptorSetLayoutBinding (1, VkShaderStageFlags.Fragment, VkDescriptorType.InputAttachment),
 				new VkDescriptorSetLayoutBinding (2, VkShaderStageFlags.Fragment, VkDescriptorType.InputAttachment),
-				new VkDescriptorSetLayoutBinding (3, VkShaderStageFlags.Fragment, VkDescriptorType.InputAttachment));
+				new VkDescriptorSetLayoutBinding (3, VkShaderStageFlags.Fragment, VkDescriptorType.InputAttachment),
+				new VkDescriptorSetLayoutBinding (4, VkShaderStageFlags.Fragment, VkDescriptorType.InputAttachment));
 
 			dsMain = descriptorPool.Allocate (descLayoutMain);
 			dsGBuff = descriptorPool.Allocate (descLayoutGBuff);
@@ -166,6 +175,7 @@ namespace deferred {
 			);
 			cfg.RenderPass = renderPass;
 			cfg.SubpassIndex = 1;
+			cfg.blendAttachments.Add (new VkPipelineColorBlendAttachmentState (false));
 			cfg.blendAttachments.Add (new VkPipelineColorBlendAttachmentState (false));
 			cfg.blendAttachments.Add (new VkPipelineColorBlendAttachmentState (false));
 			cfg.blendAttachments.Add (new VkPipelineColorBlendAttachmentState (false));
@@ -192,6 +202,10 @@ namespace deferred {
 			cfg.shaders[1] = new ShaderInfo (VkShaderStageFlags.Fragment, "shaders/show_gbuff.frag.spv");
 			cfg.SubpassIndex = 2;
 			debugPipeline = new GraphicPipeline (cfg);
+
+			cfg.shaders[1] = new ShaderInfo (VkShaderStageFlags.Fragment, "shaders/tone_mapping.frag.spv");
+			cfg.SubpassIndex = 3;
+			toneMappingPipeline = new GraphicPipeline (cfg);
 
 			envCube = new EnvironmentCube (dsMain, gBuffPipeline.Layout, presentQueue, renderPass);
 
@@ -248,6 +262,7 @@ namespace deferred {
 				cmds[i].End ();
 			}
 		}
+
 		void recordDraw (CommandBuffer cmd, Framebuffer fb) {
 			renderPass.Begin (cmd, fb);
 
@@ -274,6 +289,10 @@ namespace deferred {
 				cmd.PushConstant (debugPipeline.Layout, VkShaderStageFlags.Fragment, (int)currentDebugView - 1, (uint)Marshal.SizeOf<Matrix4x4> ());
 			}
 
+			cmd.Draw (3, 1, 0, 0);
+
+			renderPass.BeginSubPass (cmd);
+			toneMappingPipeline.Bind (cmd);
 			cmd.Draw (3, 1, 0, 0);
 
 			renderPass.End (cmd);
@@ -311,11 +330,13 @@ namespace deferred {
 			gbEmitMetal?.Dispose ();
 			gbN?.Dispose ();
 			gbPos?.Dispose ();
+			hdrImg?.Dispose ();
 
 			gbColorRough = new Image (dev, VkFormat.R8g8b8a8Unorm, VkImageUsageFlags.InputAttachment | VkImageUsageFlags.ColorAttachment, VkMemoryPropertyFlags.DeviceLocal, swapChain.Width, swapChain.Height);
 			gbEmitMetal = new Image (dev, VkFormat.R8g8b8a8Unorm, VkImageUsageFlags.InputAttachment | VkImageUsageFlags.ColorAttachment, VkMemoryPropertyFlags.DeviceLocal, swapChain.Width, swapChain.Height);
 			gbN = new Image (dev, VkFormat.R16g16b16a16Sfloat, VkImageUsageFlags.InputAttachment | VkImageUsageFlags.ColorAttachment, VkMemoryPropertyFlags.DeviceLocal, swapChain.Width, swapChain.Height);
 			gbPos = new Image (dev, VkFormat.R16g16b16a16Sfloat, VkImageUsageFlags.InputAttachment | VkImageUsageFlags.ColorAttachment, VkMemoryPropertyFlags.DeviceLocal, swapChain.Width, swapChain.Height);
+			hdrImg = new Image (dev, VkFormat.R16g16b16a16Sfloat, VkImageUsageFlags.InputAttachment | VkImageUsageFlags.ColorAttachment, VkMemoryPropertyFlags.DeviceLocal, swapChain.Width, swapChain.Height);
 
 			gbColorRough.CreateView ();
 			gbColorRough.CreateSampler ();
@@ -325,16 +346,20 @@ namespace deferred {
 			gbN.CreateSampler ();
 			gbPos.CreateView ();
 			gbPos.CreateSampler ();
+			hdrImg.CreateView ();
+			hdrImg.CreateSampler ();
 
 			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (descLayoutGBuff);
 			uboUpdate.Write (dev, dsGBuff,	gbColorRough.Descriptor,
 										gbEmitMetal.Descriptor,
 										gbN.Descriptor,
-										gbPos.Descriptor);
+										gbPos.Descriptor,
+										hdrImg.Descriptor);
 			gbColorRough.SetName ("GBuffColorRough");
 			gbEmitMetal.SetName ("GBuffEmitMetal");
 			gbN.SetName ("GBuffN");
 			gbPos.SetName ("GBuffPos");
+			hdrImg.SetName ("HDRimg");
 		}
 
 		protected override void OnResize () {
@@ -350,7 +375,7 @@ namespace deferred {
 
 			for (int i = 0; i < swapChain.ImageCount; ++i) {
 				frameBuffers[i] = new Framebuffer (renderPass, swapChain.Width, swapChain.Height, new Image[] {
-					swapChain.images[i], null, gbColorRough, gbEmitMetal, gbN, gbPos});
+					swapChain.images[i], null, gbColorRough, gbEmitMetal, gbN, gbPos, hdrImg});
 			}
 
 			buildCommandBuffers ();
@@ -454,9 +479,11 @@ namespace deferred {
 					gbEmitMetal.Dispose ();
 					gbN.Dispose ();
 					gbPos.Dispose ();
+					hdrImg.Dispose ();
 
 					gBuffPipeline.Dispose ();
 					composePipeline.Dispose ();
+					toneMappingPipeline.Dispose ();
 					debugPipeline.Dispose ();
 
 					descLayoutMain.Dispose ();
