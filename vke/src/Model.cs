@@ -75,6 +75,11 @@ namespace CVKL {
 			return new BoundingBox (mini, maxi, true);
 		}
 
+		public float Width => max.X - min.X;
+		public float Height => max.Y - min.Y;
+		public float Depth => max.Z - min.Z;
+
+		public Vector3 Center => new Vector3 (Width / 2f + min.X, Height / 2f + min.Y, Depth / 2f + min.Z);
 
 		public static BoundingBox operator +(BoundingBox bb1, BoundingBox bb2) {
 			return bb1.isValid ? bb2.isValid ? new BoundingBox (Vector3.Min (bb1.min, bb2.min), Vector3.Min (bb1.max, bb2.max),true) : bb1 : bb2.isValid ? bb2 : default(BoundingBox);
