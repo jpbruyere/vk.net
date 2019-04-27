@@ -55,8 +55,10 @@ namespace CVKL {
 		public GCHandle[] bufferHandles;
 
 		List<Mesh> meshes;
+		string path;
 
 		public glTFLoader (string path, Queue _transferQ, CommandPool _cmdPool) {
+			this.path = path;
 			transferQ = _transferQ;
 			cmdPool = _cmdPool;
 			baseDirectory = System.IO.Path.GetDirectoryName (path);
@@ -78,7 +80,9 @@ namespace CVKL {
 			if (loadedBuffers[bufferIdx] == null) {
 				//load full buffer
 				string uri = gltf.Buffers[bufferIdx].Uri;
-				if (uri.StartsWith ("data", StringComparison.Ordinal))
+				if (string.IsNullOrEmpty(uri))//glb
+					loadedBuffers[bufferIdx] = gltf.LoadBinaryBuffer (bufferIdx, path);
+				else if (uri.StartsWith ("data", StringComparison.Ordinal))
 					loadedBuffers[bufferIdx] = loadDataUri (gltf.Buffers[bufferIdx]);//TODO:check this func=>System.Buffers.Text.Base64.EncodeToUtf8InPlace
 				else
 					loadedBuffers[bufferIdx] = File.ReadAllBytes (Path.Combine (baseDirectory, gltf.Buffers[bufferIdx].Uri));
