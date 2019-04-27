@@ -33,7 +33,25 @@ using VK;
 using static VK.Vk;
 
 namespace CVKL {
-    public sealed class PipelineCache : Activable {
+	/// <summary>
+	/// Activable holding the pipeline cache handle. Activation is triggered by usage, so disposing pipelines that use this
+	/// cache is enough to have the cache disposed correctly. 
+	/// </summary>
+	/// <remarks>
+	/// Restore and Saving of the cache may be controled through the two static members:
+	/// 	- `SaveOnDispose`
+	/// 	- `LoadOnActivation`
+	/// </remarks>
+	public sealed class PipelineCache : Activable {
+		/// <summary>
+		/// If true, cache will be saved on dispose
+		/// </summary>
+		public static bool SaveOnDispose;
+		/// <summary>
+		/// If true, cache will be restore on activation
+		/// </summary>
+		public static bool LoadOnActivation;
+
 		internal VkPipelineCache handle;
 		readonly string globalConfigPath;
 		readonly string cacheFile;
@@ -48,8 +66,6 @@ namespace CVKL {
 				Directory.CreateDirectory (globalConfigPath);
 
 			this.cacheFile = cacheFile;
-
-			Activate ();
         }
 		#endregion
 
@@ -59,7 +75,7 @@ namespace CVKL {
 			if (state != ActivableState.Activated) {
 				VkPipelineCacheCreateInfo info = VkPipelineCacheCreateInfo.New ();							
 
-				if (File.Exists (path)) {
+				if (File.Exists (path) && LoadOnActivation) {
 					using (FileStream fs = File.Open (path, FileMode.Open)) {
 						using (BinaryReader br = new BinaryReader (fs)) {
 							int length = (int)br.BaseStream.Length;
@@ -80,9 +96,16 @@ namespace CVKL {
 
 		protected override VkDebugMarkerObjectNameInfoEXT DebugMarkerInfo => throw new NotImplementedException ();
 
+		public void Delete () {
+			string path = Path.Combine (globalConfigPath, cacheFile);
+			if (File.Exists (path))
+				File.Delete (path);
+		}
+
 		public void Save () {
 			if (state != ActivableState.Activated)
 				return;
+
 			string path = Path.Combine (globalConfigPath, cacheFile);
 
 			if (File.Exists (path))
@@ -104,8 +127,11 @@ namespace CVKL {
 		protected override void Dispose (bool disposing) {
 			if (!disposing)
 				System.Diagnostics.Debug.WriteLine ($"CVKL PipelineCache '{name}' disposed by finalizer");
-			if (state == ActivableState.Activated)
+			if (state == ActivableState.Activated) {
+				if (SaveOnDispose)
+					Save ();
 				vkDestroyPipelineCache (Dev.VkDev, handle, IntPtr.Zero);
+			}
 			base.Dispose (disposing);
 		}
 		#endregion

@@ -586,7 +586,6 @@ namespace deferred {
 					envCube.Dispose ();
 
 					descriptorPool.Dispose ();
-					pipelineCache.Dispose ();
 				}
 			}
 
