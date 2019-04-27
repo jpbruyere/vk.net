@@ -19,13 +19,13 @@ layout (location = 0) out vec4 outColor;
 
 vec3 Uncharted2Tonemap(vec3 color)
 {
-    float A = 0.15;
-    float B = 0.50;
-    float C = 0.10;
-    float D = 0.20;
-    float E = 0.02;
-    float F = 0.30;
-    float W = 11.2;
+    const float A = 0.15;
+    const float B = 0.50;
+    const float C = 0.10;
+    const float D = 0.20;
+    const float E = 0.02;
+    const float F = 0.30;
+    const float W = 11.2;
     return ((color*(A*color+C*B)+D*E)/(color*(A*color+B)+D*F))-E/F;
 }
 
@@ -52,7 +52,11 @@ vec3 SRGBtoLINEAR(vec3 srgbIn)
 
 void main() 
 {    
-    vec4 color = subpassLoad(samplerHDR, gl_SampleID);    
-    outColor = vec4(SRGBtoLINEAR(tonemap(color.rgb)), color.a);
-
+    vec4 hdrColor = subpassLoad(samplerHDR, gl_SampleID);    
+    
+    outColor = vec4(SRGBtoLINEAR(tonemap(hdrColor.rgb)), hdrColor.a);
+    /*
+    vec3 mapped = vec3(1.0) - exp(-hdrColor.rgb * ubo.exposure);        
+    mapped = pow(mapped, vec3(1.0 / ubo.gamma));
+    outColor = vec4(mapped, hdrColor.a);*/
 }

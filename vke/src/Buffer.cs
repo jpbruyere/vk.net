@@ -127,7 +127,7 @@ namespace CVKL {
 		protected override VkDebugMarkerObjectNameInfoEXT DebugMarkerInfo
 			=> new VkDebugMarkerObjectNameInfoEXT(VkDebugReportObjectTypeEXT.BufferEXT, handle.Handle);
 
-#region CTORS
+		#region CTORS
 		public Buffer (Device device, VkBufferUsageFlags usage, VkMemoryPropertyFlags _memoryPropertyFlags, UInt64 size)
         : base (device, _memoryPropertyFlags) {
 
@@ -135,23 +135,28 @@ namespace CVKL {
             createInfo.usage = usage;
             createInfo.sharingMode = VkSharingMode.Exclusive;
 
-            Utils.CheckResult (vkCreateBuffer (Dev.VkDev, ref createInfo, IntPtr.Zero, out handle));
-
             Activate ();//DONT OVERRIDE Activate in derived classes!!!!
         }
-#endregion
+		#endregion
 
         public override void Activate () {
 			if (state != ActivableState.Activated) {
-				allocateMemory ();
-				bindMemory (0);
+				Utils.CheckResult (vkCreateBuffer (Dev.VkDev, ref createInfo, IntPtr.Zero, out handle));
+				Dev.resourceManager.Add (this);
 				SetupDescriptor ();
 			}
 			base.Activate ();
         }
 
+		internal override void updateMemoryRequirements () {
+			vkGetBufferMemoryRequirements (Dev.VkDev, handle, out memReqs);
+		}
 
-        public void SetupDescriptor (ulong size = WholeSize, ulong offset = 0) {
+		internal override void bindMemory () {
+			Utils.CheckResult (vkBindBufferMemory (Dev.VkDev, handle, memoryPool.vkMemory, poolOffset));
+		}
+
+		public void SetupDescriptor (ulong size = WholeSize, ulong offset = 0) {
             Descriptor.buffer = handle;
             Descriptor.range = size;
             Descriptor.offset = offset;
@@ -175,26 +180,15 @@ namespace CVKL {
         }
         public void CopyTo (CommandBuffer cmd, Buffer buff, ulong size = 0, ulong srcOffset = 0, ulong dstOffset = 0) {
             VkBufferCopy bufferCopy = new VkBufferCopy {
-                size = (size == 0) ? deviceMemSize : size,
+                size = (size == 0) ? AllocatedDeviceMemorySize : size,
                 srcOffset = srcOffset,
                 dstOffset = dstOffset
             };
             vkCmdCopyBuffer (cmd.Handle, handle, buff.handle, 1, ref bufferCopy);
         }
 		public void Fill (CommandBuffer cmd, uint data, ulong size = 0, ulong offset = 0) {
-			vkCmdFillBuffer (cmd.Handle, handle, offset, (size == 0) ? deviceMemSize : size, data);
+			vkCmdFillBuffer (cmd.Handle, handle, offset, (size == 0) ? AllocatedDeviceMemorySize : size, data);
 		}
-
-
-		protected override VkMemoryRequirements getMemoryRequirements () {
-            VkMemoryRequirements memReqs;
-            vkGetBufferMemoryRequirements (Dev.VkDev, handle, out memReqs);
-            return memReqs;
-        }
-
-        protected override void bindMemory (ulong offset) {
-            Utils.CheckResult (vkBindBufferMemory (Dev.VkDev, handle, vkMemory, offset));
-        }
 
 		public override string ToString () {
 			return string.Format ($"{base.ToString ()}[0x{handle.Handle.ToString("x")}]");
@@ -209,5 +203,5 @@ namespace CVKL {
 			state = ActivableState.Disposed;
         }
 		#endregion
-    }
+	}
 }

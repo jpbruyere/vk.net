@@ -7,38 +7,44 @@ using static VK.Vk;
 
 namespace CVKL {
     public abstract class Resource : Activable {
-        protected VkDeviceMemory vkMemory;
-        protected UInt64 deviceMemSize;
-        protected IntPtr mappedData;
+		protected VkMemoryRequirements memReqs;
+		internal MemoryPool memoryPool;
+		internal ulong poolOffset;
+		/// <summary> double linked list in memory pool </summary>
+		internal Resource previous;
+		internal Resource next;
 
-        public readonly VkMemoryPropertyFlags MemoryFlags;
-        public IntPtr MappedData => mappedData;
-		public UInt64 AllocatedDeviceMemorySize => deviceMemSize;
+		public ulong AllocatedDeviceMemorySize => memReqs.size;
+		public uint TypeBits => memReqs.memoryTypeBits;
+		public ulong MemoryAlignment => memReqs.alignment;
+
+		protected IntPtr mappedData;
+		public IntPtr MappedData => mappedData;
+
+		public readonly VkMemoryPropertyFlags MemoryFlags;
 
         protected Resource (Device device, VkMemoryPropertyFlags memoryFlags) : base (device) {            
             MemoryFlags = memoryFlags;
         }
 
-        protected abstract VkMemoryRequirements getMemoryRequirements ();
-        protected abstract void bindMemory (ulong offset);
+        internal abstract void updateMemoryRequirements ();
 
-        protected void allocateMemory () {
-            VkMemoryRequirements memReqs = getMemoryRequirements ();
-            VkMemoryAllocateInfo memInfo = VkMemoryAllocateInfo.New();
-            memInfo.allocationSize = memReqs.size;
-            memInfo.memoryTypeIndex = Dev.GetMemoryTypeIndex (memReqs.memoryTypeBits, MemoryFlags);
+		internal abstract void bindMemory ();
 
-            Utils.CheckResult (vkAllocateMemory (Dev.VkDev, ref memInfo, IntPtr.Zero, out vkMemory));
+		internal VkMappedMemoryRange MapRange => new VkMappedMemoryRange {
+				sType = VkStructureType.MappedMemoryRange,
+				memory = memoryPool.vkMemory,
+				offset = poolOffset,
+				size = AllocatedDeviceMemorySize
+			};
 
-            deviceMemSize = memInfo.allocationSize;
-        }
-
-        public void Map (ulong size = WholeSize, ulong offset = 0) {
-            Utils.CheckResult (vkMapMemory (Dev.VkDev, vkMemory, offset, size, 0, ref mappedData));
+		public void Map (ulong offset = 0) {
+			if (!memoryPool.IsMapped)
+				memoryPool.Map ();
+			mappedData = new IntPtr(memoryPool.MappedData.ToInt64() + (long)(poolOffset + offset));
         }
         public void Unmap () {
-            vkUnmapMemory (Dev.VkDev, vkMemory);
-            mappedData = IntPtr.Zero;
+            
         }
         public void Update (object data, ulong size, ulong offset = 0) {
             GCHandle ptr = GCHandle.Alloc (data, GCHandleType.Pinned);
@@ -48,13 +54,8 @@ namespace CVKL {
             }
             ptr.Free ();
         }
-        public void Flush (ulong size = WholeSize, ulong offset = 0) {
-            VkMappedMemoryRange range = new VkMappedMemoryRange {
-                sType = VkStructureType.MappedMemoryRange,
-                memory = vkMemory,
-                offset = offset,
-                size = size,
-            };
+        public void Flush () {
+			VkMappedMemoryRange range = MapRange;
             vkFlushMappedMemoryRanges (Dev.VkDev, 1, ref range);
         }
 
@@ -65,7 +66,7 @@ namespace CVKL {
 			if (state == ActivableState.Activated) {
 				if (mappedData != IntPtr.Zero)
 					Unmap ();
-				vkFreeMemory (Dev.VkDev, vkMemory, IntPtr.Zero);
+				memoryPool.Remove (this);
 			}
 			base.Dispose (disposing);
         }
