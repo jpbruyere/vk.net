@@ -18,21 +18,48 @@ namespace deferred {
 			features.samplerAnisotropy = true;
 			features.sampleRateShading = true;
 		}
-		VkSampleCountFlags samples = VkSampleCountFlags.SampleCount4;
-		VkFormat hdrFormat = VkFormat.R32g32b32a32Sfloat;
 
+		protected override void createQueues () {
+			base.createQueues ();
+			transferQ = new Queue (dev, VkQueueFlags.Transfer);
+		}
+
+		string[] modelPathes = {
+				"../data/models/DamagedHelmet/glTF/DamagedHelmet.gltf",
+				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/Avocado/glTF/Avocado.gltf",
+				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/BarramundiFish/glTF/BarramundiFish.gltf",
+				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/BoomBoxWithAxes/glTF/BoomBoxWithAxes.gltf",
+				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/Box/glTF/Box.gltf",
+				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/EnvironmentTest/glTF/EnvironmentTest.gltf",
+				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/MetalRoughSpheres/glTF/MetalRoughSpheres.gltf",
+				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/OrientationTest/glTF/OrientationTest.gltf",
+				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/Buggy/glTF/Buggy.gltf",
+				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/2CylinderEngine/glTF-Embedded/2CylinderEngine.gltf",
+				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/FlightHelmet/glTF/FlightHelmet.gltf",
+				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/GearboxAssy/glTF/GearboxAssy.gltf",
+				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/Lantern/glTF/Lantern.gltf",
+				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/SciFiHelmet/glTF/SciFiHelmet.gltf",
+				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/Sponza/glTF/Sponza.gltf",
+				"/mnt/devel/vkChess/data/chess.gltf",
+				"/home/jp/gltf/camaro/scene.gltf",
+				"/home/jp/gltf/chessold/scene.gltf",
+				"../data/models/Hubble.glb",
+				"../data/models/MER_static.glb",
+				"../data/models/ISS_stationary.glb",
+			};
+
+		int curModelIndex = 0;
+		bool reloadModel = true;
+
+		Queue transferQ;
 		DeferredPbrRenderer renderer;
 
 		Program () {
-			camera = new Camera (Utils.DegreesToRadians (45f), 1f, 0.1f, 16f);
+			camera = new Camera (Utils.DegreesToRadians (60f), 1f, 0.1f, 16f);
 			camera.SetPosition (0, 0, 3);
 
 			renderer = new DeferredPbrRenderer (dev, swapChain, presentQueue, camera.NearPlane, camera.FarPlane);
-
-			camera.Model = Matrix4x4.CreateScale (1f / Math.Max (Math.Max (renderer.modelAABB.Width, renderer.modelAABB.Height), renderer.modelAABB.Depth));
 		}
-
-
 
 		void buildCommandBuffers () {
 			cmdPool.FreeCommandBuffers (cmds);
@@ -40,30 +67,28 @@ namespace deferred {
 			renderer.buildCommandBuffers (cmds);
 		}
 
-
-
-		#region update
 		public override void UpdateView () {
 			renderer.UpdateView (camera);
 			updateViewRequested = false;
 		}
-
-		#endregion
-
-		protected override void OnResize () {
-			UpdateView ();
-			renderer.Resize ();
-			buildCommandBuffers ();
-		}
-
-
 		public override void Update () {
+			if (reloadModel) {
+				renderer.LoadModel (transferQ, modelPathes[curModelIndex]);
+				reloadModel = false;
+				camera.Model = Matrix4x4.CreateScale (1f / Math.Max (Math.Max (renderer.modelAABB.Width, renderer.modelAABB.Height), renderer.modelAABB.Depth));
+				updateViewRequested = true;
+				rebuildBuffers = true;
+			}
 			if (!rebuildBuffers)
 				return;
 			buildCommandBuffers ();
 			rebuildBuffers = false;
 		}
-
+		protected override void OnResize () {
+			UpdateView ();
+			renderer.Resize ();
+			buildCommandBuffers ();
+		}
 
 		#region Mouse and keyboard
 		protected override void onKeyDown (Key key, int scanCode, Modifier modifiers) {
@@ -168,13 +193,25 @@ namespace deferred {
 					renderer.pipelineCache.Save ();
 					Console.WriteLine ($"Pipeline Cache saved.");
 					break;
+				case Key.KeypadAdd:
+					curModelIndex++;
+					if (curModelIndex >= modelPathes.Length)
+						curModelIndex = 0;
+					reloadModel = true;
+					break;
+				case Key.KeypadSubtract:
+					curModelIndex--;
+					if (curModelIndex < modelPathes.Length)
+						curModelIndex = modelPathes.Length -1;
+					reloadModel = true;
+					break;
 				default:
 					base.onKeyDown (key, scanCode, modifiers);
 					return;
 			}
 			updateViewRequested = true;
 		}
-#endregion
+		#endregion
 
 		protected override void Dispose (bool disposing) {
 			if (disposing) {
