@@ -249,49 +249,27 @@ namespace deferred {
 			uboMatrices = new HostBuffer (dev, VkBufferUsageFlags.UniformBuffer, matrices, true);
 			uboLights = new HostBuffer<Light> (dev, VkBufferUsageFlags.UniformBuffer, lights, true);
 
-			string[] modelPathes = {
-				"../data/models/DamagedHelmet/glTF/DamagedHelmet.gltf",
-				"/home/jp/gltf/chessold/scene.gltf",
-				"../data/models/Hubble.glb",
-				"../data/models/MER_static.glb",
-				"../data/models/ISS_stationary.glb",
-				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/Avocado/glTF/Avocado.gltf",
-				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/BarramundiFish/glTF/BarramundiFish.gltf",
-				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/BoomBoxWithAxes/glTF/BoomBoxWithAxes.gltf",
-				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/Box/glTF/Box.gltf",
-				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/EnvironmentTest/glTF/EnvironmentTest.gltf",
-				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/MetalRoughSpheres/glTF/MetalRoughSpheres.gltf",
-				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/OrientationTest/glTF/OrientationTest.gltf",
-				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/Buggy/glTF/Buggy.gltf",
-				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/2CylinderEngine/glTF-Embedded/2CylinderEngine.gltf",
-				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/FlightHelmet/glTF/FlightHelmet.gltf",
-				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/GearboxAssy/glTF/GearboxAssy.gltf",
-				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/Lantern/glTF/Lantern.gltf",
-				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/SciFiHelmet/glTF/SciFiHelmet.gltf",
-				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/Sponza/glTF/Sponza.gltf",
-				"/mnt/devel/vkChess/data/chess.gltf",
-				"/home/jp/gltf/camaro/scene.gltf"
-			};
+			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (dsMain, descLayoutMain.Bindings.GetRange (0, 5).ToArray ());
+			uboUpdate.Write (dev, 
+				uboMatrices.Descriptor,
+				envCube.irradianceCube.Descriptor,
+				envCube.prefilterCube.Descriptor,
+				envCube.lutBrdf.Descriptor,
+				uboLights.Descriptor);
+		}
 
-			model = new PbrModel (presentQueue, modelPathes[0],
+		public void LoadModel (Queue transferQ, string path) {
+			dev.WaitIdle ();
+			model?.Dispose ();
+			model = new PbrModel (transferQ, path,
 				descLayoutTextures,
 				AttachmentType.Color,
 				AttachmentType.PhysicalProps,
 				AttachmentType.Normal,
 				AttachmentType.AmbientOcclusion,
 				AttachmentType.Emissive);
-			//model = new Model (presentQueue, "../data/models/chess.gltf");
-			//model = new Model (presentQueue, "../data/models/Sponza/glTF/Sponza.gltf");
-			//model = new Model (dev, presentQueue, "../data/models/icosphere.gltf");
-			//model = new Model (dev, presentQueue, cmdPool, "../data/models/cube.gltf");
-			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (descLayoutMain);
-			uboUpdate.Write (dev, dsMain,
-				uboMatrices.Descriptor,
-				envCube.irradianceCube.Descriptor,
-				envCube.prefilterCube.Descriptor,
-				envCube.lutBrdf.Descriptor,
-				uboLights.Descriptor,
-				model.materialUBO.Descriptor);
+			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (dsMain, descLayoutMain.Bindings[5]);
+			uboUpdate.Write (dev, model.materialUBO.Descriptor);
 
 			modelAABB = model.DefaultScene.AABB;
 		}
@@ -315,10 +293,11 @@ namespace deferred {
 			envCube.RecordDraw (cmd);
 			renderPass.BeginSubPass (cmd);
 
-			gBuffPipeline.Bind (cmd);
-			model.Bind (cmd);
-			model.DrawAll (cmd, gBuffPipeline.Layout);
-
+			if (model != null) {
+				gBuffPipeline.Bind (cmd);
+				model.Bind (cmd);
+				model.DrawAll (cmd, gBuffPipeline.Layout);
+			}
 			renderPass.BeginSubPass (cmd);
 
 			cmd.BindDescriptorSet (composePipeline.Layout, dsGBuff, 2);

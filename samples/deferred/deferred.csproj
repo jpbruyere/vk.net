@@ -54,7 +54,7 @@
       <HintPath>..\..\packages\System.Memory.4.5.2\lib\netstandard2.0\System.Memory.dll</HintPath>
     </Reference>
     <Reference Include="vkvg.net">
-      <HintPath>..\..\packages\vkvg.net.0.2.0\lib\netstandard2.0\vkvg.net.dll</HintPath>
+      <HintPath>..\..\packages\vkvg.net.0.2.1-beta\lib\netstandard2.0\vkvg.net.dll</HintPath>
     </Reference>
     <Reference Include="VK">
       <HintPath>..\..\packages\Vulkan.0.1.2.6\lib\netstandard2.0\VK.dll</HintPath>
