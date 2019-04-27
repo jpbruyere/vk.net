@@ -265,6 +265,7 @@ namespace deferred {
 
 			string[] modelPathes = {
 				"../data/models/DamagedHelmet/glTF/DamagedHelmet.gltf",
+				"../data/models/Hubble.glb",
 				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/Avocado/glTF/Avocado.gltf",
 				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/BarramundiFish/glTF/BarramundiFish.gltf",
 				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/BoomBoxWithAxes/glTF/BoomBoxWithAxes.gltf",
@@ -283,7 +284,7 @@ namespace deferred {
 				"/home/jp/gltf/camaro/scene.gltf"
 			};
 
-			model = new PbrModel (presentQueue, modelPathes[0],
+			model = new PbrModel (presentQueue, modelPathes[1],
 				descLayoutTextures,
 				AttachmentType.Color,
 				AttachmentType.PhysicalProps,
