@@ -95,9 +95,16 @@ namespace CVKL {
                 return;
             }
             using (NativeList<VkCommandBuffer> nlCmds = new NativeList<VkCommandBuffer> ((uint)cmds.Length, (uint)cmds.Length)) {
-                for (int i = 0; i < cmds.Length; i++) 
-                    nlCmds[i] = cmds[i].Handle;
-                vkFreeCommandBuffers (Dev.VkDev, handle, (uint)cmds.Length, nlCmds.Data);
+				int count = 0;
+				for (int i = 0; i < cmds.Length; i++) {
+					if (cmds[i] == null)
+						continue;
+					nlCmds[count] = cmds[i].Handle;
+					count++;
+				}
+				if (count == 0)
+					return;
+                vkFreeCommandBuffers (Dev.VkDev, handle, (uint)count, nlCmds.Data);
             }
         }
 

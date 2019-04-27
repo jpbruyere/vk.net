@@ -6,27 +6,22 @@ layout (set = 0, binding = 0) uniform UBO {
     mat4 projection;
     mat4 model;
     mat4 view;
-    vec4 camPos;
-    vec4 lightPos;
+    vec4 camPos;    
     float exposure;
     float gamma;
     float prefilteredCubeMipLevels;
     float scaleIBLAmbient;
-#if DEBUG
-    float debugViewInputs;
-    float debugViewEquation;
-#endif
 } ubo;
 
-#define MAX_LIGHT 4
+layout (constant_id = 0) const uint NUM_LIGHTS = 1;
 
 struct Light {
     vec4 position;
     vec4 color;
 };
 
-layout (set = 0, binding = 5) uniform UBOLights {
-    Light lights[MAX_LIGHT];
+layout (set = 0, binding = 4) uniform UBOLights {
+    Light lights[NUM_LIGHTS];
 };
 
 const float M_PI = 3.141592653589793;
@@ -171,56 +166,63 @@ void main()
     vec3 specularEnvironmentR90 = vec3(1.0) * reflectance90;
 
     vec3 n = subpassLoad(samplerN_AO, gl_SampleID).rgb;
-    vec3 v = subpassLoad(samplerPos, gl_SampleID).rgb;    // Vector from surface point to camera
-    vec3 l = normalize(ubo.lightPos.xyz);     // Vector from surface point to light
-    vec3 h = normalize(l+v);                        // Half vector between both l and v
-    vec3 reflection = -normalize(reflect(v, n));
-    reflection.y *= -1.0f;
+    vec3 v = subpassLoad(samplerPos, gl_SampleID).rgb; // Vector from surface point to camera
+    
+    vec3 colors = vec3(0);
+    
+    for (int i=0; i<NUM_LIGHTS; i++) {
+    
+        vec3 l = normalize(lights[i].position.xyz);     // Vector from surface point to light
+        vec3 h = normalize(l+v);                        // Half vector between both l and v
+        vec3 reflection = -normalize(reflect(v, n));
+        reflection.y *= -1.0f;
 
-    float NdotL = clamp(dot(n, l), 0.001, 1.0);
-    float NdotV = clamp(abs(dot(n, v)), 0.001, 1.0);
-    float NdotH = clamp(dot(n, h), 0.0, 1.0);
-    float LdotH = clamp(dot(l, h), 0.0, 1.0);
-    float VdotH = clamp(dot(v, h), 0.0, 1.0);
+        float NdotL = clamp(dot(n, l), 0.001, 1.0);
+        float NdotV = clamp(abs(dot(n, v)), 0.001, 1.0);
+        float NdotH = clamp(dot(n, h), 0.0, 1.0);
+        float LdotH = clamp(dot(l, h), 0.0, 1.0);
+        float VdotH = clamp(dot(v, h), 0.0, 1.0);
 
-    PBRInfo pbrInputs = PBRInfo(
-        NdotL,
-        NdotV,
-        NdotH,
-        LdotH,
-        VdotH,
-        perceptualRoughness,
-        metallic,
-        specularEnvironmentR0,
-        specularEnvironmentR90,
-        alphaRoughness,
-        diffuseColor,
-        specularColor
-    );
+        PBRInfo pbrInputs = PBRInfo(
+            NdotL,
+            NdotV,
+            NdotH,
+            LdotH,
+            VdotH,
+            perceptualRoughness,
+            metallic,
+            specularEnvironmentR0,
+            specularEnvironmentR90,
+            alphaRoughness,
+            diffuseColor,
+            specularColor
+        );
 
-    // Calculate the shading terms for the microfacet specular shading model
-    vec3 F = specularReflection(pbrInputs);
-    float G = geometricOcclusion(pbrInputs);
-    float D = microfacetDistribution(pbrInputs);
+        // Calculate the shading terms for the microfacet specular shading model
+        vec3 F = specularReflection(pbrInputs);
+        float G = geometricOcclusion(pbrInputs);
+        float D = microfacetDistribution(pbrInputs);
 
-    const vec3 u_LightColor = vec3(1.0);
+        // Calculation of analytical lighting contribution
+        vec3 diffuseContrib = (1.0 - F) * diffuse(pbrInputs);
+        vec3 specContrib = F * G * D / (4.0 * NdotL * NdotV);
+        // Obtain final intensity as reflectance (BRDF) scaled by the energy of the light (cosine law)
+        vec3 color = NdotL * lights[i].color.rgb * (diffuseContrib + specContrib);
 
-    // Calculation of analytical lighting contribution
-    vec3 diffuseContrib = (1.0 - F) * diffuse(pbrInputs);
-    vec3 specContrib = F * G * D / (4.0 * NdotL * NdotV);
-    // Obtain final intensity as reflectance (BRDF) scaled by the energy of the light (cosine law)
-    vec3 color = NdotL * u_LightColor * (diffuseContrib + specContrib);
-
-    // Calculate lighting contribution from image based lighting source (IBL)
-    color += getIBLContribution(pbrInputs, n, reflection);
-
+        // Calculate lighting contribution from image based lighting source (IBL)
+        colors += color + getIBLContribution(pbrInputs, n, reflection);
+    
+    }
+    colors /= NUM_LIGHTS;
+    
+    
     const float u_OcclusionStrength = 1.0f;
     const float u_EmissiveFactor = 1.0f;
     
     //AO is in the alpha channel of the normalAttachment    
-    color = mix(color, color * subpassLoad(samplerN_AO, gl_SampleID).a, u_OcclusionStrength);
-    color += emissive;             
+    colors = mix(colors, colors * subpassLoad(samplerN_AO, gl_SampleID).a, u_OcclusionStrength);
+    colors += emissive;             
     
-    outColor = vec4(color, baseColor.a);
+    outColor = vec4(colors, baseColor.a);
 
 }

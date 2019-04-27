@@ -29,7 +29,7 @@
     <Datas Include="..\data\**\*.*">      
       <Link>data\%(RecursiveDir)%(Filename)%(Extension)</Link>
     </Datas>
-    <Compile Include="main.cs;EnvironmentPipeline.cs" />
+    <Compile Include="main.cs;EnvironmentPipeline.cs;deferredPbrRenderer.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="System.Numerics" />
