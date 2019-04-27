@@ -30,6 +30,11 @@ using VK;
 using static VK.Vk;
 
 namespace CVKL {
+	/// <summary>
+	/// Combined Image/Descriptor class. Optional Sampler and View are disposed with the vkImage. If multiple view/sampler have to be
+	/// created for the same vkImage, you may call the constructor accepting a vkImage as parameter to import an existing one. vkImage handle of
+	/// such imported image will not be disposed with the sampler and the view.
+	/// </summary>
     public class Image : Resource {
 		internal VkImage handle; 
         VkImageCreateInfo info = VkImageCreateInfo.New();
@@ -298,19 +303,16 @@ namespace CVKL {
         }
 #endregion
 
-        protected override VkMemoryRequirements getMemoryRequirements () {
-            VkMemoryRequirements memReqs;
-            vkGetImageMemoryRequirements (Dev.VkDev, handle, out memReqs);
-            return memReqs;
+        internal override void updateMemoryRequirements () {            
+            vkGetImageMemoryRequirements (Dev.VkDev, handle, out memReqs);            
         }
-        protected override void bindMemory (ulong offset = 0) {
-            Utils.CheckResult (vkBindImageMemory (Dev.VkDev, handle, vkMemory, offset));
-        }
+		internal override void bindMemory () {
+			Utils.CheckResult (vkBindImageMemory (Dev.VkDev, handle, memoryPool.vkMemory, poolOffset));
+		}
         public override void Activate () {
 			if (state != ActivableState.Activated) {
 				Utils.CheckResult (vkCreateImage (Dev.VkDev, ref info, IntPtr.Zero, out handle));
-				allocateMemory ();
-				bindMemory ();
+				Dev.resourceManager.Add (this);
 			}
             base.Activate ();
         }
@@ -554,7 +556,7 @@ namespace CVKL {
 		public override string ToString () {
 			return string.Format ($"{base.ToString ()}[0x{handle.Handle.ToString("x")}]");
 		}
-#region IDisposable Support
+		#region IDisposable Support
         protected override void Dispose (bool disposing) {
 			if (state == ActivableState.Activated) {
 				if (Descriptor.sampler.Handle != 0)
@@ -568,6 +570,6 @@ namespace CVKL {
 			}
 			state = ActivableState.Disposed;
         }
-#endregion
+		#endregion
 	}
 }

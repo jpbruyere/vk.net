@@ -34,6 +34,10 @@ namespace CVKL {
 	/// each time it is disposed, the count is decremented. When the count reach zero, the handle is destroyed and the finalizizer is unregistered. Once disposed, the
 	/// objecte may still be reactivated.
 	/// </summary>
+	/// <remarks>
+	/// Some of the activation trigger the first activation on creation, those activables have to be explicitly dispose at the end of the application.
+	/// The activables that trigger activation only on usage does not require an additional dispose at the end.
+	/// </remarks>
 	public abstract class Activable : IDisposable {
 		//count number of activation, only the first one will create a handle 
 		protected uint references;

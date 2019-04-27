@@ -42,6 +42,8 @@ namespace CVKL {
 
         internal List<Queue> queues = new List<Queue> ();
 
+		public ResourceManager resourceManager;
+
         public Device (PhysicalDevice _phy, bool enableDebugMarkers = false) {
             phy = _phy;
 			DebugMarkersEnabled = enableDebugMarkers;
@@ -105,9 +107,11 @@ namespace CVKL {
 
             foreach (Queue q in queues)
                 q.updateHandle ();
+
+			resourceManager = new ResourceManager (this);
         }
 
-        unsafe public VkSemaphore CreateSemaphore () {
+        public VkSemaphore CreateSemaphore () {
             VkSemaphore tmp;
             VkSemaphoreCreateInfo info = VkSemaphoreCreateInfo.New();
             Utils.CheckResult (vkCreateSemaphore (dev, ref info, IntPtr.Zero, out tmp));
@@ -116,7 +120,7 @@ namespace CVKL {
         public void DestroySemaphore (VkSemaphore semaphore) {
             vkDestroySemaphore (dev, semaphore, IntPtr.Zero);
         }
-        unsafe public VkFence CreateFence (bool signaled = false) {
+        public VkFence CreateFence (bool signaled = false) {
             VkFence tmp;
             VkFenceCreateInfo info = VkFenceCreateInfo.New();
             info.flags = signaled ? VkFenceCreateFlags.Signaled : 0;
@@ -202,7 +206,7 @@ namespace CVKL {
         // This is necessary as implementations can offer an arbitrary number of memory types with different
         // memory properties. 
         // You can check http://vulkan.gpuinfo.org/ for details on different memory configurations
-        internal unsafe  uint GetMemoryTypeIndex (uint typeBits, VkMemoryPropertyFlags properties) {
+        internal uint GetMemoryTypeIndex (uint typeBits, VkMemoryPropertyFlags properties) {
             // Iterate over all memory types available for the Device used in this example
             for (uint i = 0; i < phy.memoryProperties.memoryTypeCount; i++) {
                 if ((typeBits & 1) == 1) {
