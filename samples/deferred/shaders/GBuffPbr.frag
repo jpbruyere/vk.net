@@ -45,19 +45,14 @@ layout (set = 0, binding = 0) uniform UBO {
     mat4 projection;
     mat4 model;
     mat4 view;
-    vec4 camPos;
-    vec4 lightDir;
+    vec4 camPos;    
     float exposure;
     float gamma;
     float prefilteredCubeMipLevels;
     float scaleIBLAmbient;
-#if DEBUG
-    float debugViewInputs;
-    float debugViewEquation;
-#endif
 } ubo;
 
-layout (set = 0, binding = 4) uniform UBOMaterials {
+layout (set = 0, binding = 5) uniform UBOMaterials {
     Material materials[16];
 };
 

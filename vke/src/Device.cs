@@ -250,9 +250,10 @@ namespace CVKL {
 
         protected virtual void Dispose (bool disposing) {
             if (!disposedValue) {
-                if (disposing) {
-                    // TODO: supprimer l'état managé (objets managés).
-                }
+				if (disposing) {
+					resourceManager.Dispose ();
+				} else
+					System.Diagnostics.Debug.WriteLine ("Device disposed by Finalizer.");
 
                 vkDestroyDevice (dev, IntPtr.Zero);
 
@@ -260,17 +261,13 @@ namespace CVKL {
             }
         }
 
-        // TODO: remplacer un finaliseur seulement si la fonction Dispose(bool disposing) ci-dessus a du code pour libérer les ressources non managées.
         ~Device() {
-           // Ne modifiez pas ce code. Placez le code de nettoyage dans Dispose(bool disposing) ci-dessus.
            Dispose(false);
         }
 
         // Ce code est ajouté pour implémenter correctement le modèle supprimable.
         public void Dispose () {
-            // Ne modifiez pas ce code. Placez le code de nettoyage dans Dispose(bool disposing) ci-dessus.
             Dispose (true);
-            // TODO: supprimer les marques de commentaire pour la ligne suivante si le finaliseur est remplacé ci-dessus.
             GC.SuppressFinalize(this);
         }
         #endregion
