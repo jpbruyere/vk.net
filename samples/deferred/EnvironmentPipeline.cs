@@ -24,7 +24,7 @@ namespace CVKL {
 
 				vboSkybox = new GPUBuffer<float> (staggingQ, cmdPool, VkBufferUsageFlags.VertexBuffer, box_vertices);
 
-				cubemap = KTX.KTX.Load (staggingQ, cmdPool, cubemapPathes[2],
+				cubemap = KTX.KTX.Load (staggingQ, cmdPool, cubemapPathes[0],
 					VkImageUsageFlags.Sampled, VkMemoryPropertyFlags.DeviceLocal, true);
 				cubemap.CreateView (VkImageViewType.Cube, VkImageAspectFlags.Color, 6, 0, cubemap.CreateInfo.mipLevels);
 				cubemap.CreateSampler (VkSamplerAddressMode.ClampToEdge);
@@ -259,7 +259,7 @@ namespace CVKL {
 								cmd.PushConstant (pl.Layout, VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment, deltaTheta, (uint)Marshal.SizeOf<Matrix4x4> () + 4);
 							} else {
 								cmd.PushConstant (pl.Layout, VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment, roughness, (uint)Marshal.SizeOf<Matrix4x4> ());
-								cmd.PushConstant (pl.Layout, VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment, 512u, (uint)Marshal.SizeOf<Matrix4x4> () + 4);
+								cmd.PushConstant (pl.Layout, VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment, 64u, (uint)Marshal.SizeOf<Matrix4x4> () + 4);
 							}
 
 							cmd.BindDescriptorSet (pl.Layout, dset);

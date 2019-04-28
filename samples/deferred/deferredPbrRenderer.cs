@@ -11,8 +11,9 @@ namespace deferred {
 		SwapChain swapChain;
 		PresentQueue presentQueue;
 
-		VkSampleCountFlags samples = VkSampleCountFlags.SampleCount4;
+		VkSampleCountFlags samples = VkSampleCountFlags.SampleCount1;
 		VkFormat hdrFormat = VkFormat.R32g32b32a32Sfloat;
+		VkFormat mrtFormat = VkFormat.R32g32b32a32Sfloat;
 
 		public enum DebugView {
 			none,
@@ -102,12 +103,12 @@ namespace deferred {
 			renderPass.AddAttachment (dev.GetSuitableDepthFormat(), VkImageLayout.DepthStencilAttachmentOptimal, samples);
 			renderPass.AddAttachment (swapChain.ColorFormat, VkImageLayout.ColorAttachmentOptimal, samples, VkAttachmentLoadOp.Clear, VkAttachmentStoreOp.DontCare);//GBuff0 (color + roughness) and final color before resolve
 			renderPass.AddAttachment (VkFormat.R8g8b8a8Unorm, VkImageLayout.ColorAttachmentOptimal, samples, VkAttachmentLoadOp.Clear, VkAttachmentStoreOp.DontCare);//GBuff1 (emit + metal)
-			renderPass.AddAttachment (VkFormat.R16g16b16a16Sfloat, VkImageLayout.ColorAttachmentOptimal, samples, VkAttachmentLoadOp.Clear, VkAttachmentStoreOp.DontCare);//GBuff2 (normals + AO)
-			renderPass.AddAttachment (VkFormat.R16g16b16a16Sfloat, VkImageLayout.ColorAttachmentOptimal, samples, VkAttachmentLoadOp.Clear, VkAttachmentStoreOp.DontCare);//GBuff3 (Pos + depth)
+			renderPass.AddAttachment (mrtFormat, VkImageLayout.ColorAttachmentOptimal, samples, VkAttachmentLoadOp.Clear, VkAttachmentStoreOp.DontCare);//GBuff2 (normals + AO)
+			renderPass.AddAttachment (mrtFormat, VkImageLayout.ColorAttachmentOptimal, samples, VkAttachmentLoadOp.Clear, VkAttachmentStoreOp.DontCare);//GBuff3 (Pos + depth)
 			renderPass.AddAttachment (hdrFormat, VkImageLayout.ColorAttachmentOptimal, samples);//hdr color
 
 			renderPass.ClearValues.Add (new VkClearValue { color = new VkClearColorValue (0.0f, 0.0f, 0.0f) });
-            	renderPass.ClearValues.Add (new VkClearValue { depthStencil = new VkClearDepthStencilValue (1.0f, 0) });
+			renderPass.ClearValues.Add (new VkClearValue { depthStencil = new VkClearDepthStencilValue (1.0f, 0) });
 			renderPass.ClearValues.Add (new VkClearValue { color = new VkClearColorValue (0.0f, 0.0f, 0.0f) });
 			renderPass.ClearValues.Add (new VkClearValue { color = new VkClearColorValue (0.0f, 0.0f, 0.0f) });
 			renderPass.ClearValues.Add (new VkClearValue { color = new VkClearColorValue (0.0f, 0.0f, 0.0f) });
@@ -158,7 +159,7 @@ namespace deferred {
 			 
 			descriptorPool = new DescriptorPool (dev, 3,
 				new VkDescriptorPoolSize (VkDescriptorType.UniformBuffer, 3),
-				new VkDescriptorPoolSize (VkDescriptorType.CombinedImageSampler, 3),
+				new VkDescriptorPoolSize (VkDescriptorType.CombinedImageSampler, 4),
 				new VkDescriptorPoolSize (VkDescriptorType.InputAttachment, 6)
 			);
 
@@ -168,7 +169,8 @@ namespace deferred {
 				new VkDescriptorSetLayoutBinding (2, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
 				new VkDescriptorSetLayoutBinding (3, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
 				new VkDescriptorSetLayoutBinding (4, VkShaderStageFlags.Fragment, VkDescriptorType.UniformBuffer),//lights
-				new VkDescriptorSetLayoutBinding (5, VkShaderStageFlags.Fragment, VkDescriptorType.UniformBuffer));//materials
+				new VkDescriptorSetLayoutBinding (5, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),//ui overlay
+				new VkDescriptorSetLayoutBinding (6, VkShaderStageFlags.Fragment, VkDescriptorType.UniformBuffer));//materials
 
 			descLayoutTextures = new DescriptorSetLayout (dev,
 				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
@@ -268,10 +270,16 @@ namespace deferred {
 				AttachmentType.Normal,
 				AttachmentType.AmbientOcclusion,
 				AttachmentType.Emissive);
-			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (dsMain, descLayoutMain.Bindings[5]);
+
+			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (dsMain, descLayoutMain.Bindings[6]);
 			uboUpdate.Write (dev, model.materialUBO.Descriptor);
 
 			modelAABB = model.DefaultScene.AABB;
+		}
+
+		public void WriteUiImgDesciptor (Image uiImage) {
+			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (dsMain, descLayoutMain.Bindings[5]);
+			uboUpdate.Write (dev, uiImage.Descriptor);
 		}
 
 		public void buildCommandBuffers (CommandBuffer[] cmds) {
@@ -352,8 +360,8 @@ namespace deferred {
 
 			gbColorRough = new Image (dev, swapChain.ColorFormat, VkImageUsageFlags.InputAttachment | VkImageUsageFlags.ColorAttachment | VkImageUsageFlags.TransientAttachment, VkMemoryPropertyFlags.DeviceLocal, swapChain.Width, swapChain.Height, VkImageType.Image2D, samples);
 			gbEmitMetal = new Image (dev, VkFormat.R8g8b8a8Unorm, VkImageUsageFlags.InputAttachment | VkImageUsageFlags.ColorAttachment | VkImageUsageFlags.TransientAttachment, VkMemoryPropertyFlags.DeviceLocal, swapChain.Width, swapChain.Height, VkImageType.Image2D, samples);
-			gbN_AO = new Image (dev, VkFormat.R16g16b16a16Sfloat, VkImageUsageFlags.InputAttachment | VkImageUsageFlags.ColorAttachment | VkImageUsageFlags.TransientAttachment, VkMemoryPropertyFlags.DeviceLocal, swapChain.Width, swapChain.Height, VkImageType.Image2D, samples);
-			gbPos = new Image (dev, VkFormat.R16g16b16a16Sfloat, VkImageUsageFlags.InputAttachment | VkImageUsageFlags.ColorAttachment | VkImageUsageFlags.TransientAttachment, VkMemoryPropertyFlags.DeviceLocal, swapChain.Width, swapChain.Height, VkImageType.Image2D, samples);
+			gbN_AO = new Image (dev, mrtFormat, VkImageUsageFlags.InputAttachment | VkImageUsageFlags.ColorAttachment | VkImageUsageFlags.TransientAttachment, VkMemoryPropertyFlags.DeviceLocal, swapChain.Width, swapChain.Height, VkImageType.Image2D, samples);
+			gbPos = new Image (dev, mrtFormat, VkImageUsageFlags.InputAttachment | VkImageUsageFlags.ColorAttachment | VkImageUsageFlags.TransientAttachment, VkMemoryPropertyFlags.DeviceLocal, swapChain.Width, swapChain.Height, VkImageType.Image2D, samples);
 			hdrImg = new Image (dev, hdrFormat, VkImageUsageFlags.InputAttachment | VkImageUsageFlags.ColorAttachment | VkImageUsageFlags.TransientAttachment, VkMemoryPropertyFlags.DeviceLocal | VkMemoryPropertyFlags.DeviceLocal, swapChain.Width, swapChain.Height, VkImageType.Image2D, samples);
 
 			gbColorRough.CreateView ();
