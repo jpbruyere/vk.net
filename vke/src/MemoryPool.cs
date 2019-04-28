@@ -27,6 +27,7 @@ namespace CVKL {
 		public ulong Size => memInfo.allocationSize;
 		public bool IsMapped => mappedPointer != IntPtr.Zero;
 		public IntPtr MappedData => mappedPointer;
+		public Resource First => firstResource;
 
 		public MemoryPool (Device dev, uint memoryTypeIndex, UInt64 size) {
 			this.dev = dev;
@@ -51,6 +52,10 @@ namespace CVKL {
 				lastResource = resource;
 			}
 			resource.bindMemory ();
+		}
+
+		public void Defrag () { 
+
 		}
 
 		public void Remove (Resource resource) {

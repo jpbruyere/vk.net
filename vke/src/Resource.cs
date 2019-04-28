@@ -9,10 +9,10 @@ namespace CVKL {
     public abstract class Resource : Activable {
 		protected VkMemoryRequirements memReqs;
 		internal MemoryPool memoryPool;
-		internal ulong poolOffset;
+		public ulong poolOffset;
 		/// <summary> double linked list in memory pool </summary>
 		internal Resource previous;
-		internal Resource next;
+		public Resource next;
 
 		public ulong AllocatedDeviceMemorySize => memReqs.size;
 		public uint TypeBits => memReqs.memoryTypeBits;

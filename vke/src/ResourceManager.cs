@@ -9,13 +9,13 @@ using static VK.Vk;
 namespace CVKL {
     public class ResourceManager : IDisposable {
 		VkPhysicalDeviceMemoryProperties memoryProperties;
-		MemoryPool[] memoryPools;
+		public MemoryPool[] memoryPools;
 		ulong[] reservedHeapMemory;
 
 		VkMemoryHeap getHeapFromMemoryIndex (uint i) => memoryProperties.memoryHeaps[memoryProperties.memoryTypes[i].heapIndex];
 
 
-		public ResourceManager (Device dev, ulong defaultPoolsBlockDivisor = 8) {
+		public ResourceManager (Device dev, ulong defaultPoolsBlockDivisor = 4) {
 			memoryProperties = dev.phy.memoryProperties;
 			memoryPools = new MemoryPool[memoryProperties.memoryTypeCount];
 			reservedHeapMemory = new ulong[memoryProperties.memoryHeapCount];
