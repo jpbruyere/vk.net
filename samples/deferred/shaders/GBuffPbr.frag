@@ -45,14 +45,10 @@ layout (set = 0, binding = 0) uniform UBO {
     mat4 projection;
     mat4 model;
     mat4 view;
-    vec4 camPos;    
-    float exposure;
-    float gamma;
-    float prefilteredCubeMipLevels;
-    float scaleIBLAmbient;
+    vec4 camPos;
 } ubo;
 
-layout (set = 0, binding = 5) uniform UBOMaterials {
+layout (set = 0, binding = 6) uniform UBOMaterials {
     Material materials[16];
 };
 
@@ -217,7 +213,7 @@ void main()
         ao = texture(aoMap, inUV1).r;
         
     vec3 n = getNormal();    
-    vec3 v = normalize(ubo.camPos.xyz - inWorldPos);
+    vec3 v = ubo.camPos.xyz - inWorldPos;
     
     outColorRough = vec4 (baseColor.rgb, perceptualRoughness);
     outEmitMetal = vec4 (emissive, metallic);

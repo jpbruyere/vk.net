@@ -205,13 +205,12 @@ void main()
 
         // Calculation of analytical lighting contribution
         vec3 diffuseContrib = (1.0 - F) * diffuse(pbrInputs);
-        vec3 specContrib = F * G * D / (4.0 * NdotL * NdotV);
+        vec3 specContrib = F * G * D / (4.0 * NdotL * NdotV);        
         // Obtain final intensity as reflectance (BRDF) scaled by the energy of the light (cosine law)
         vec3 color = NdotL * lights[i].color.rgb * (diffuseContrib + specContrib);
 
         // Calculate lighting contribution from image based lighting source (IBL)
-        colors += color + getIBLContribution(pbrInputs, n, reflection);
-    
+        colors += color + getIBLContribution(pbrInputs, n, reflection);          
     }
     colors /= NUM_LIGHTS;
     
@@ -223,6 +222,5 @@ void main()
     colors = mix(colors, colors * subpassLoad(samplerN_AO, gl_SampleID).a, u_OcclusionStrength);
     colors += emissive;             
     
-    outColor = vec4(colors, baseColor.a);
-
+    outColor = vec4(colors, baseColor.a);       
 }

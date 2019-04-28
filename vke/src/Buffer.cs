@@ -120,9 +120,11 @@ namespace CVKL {
 	/// </summary>
 	public class Buffer : Resource {
         internal VkBuffer handle;
-        public VkDescriptorBufferInfo Descriptor;
+		protected VkBufferCreateInfo createInfo = VkBufferCreateInfo.New ();
+
+		public VkDescriptorBufferInfo Descriptor;
 		public VkBuffer Handle => handle;
-        protected VkBufferCreateInfo createInfo = VkBufferCreateInfo.New();
+		public VkBufferCreateInfo Infos => createInfo;
         
 		protected override VkDebugMarkerObjectNameInfoEXT DebugMarkerInfo
 			=> new VkDebugMarkerObjectNameInfoEXT(VkDebugReportObjectTypeEXT.BufferEXT, handle.Handle);
