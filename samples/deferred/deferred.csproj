@@ -13,7 +13,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <DefineConstants>DEBUG</DefineConstants>
+    <DefineConstants>DEBUG;_WITH_VKVG;_WITH_SHADOWS</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -25,11 +25,11 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
-    <GLSLShader Include="shaders\**\*.frag;shaders\**\*.vert;shaders\**\*.comp" />
+    <GLSLShader Include="shaders\**\*.frag;shaders\**\*.vert;shaders\**\*.comp;shaders\**\*.geom" />
     <Datas Include="..\data\**\*.*">      
       <Link>data\%(RecursiveDir)%(Filename)%(Extension)</Link>
     </Datas>
-    <Compile Include="main.cs;EnvironmentPipeline.cs;deferredPbrRenderer.cs" />
+    <Compile Include="main.cs;EnvironmentPipeline.cs;deferredPbrRenderer.cs;shadowMapRenderer.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="System.Numerics" />

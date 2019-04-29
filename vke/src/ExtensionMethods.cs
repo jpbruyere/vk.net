@@ -49,6 +49,9 @@ namespace CVKL {
             Vector4 v4 = Vector4.Transform (new Vector4 (v, translate ? 1f : 0f), mat);
             return new Vector3 (v4.X, v4.Y, v4.Z);
         }
+		public static Vector3 ToVector3 (this Vector4 v) {
+			return new Vector3 (v.X, v.Y, v.Z);
+		}
 
         public static IntPtr Pin (this object obj) {
 			if (handles.ContainsKey (obj)) {

@@ -66,6 +66,8 @@ namespace CVKL {
 
 		public override void Activate () {
 			if (state != ActivableState.Activated) {
+				foreach (DescriptorSetLayout dsl in DescriptorSetLayouts) 
+					dsl.Activate ();
 				VkPipelineLayoutCreateInfo info = VkPipelineLayoutCreateInfo.New();
 				VkDescriptorSetLayout[] dsls = DescriptorSetLayouts.Select (dsl => dsl.handle).ToArray ();
 

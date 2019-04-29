@@ -41,8 +41,10 @@ namespace CVKL {
             public static FixedUtf8String VK_KHR_XLIB_SURFACE_EXTENSION_NAME = "VK_KHR_xlib_surface";
             public static FixedUtf8String VK_KHR_SWAPCHAIN_EXTENSION_NAME = "VK_KHR_swapchain";
             public static FixedUtf8String VK_EXT_DEBUG_REPORT_EXTENSION_NAME = "VK_EXT_debug_report";
-            public static FixedUtf8String StandardValidationLayeName = "VK_LAYER_LUNARG_standard_validation";
-            public static FixedUtf8String VkTraceLayeName = "VK_LAYER_LUNARG_vktrace";
+			public static FixedUtf8String VK_EXT_DEBUG_UTILS_EXTENSION_NAME = "VK_EXT_debug_utils";
+			public static FixedUtf8String LayerValidation = "VK_LAYER_KHRONOS_validation"; 
+			public static FixedUtf8String LayerMonitor = "VK_LAYER_LUNARG_monitor";
+			public static FixedUtf8String VkTraceLayeName = "VK_LAYER_LUNARG_vktrace";
             public static FixedUtf8String RenderdocCaptureLayerName = "VK_LAYER_RENDERDOC_Capture";
             public static FixedUtf8String main = "main";
         }
@@ -80,8 +82,9 @@ namespace CVKL {
 
 #if DEBUG
 			instanceExtensions.Add (Strings.VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
-
-			enabledLayerNames.Add (Strings.StandardValidationLayeName);
+			instanceExtensions.Add (Strings.VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+			enabledLayerNames.Add (Strings.LayerMonitor);
+			enabledLayerNames.Add (Strings.LayerValidation);
 #if RENDERDOC
 			enabledLayerNames.Add (Strings.RenderdocCaptureLayerName);
 #endif

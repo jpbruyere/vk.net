@@ -94,7 +94,9 @@ namespace CVKL {
 			base.Activate ();
 		}
 
-		protected override VkDebugMarkerObjectNameInfoEXT DebugMarkerInfo => throw new NotImplementedException ();
+		protected override VkDebugMarkerObjectNameInfoEXT DebugMarkerInfo
+			=> new VkDebugMarkerObjectNameInfoEXT (VkDebugReportObjectTypeEXT.PipelineCacheEXT, handle.Handle);
+
 
 		public void Delete () {
 			string path = Path.Combine (globalConfigPath, cacheFile);

@@ -10,6 +10,7 @@ layout (input_attachment_index = 3, set = 2, binding = 3) uniform subpassInputMS
 layout (set = 0, binding = 1) uniform samplerCube samplerIrradiance;
 layout (set = 0, binding = 2) uniform samplerCube prefilteredMap;
 layout (set = 0, binding = 3) uniform sampler2D samplerBRDFLUT;
+layout (set = 0, binding = 7) uniform sampler2DArray samplerShadowMap;
 
 layout (push_constant) uniform PushCsts {
     layout(offset = 64)
@@ -29,6 +30,7 @@ const uint roughness    = 6;
 const uint depth        = 7;
 const uint prefill      = 8;
 const uint irradiance   = 9;
+const uint shadowMap    = 10;
 
 vec4 sampleCubeMap (samplerCube sc, uint face, uint lod) {
     vec2 uv = 2.0 * inUV - vec2(1.0);
@@ -75,6 +77,10 @@ void main()
             break;
         case depth:
             outColor = vec4(subpassLoad(samplerPos, gl_SampleID).aaa, 1);
+            break;
+        case shadowMap:            
+            vec3 d = texture(samplerShadowMap, vec3(inUV, bitfieldExtract (imgIdx, 8, 8))).rrr;
+            outColor = vec4(d*d*d, 1);
             break;
         default:
             if (imgNum == prefill)
