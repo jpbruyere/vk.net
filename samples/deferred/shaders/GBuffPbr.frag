@@ -213,10 +213,10 @@ void main()
         ao = texture(aoMap, inUV1).r;
         
     vec3 n = getNormal();    
-    vec3 v = ubo.camPos.xyz - inWorldPos;
+    vec3 p = inWorldPos;
     
     outColorRough = vec4 (baseColor.rgb, perceptualRoughness);
     outEmitMetal = vec4 (emissive, metallic);
     outN_AO = vec4 (n, ao);
-    outPos = vec4 (v, linearDepth(gl_FragCoord.z));
+    outPos = vec4 (p, linearDepth(gl_FragCoord.z));
 }

@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 using VK;
 
 namespace CVKL {
-	class EnvironmentCube : GraphicPipeline {
+	public class EnvironmentCube : GraphicPipeline {
 
 		GPUBuffer vboSkybox;
 
@@ -24,7 +24,7 @@ namespace CVKL {
 
 				vboSkybox = new GPUBuffer<float> (staggingQ, cmdPool, VkBufferUsageFlags.VertexBuffer, box_vertices);
 
-				cubemap = KTX.KTX.Load (staggingQ, cmdPool, cubemapPathes[0],
+				cubemap = KTX.KTX.Load (staggingQ, cmdPool, cubemapPathes[2],
 					VkImageUsageFlags.Sampled, VkMemoryPropertyFlags.DeviceLocal, true);
 				cubemap.CreateView (VkImageViewType.Cube, VkImageAspectFlags.Color, 6, 0, cubemap.CreateInfo.mipLevels);
 				cubemap.CreateSampler (VkSamplerAddressMode.ClampToEdge);
@@ -188,13 +188,8 @@ namespace CVKL {
 			DescriptorSetLayout dsLayout = new DescriptorSetLayout (Dev,
 				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler));
 
-			DescriptorSet dset = dsPool.Allocate (dsLayout);
 
 			GraphicPipelineConfig cfg = GraphicPipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, VkSampleCountFlags.SampleCount1, false);
-
-			DescriptorSetWrites dsUpdate = new DescriptorSetWrites (dsLayout);
-			dsUpdate.Write (Dev, dset, cubemap.Descriptor);
-
 			cfg.Layout = new PipelineLayout (Dev, dsLayout);
 			cfg.Layout.AddPushConstants (
 				new VkPushConstantRange (VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment, (uint)Marshal.SizeOf<Matrix4x4> () + 8));
@@ -231,6 +226,12 @@ namespace CVKL {
 			VkImageSubresourceRange subRes = new VkImageSubresourceRange (VkImageAspectFlags.Color, 0, numMips, 0, 6);
 
 			using (GraphicPipeline pl = new GraphicPipeline (cfg)) {
+
+				DescriptorSet dset = dsPool.Allocate (dsLayout);
+				DescriptorSetWrites dsUpdate = new DescriptorSetWrites (dsLayout);
+				dsUpdate.Write (Dev, dset, cubemap.Descriptor);
+				Dev.WaitIdle ();
+
 				using (Framebuffer fb = new Framebuffer (pl.RenderPass, dim, dim, imgFbOffscreen)) {
 					CommandBuffer cmd = cmdPool.AllocateCommandBuffer ();
 					cmd.Start (VkCommandBufferUsageFlags.OneTimeSubmit);

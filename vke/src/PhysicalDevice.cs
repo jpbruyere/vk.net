@@ -77,12 +77,23 @@ namespace CVKL {
     public class PhysicalDevice {
         IntPtr phy;
 
-        public VkPhysicalDeviceProperties deviceProperties { get; private set; }
-        public VkPhysicalDeviceFeatures deviceFeatures { get; private set; }
         public VkPhysicalDeviceMemoryProperties memoryProperties { get; private set; }
         public VkQueueFamilyProperties[] QueueFamilies { get; private set; }
-
-		public VkPhysicalDeviceLimits Limits => deviceProperties.limits;
+		public VkPhysicalDeviceProperties Properties {
+			get {
+				VkPhysicalDeviceProperties pdp;
+				vkGetPhysicalDeviceProperties (phy, out pdp);
+				return pdp;
+			}
+		}
+		public VkPhysicalDeviceFeatures Features {
+			get {
+				VkPhysicalDeviceFeatures df;
+				vkGetPhysicalDeviceFeatures (phy, out df);
+				return df;
+			}
+		}
+		public VkPhysicalDeviceLimits Limits => Properties.limits;
 
         public bool HasSwapChainSupport { get; private set; }
         public IntPtr Handle => phy;
@@ -93,14 +104,6 @@ namespace CVKL {
         }
 
         unsafe void init () {
-            VkPhysicalDeviceProperties pdp;
-            vkGetPhysicalDeviceProperties (phy, out pdp);
-            deviceProperties = pdp;
-
-            VkPhysicalDeviceFeatures df;
-            vkGetPhysicalDeviceFeatures (phy, out df);
-            deviceFeatures = df;
-
             // Gather physical Device memory properties
             IntPtr tmp = Marshal.AllocHGlobal (Marshal.SizeOf<VkPhysicalDeviceMemoryProperties>());
             vkGetPhysicalDeviceMemoryProperties (phy, tmp);
