@@ -13,10 +13,15 @@ namespace deferred {
 			}
 		}
 
-		protected override void configureEnabledFeatures (ref VkPhysicalDeviceFeatures features) {
-			base.configureEnabledFeatures (ref features);
-			features.samplerAnisotropy = true;
-			features.sampleRateShading = true;
+		protected override void configureEnabledFeatures (VkPhysicalDeviceFeatures available_features, ref VkPhysicalDeviceFeatures features) {
+			base.configureEnabledFeatures (available_features, ref features);
+
+			features.samplerAnisotropy = available_features.samplerAnisotropy;
+			features.sampleRateShading = available_features.sampleRateShading;
+			features.geometryShader = available_features.geometryShader;
+
+			if (available_features.textureCompressionBC) { 
+			}
 		}
 
 		protected override void createQueues () {
@@ -26,26 +31,27 @@ namespace deferred {
 
 		string[] modelPathes = {
 				"../data/models/DamagedHelmet/glTF/DamagedHelmet.gltf",
-				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/Avocado/glTF/Avocado.gltf",
-				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/BarramundiFish/glTF/BarramundiFish.gltf",
-				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/BoomBoxWithAxes/glTF/BoomBoxWithAxes.gltf",
-				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/Box/glTF/Box.gltf",
-				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/EnvironmentTest/glTF/EnvironmentTest.gltf",
-				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/MetalRoughSpheres/glTF/MetalRoughSpheres.gltf",
-				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/OrientationTest/glTF/OrientationTest.gltf",
-				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/Buggy/glTF/Buggy.gltf",
-				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/2CylinderEngine/glTF-Embedded/2CylinderEngine.gltf",
-				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/FlightHelmet/glTF/FlightHelmet.gltf",
-				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/GearboxAssy/glTF/GearboxAssy.gltf",
-				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/Lantern/glTF/Lantern.gltf",
-				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/SciFiHelmet/glTF/SciFiHelmet.gltf",
-				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/Sponza/glTF/Sponza.gltf",
-				"/mnt/devel/vkChess/data/chess.gltf",
-				"/home/jp/gltf/camaro/scene.gltf",
-				"/home/jp/gltf/chessold/scene.gltf",
-				"../data/models/Hubble.glb",
-				"../data/models/MER_static.glb",
-				"../data/models/ISS_stationary.glb",
+				"../data/models/shadow.glb",
+				//"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/Avocado/glTF/Avocado.gltf",
+				//"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/BarramundiFish/glTF/BarramundiFish.gltf",
+				//"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/BoomBoxWithAxes/glTF/BoomBoxWithAxes.gltf",
+				//"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/Box/glTF/Box.gltf",
+				//"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/EnvironmentTest/glTF/EnvironmentTest.gltf",
+				//"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/MetalRoughSpheres/glTF/MetalRoughSpheres.gltf",
+				//"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/OrientationTest/glTF/OrientationTest.gltf",
+				//"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/Buggy/glTF/Buggy.gltf",
+				//"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/2CylinderEngine/glTF-Embedded/2CylinderEngine.gltf",
+				//"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/FlightHelmet/glTF/FlightHelmet.gltf",
+				//"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/GearboxAssy/glTF/GearboxAssy.gltf",
+				//"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/Lantern/glTF/Lantern.gltf",
+				//"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/SciFiHelmet/glTF/SciFiHelmet.gltf",
+				//"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/Sponza/glTF/Sponza.gltf",
+				//"/mnt/devel/vkChess/data/chess.gltf",
+				//"/home/jp/gltf/camaro/scene.gltf",
+				//"/home/jp/gltf/chessold/scene.gltf",
+				//"../data/models/Hubble.glb",
+				//"../data/models/MER_static.glb",
+				//"../data/models/ISS_stationary.glb",
 			};
 
 		int curModelIndex = 0;
@@ -68,6 +74,7 @@ namespace deferred {
 			uiImage.CreateView (VkImageViewType.ImageView2D, VkImageAspectFlags.Color);
 			uiImage.CreateSampler (VkFilter.Nearest, VkFilter.Nearest, VkSamplerMipmapMode.Nearest, VkSamplerAddressMode.ClampToBorder);
 			uiImage.Descriptor.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
+			uiImage.SetName ("uiImage");
 		}
 
 		void vkvgDraw () {
@@ -103,7 +110,7 @@ namespace deferred {
 				ctx.ShowText (string.Format ($"Gamma:   {renderer.matrices.gamma,5} "));
 				y += dy;
 				ctx.MoveTo (x, y);
-				ctx.ShowText (string.Format ($"Light pos:   {renderer.lightPos.ToString ()} "));
+				ctx.ShowText (string.Format ($"Light pos:   {renderer.lights[0].position.ToString ()} "));
 				y += dy;
 				ctx.MoveTo (x, y);
 				ctx.ShowText (string.Format ($"{"Debug draw (numpad 0->9)",-30} : {renderer.currentDebugView.ToString ()} "));
@@ -180,8 +187,8 @@ namespace deferred {
 		}
 		#endif
 
-		Program () {
-			camera = new Camera (Utils.DegreesToRadians (45f), 1f, 0.1f, 256f);
+		Program () : base(true) {
+			camera = new Camera (Utils.DegreesToRadians (45f), 1f, 0.1f, 16f);
 			camera.SetPosition (0, 0, 2);
 
 			#if WITH_VKVG
@@ -205,7 +212,12 @@ namespace deferred {
 		public override void UpdateView () {
 			renderer.UpdateView (camera);
 			updateViewRequested = false;
+#if WITH_SHADOWS
+			if (renderer.shadowMapRenderer.updateShadowMap)
+				renderer.shadowMapRenderer.update_shadow_map (cmdPool);
+#endif
 		}
+
 		public override void Update () {
 			if (reloadModel) {
 				renderer.LoadModel (transferQ, modelPathes[curModelIndex]);
@@ -213,27 +225,31 @@ namespace deferred {
 				camera.Model = Matrix4x4.CreateScale (1f / Math.Max (Math.Max (renderer.modelAABB.Width, renderer.modelAABB.Height), renderer.modelAABB.Depth));
 				updateViewRequested = true;
 				rebuildBuffers = true;
+#if WITH_SHADOWS
+				renderer.shadowMapRenderer.updateShadowMap = true;
+#endif
 			}
+
 			if (rebuildBuffers) {
 				buildCommandBuffers ();
 				rebuildBuffers = false;
 			}
-			#if WITH_VKVG
+#if WITH_VKVG
 			vkvgDraw ();
-			#endif
+#endif
 		}
 		protected override void OnResize () {
-			#if WITH_VKVG
+#if WITH_VKVG
 			initUISurface ();
 			renderer.WriteUiImgDesciptor (uiImage);
-			#endif
+#endif
 
 			UpdateView ();
 			renderer.Resize ();
 			buildCommandBuffers ();
 		}
 
-		#region Mouse and keyboard
+#region Mouse and keyboard
 		protected override void onKeyDown (Key key, int scanCode, Modifier modifiers) {
 			switch (key) {
 				case Key.F:
@@ -243,7 +259,7 @@ namespace deferred {
 							renderer.envCube.debugFace = 5;
 					} else {
 						renderer.envCube.debugFace++;
-						if (renderer.envCube.debugFace > 5)
+						if (renderer.envCube.debugFace >= 5)
 							renderer.envCube.debugFace = 0;
 					}
 					rebuildBuffers = true;
@@ -255,8 +271,20 @@ namespace deferred {
 							renderer.envCube.debugMip = (int)renderer.envCube.prefilterCube.CreateInfo.mipLevels - 1;
 					} else {
 						renderer.envCube.debugMip++;
-						if (renderer.envCube.debugMip > renderer.envCube.prefilterCube.CreateInfo.mipLevels)
+						if (renderer.envCube.debugMip >= renderer.envCube.prefilterCube.CreateInfo.mipLevels)
 							renderer.envCube.debugMip = 0;
+					}
+					rebuildBuffers = true;
+					break;
+				case Key.L:
+					if (modifiers.HasFlag (Modifier.Shift)) {
+						renderer.lightNumDebug--;
+						if (renderer.lightNumDebug < 0)
+							renderer.lightNumDebug = (int)renderer.lights.Length - 1;
+					} else {
+						renderer.lightNumDebug++;
+						if (renderer.lightNumDebug >= renderer.lights.Length)
+							renderer.lightNumDebug = 0;
 					}
 					rebuildBuffers = true;
 					break;
@@ -277,39 +305,48 @@ namespace deferred {
 					renderer.currentDebugView = DeferredPbrRenderer.DebugView.irradiance;
 					rebuildBuffers = true;
 					break;
+				case Key.S:
+					if (modifiers.HasFlag (Modifier.Control)) {
+						renderer.pipelineCache.Save ();
+						Console.WriteLine ($"Pipeline Cache saved.");
+					} else {
+						renderer.currentDebugView = DeferredPbrRenderer.DebugView.shadowMap;
+						rebuildBuffers = true; 
+					}
+					break;
 				case Key.Up:
 					if (modifiers.HasFlag (Modifier.Shift))
-						renderer.lightPos -= Vector4.UnitZ;
+						renderer.MoveLight(-Vector4.UnitZ);
 					else
 						camera.Move (0, 0, 1);
 					break;
 				case Key.Down:
 					if (modifiers.HasFlag (Modifier.Shift))
-						renderer.lightPos += Vector4.UnitZ;
+						renderer.MoveLight (Vector4.UnitZ);
 					else
 						camera.Move (0, 0, -1);
 					break;
 				case Key.Left:
 					if (modifiers.HasFlag (Modifier.Shift))
-						renderer.lightPos -= Vector4.UnitX;
+						renderer.MoveLight (-Vector4.UnitX);
 					else
 						camera.Move (1, 0, 0);
 					break;
 				case Key.Right:
 					if (modifiers.HasFlag (Modifier.Shift))
-						renderer.lightPos += Vector4.UnitX;
+						renderer.MoveLight (Vector4.UnitX);
 					else
 						camera.Move (-1, 0, 0);
 					break;
 				case Key.PageUp:
 					if (modifiers.HasFlag (Modifier.Shift))
-						renderer.lightPos += Vector4.UnitY;
+						renderer.MoveLight (Vector4.UnitY);
 					else
 						camera.Move (0, 1, 0);
 					break;
 				case Key.PageDown:
 					if (modifiers.HasFlag (Modifier.Shift))
-						renderer.lightPos -= Vector4.UnitY;
+						renderer.MoveLight (-Vector4.UnitY);
 					else
 						camera.Move (0, -1, 0);
 					break;
@@ -332,10 +369,6 @@ namespace deferred {
 						camera.Type = Camera.CamType.FirstPerson;
 					Console.WriteLine ($"camera type = {camera.Type}");
 					break;
-				case Key.S:
-					renderer.pipelineCache.Save ();
-					Console.WriteLine ($"Pipeline Cache saved.");
-					break;
 				case Key.KeypadAdd:
 					curModelIndex++;
 					if (curModelIndex >= modelPathes.Length)
@@ -354,17 +387,17 @@ namespace deferred {
 			}
 			updateViewRequested = true;
 		}
-		#endregion
+#endregion
 
 		protected override void Dispose (bool disposing) {
 			if (disposing) {
 				if (!isDisposed) {
 					renderer.Dispose ();
-					#if WITH_VKVG
+#if WITH_VKVG
 					uiImage?.Dispose ();
 					vkvgSurf?.Dispose ();
 					vkvgDev.Dispose ();
-					#endif
+#endif
 				}
 			}
 

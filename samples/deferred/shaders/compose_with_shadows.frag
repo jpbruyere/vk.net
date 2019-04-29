@@ -27,6 +27,7 @@ layout (set = 0, binding = 4) uniform UBOLights {
 
 const float M_PI = 3.141592653589793;
 const float c_MinRoughness = 0.04;
+#define SHADOW_FACTOR 0.55
 
 layout (input_attachment_index = 0, set = 2, binding = 0) uniform subpassInputMS samplerColorRough;
 layout (input_attachment_index = 1, set = 2, binding = 1) uniform subpassInputMS samplerEmitMetal;
@@ -36,6 +37,7 @@ layout (input_attachment_index = 3, set = 2, binding = 3) uniform subpassInputMS
 layout (set = 0, binding = 1) uniform samplerCube samplerIrradiance;
 layout (set = 0, binding = 2) uniform samplerCube prefilteredMap;
 layout (set = 0, binding = 3) uniform sampler2D samplerBRDFLUT;
+layout (set = 0, binding = 7) uniform sampler2DArray samplerShadowMap;
 
 layout (location = 0) in vec2 inUV;
 
@@ -137,6 +139,46 @@ float convertMetallic(vec3 diffuse, vec3 specular, float maxSpecular) {
     return clamp((-b + sqrt(D)) / (2.0 * a), 0.0, 1.0);
 }
 
+float textureProj(vec4 P, float layer, vec2 offset)
+{
+    float shadow = 1.0;
+    vec4 shadowCoord = P / P.w;
+    shadowCoord.st = shadowCoord.st * 0.5 + 0.5;
+    
+    if (shadowCoord.z > -1.0 && shadowCoord.z < 1.0) 
+    {
+        float dist = texture(samplerShadowMap, vec3(shadowCoord.st + offset, layer)).r;
+        if (shadowCoord.w > 0.0 && dist < shadowCoord.z)         
+            shadow = SHADOW_FACTOR;
+    }else
+        shadow = 0.05f;//for debug view out of light proj
+    
+    return shadow;
+}
+
+float filterPCF(vec4 sc, float layer)
+{
+    ivec2 texDim = textureSize(samplerShadowMap, 0).xy;
+    float scale = 1.5;
+    float dx = scale * 1.0 / float(texDim.x);
+    float dy = scale * 1.0 / float(texDim.y);
+
+    float shadowFactor = 0.0;
+    int count = 0;
+    int range = 1;
+    
+    for (int x = -range; x <= range; x++)
+    {
+        for (int y = -range; y <= range; y++)
+        {
+            shadowFactor += textureProj(sc, layer, vec2(dx*x, dy*y));
+            count++;
+        }
+    
+    }
+    return shadowFactor / count;
+}
+
 void main() 
 {
     if (subpassLoad(samplerPos, gl_SampleID).a == 1.0f)
@@ -210,9 +252,14 @@ void main()
         vec3 diffuseContrib = (1.0 - F) * diffuse(pbrInputs);
         vec3 specContrib = F * G * D / (4.0 * NdotL * NdotV);        
         // Obtain final intensity as reflectance (BRDF) scaled by the energy of the light (cosine law)
+        vec4 shadowClip = lights[i].mvp * vec4(pos, 1);
+        float shadowFactor = filterPCF(shadowClip, i);
+
+        
         vec3 color = NdotL * lights[i].color.rgb * (diffuseContrib + specContrib);
+
         // Calculate lighting contribution from image based lighting source (IBL)
-        colors += (color + getIBLContribution(pbrInputs, n, reflection));
+        colors += shadowFactor * (color + getIBLContribution(pbrInputs, n, reflection));
         
         
     }

@@ -158,6 +158,8 @@ namespace CVKL {
 					specularFactor = new Vector4 (0)
 				};
 
+				//materials[i].metallicFactor = 0.1f;
+				//materials[i].roughnessFactor = 0.9f;
 				descriptorSets[i] = descriptorPool.Allocate (layout);
 				descriptorSets[i].Handle.SetDebugMarkerName (dev, "descSet " + mats[i].Name);
 
@@ -210,29 +212,31 @@ namespace CVKL {
 
 		//TODO:destset for binding must be variable
 		//TODO: ADD REFAULT MAT IF NO MAT DEFINED
-		public void RenderNode (CommandBuffer cmd, PipelineLayout pipelineLayout, Node node, Matrix4x4 currentTransform) {
+		public void RenderNode (CommandBuffer cmd, PipelineLayout pipelineLayout, Node node, Matrix4x4 currentTransform, bool shadowPass = false) {
 			Matrix4x4 localMat = node.localMatrix * currentTransform;
-
-			cmd.PushConstant (pipelineLayout, VkShaderStageFlags.Vertex, localMat);
+			VkShaderStageFlags matStage = shadowPass ? VkShaderStageFlags.Geometry : VkShaderStageFlags.Vertex;
+			cmd.PushConstant (pipelineLayout, matStage, localMat);
 
 			if (node.Mesh != null) {
 				foreach (Primitive p in node.Mesh.Primitives) {
-					cmd.PushConstant (pipelineLayout, VkShaderStageFlags.Fragment, (int)p.material, (uint)Marshal.SizeOf<Matrix4x4> ());
-					if (descriptorSets[p.material] != null)
-						cmd.BindDescriptorSet (pipelineLayout, descriptorSets[p.material], 1);
+					if (!shadowPass) {
+						cmd.PushConstant (pipelineLayout, VkShaderStageFlags.Fragment, (int)p.material, (uint)Marshal.SizeOf<Matrix4x4> ());
+						if (descriptorSets[p.material] != null)
+							cmd.BindDescriptorSet (pipelineLayout, descriptorSets[p.material], 1);
+					}
 					cmd.DrawIndexed (p.indexCount, 1, p.indexBase, p.vertexBase, 0);
 				}
 			}
 			if (node.Children == null)
 				return;
 			foreach (Node child in node.Children)
-				RenderNode (cmd, pipelineLayout, child, localMat);
+				RenderNode (cmd, pipelineLayout, child, localMat, shadowPass);
 		}
 
-		public void DrawAll (CommandBuffer cmd, PipelineLayout pipelineLayout) {
+		public void DrawAll (CommandBuffer cmd, PipelineLayout pipelineLayout, bool shadowPass = false) {
 			foreach (Scene sc in Scenes) {
 				foreach (Node node in sc.Root.Children) {
-					RenderNode (cmd, pipelineLayout, node, sc.Root.localMatrix);
+					RenderNode (cmd, pipelineLayout, node, sc.Root.localMatrix, shadowPass);
 				}
 			}
 		}

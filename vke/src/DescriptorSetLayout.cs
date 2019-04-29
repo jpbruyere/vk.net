@@ -48,8 +48,7 @@ namespace CVKL {
         public DescriptorSetLayout (Device device, VkDescriptorSetLayoutCreateFlags flags, params VkDescriptorSetLayoutBinding[] bindings)
         : this (device, flags) {
             foreach (VkDescriptorSetLayoutBinding b in bindings) 
-                Bindings.Add (b);
-            Activate ();
+                Bindings.Add (b);            
         }
 		#endregion
 

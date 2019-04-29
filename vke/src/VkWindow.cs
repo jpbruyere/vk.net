@@ -126,7 +126,7 @@ namespace CVKL {
             phy = instance.GetAvailablePhysicalDevice ().Where (p => p.HasSwapChainSupport).FirstOrDefault ();
 
             VkPhysicalDeviceFeatures enabledFeatures = default(VkPhysicalDeviceFeatures);
-            configureEnabledFeatures (ref enabledFeatures);
+            configureEnabledFeatures (phy.Features, ref enabledFeatures);
 
 			if (debugMarkers)
 				debugMarkers = phy.GetDeviceExtensionSupported (Ext.D.VK_EXT_debug_marker);
@@ -157,7 +157,7 @@ namespace CVKL {
 		/// override this method to modify enabled features before device creation
 		/// </summary>
 		/// <param name="features">Features.</param>
-        protected virtual void configureEnabledFeatures (ref VkPhysicalDeviceFeatures features) {
+        protected virtual void configureEnabledFeatures (VkPhysicalDeviceFeatures available_features, ref VkPhysicalDeviceFeatures features) {
         }
 		/// <summary>
 		/// override this method to create additional queue. Dedicated queue of the requested type will be selected first, created queues may excess
