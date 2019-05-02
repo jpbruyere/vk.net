@@ -39,7 +39,7 @@
     </Reference>
     <Reference Include="mscorlib" />
     <Reference Include="Newtonsoft.Json">
-      <HintPath>..\..\packages\Newtonsoft.Json.12.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <HintPath>..\..\packages\Newtonsoft.Json.12.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="glTFLoader">
       <HintPath>..\..\packages\glTF2Loader.1.1.3-alpha\lib\net35\glTFLoader.dll</HintPath>
@@ -57,7 +57,7 @@
       <HintPath>..\..\packages\Vulkan.0.1.2.6\lib\netstandard2.0\VK.dll</HintPath>
     </Reference>
     <Reference Include="vkvg.net">
-      <HintPath>..\..\packages\vkvg.net.0.2.1-beta\lib\netstandard2.0\vkvg.net.dll</HintPath>
+      <HintPath>..\..\packages\vkvg.net.0.2.1.1-beta\lib\netstandard2.0\vkvg.net.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>

@@ -267,6 +267,7 @@ namespace CVKL {
             UpdateView ();
 
             frameChrono = Stopwatch.StartNew ();
+			long totTime = 0;
 
             while (!Glfw3.WindowShouldClose (hWin)) {
                 render ();
@@ -277,17 +278,17 @@ namespace CVKL {
                 frameCount++;
 
                 if (frameChrono.ElapsedMilliseconds > UpdateFrequency) {
-                    frameChrono.Stop ();
-
-                    fps = (uint)(1000.0 * frameCount  / frameChrono.ElapsedMilliseconds);
-
-                    Glfw3.SetWindowTitle (hWin, "FPS: " + fps.ToString ());
-
 					Update ();
 
-                    frameCount = 0;
-                    frameChrono.Restart ();
-
+					frameChrono.Stop ();
+					totTime += frameChrono.ElapsedMilliseconds;
+                    fps = (uint)((double)frameCount  / (double)totTime * 1000.0);
+					//Glfw3.SetWindowTitle (hWin, "FPS: " + fps.ToString ());                    
+					if (totTime > 2000) {
+						frameCount = 0;
+						totTime = 0;
+					}
+					frameChrono.Restart ();
                 }
                 Glfw3.PollEvents ();
             }
