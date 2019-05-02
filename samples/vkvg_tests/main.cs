@@ -1,4 +1,5 @@
-﻿using CVKL;
+﻿using System.Threading;
+using CVKL;
 using VK;
 
 namespace vkvg_test {
@@ -27,41 +28,110 @@ namespace vkvg_test {
 			ctx.Fill ();
 			ctx.Operator = vkvg.Operator.Over;
 		}
-
 		void vkvgDraw () {
 
-            using (vkvg.Context ctx = new vkvg.Context (vkvgSurf)) {
-				ctx.ResetClip ();
-				ctx.Rectangle (50, 50, 200, 200);
-				ctx.Rectangle (50, 50, 250, 250);
-				clearAndClip (ctx);
-				//ctx.Rectangle (60, 60, 200, 200);
-				//clearAndClip (ctx);
+			using (vkvg.Context ctx = new vkvg.Context (vkvgSurf)) {
+				//ctx.SetSource (1.0, 0.1, 0.1, 0.2);
+				//ctx.Paint ();
 
-				ctx.LineWidth = 1;
-				ctx.SetSource (1.0, 0.1, 0.1, 0.2);
-				ctx.Rectangle (5.5, 5.5, 400, 250);
-				ctx.FillPreserve ();
-				ctx.Flush ();
+				//ctx.Rectangle (50, 50, 200, 200);
+				//ctx.Rectangle (50, 50, 250, 250);
+				//clearAndClip (ctx);
+				////ctx.Rectangle (60, 60, 200, 200);
+				////clearAndClip (ctx);
+
+				//ctx.LineWidth = 1;
+				//ctx.SetSource (1.0, 0.1, 0.1, 0.2);
+				//ctx.Rectangle (5.5, 5.5, 400, 250);
+				//ctx.FillPreserve ();
+				//ctx.Flush ();
 				ctx.SetSource (0.8, 0.8, 0.8);
-				ctx.Stroke ();
+				//ctx.Stroke ();
 
 				ctx.FontFace = "mono";
-				ctx.FontSize = 20;
-				int x = 60;
-				int y = 80, dy = 16;
-				ctx.MoveTo (x, y);
-				ctx.ShowText (string.Format ($"fps:     {fps,5} "));
+				ctx.FontSize = 8;
+				int x = 10;
+				int y = 10, dy = 14;
+				for (int j = 0; j < 10; j++) {
+
+					for (int i = 0; i < 50; i++) {
+						ctx.Save ();
+						string text = string.Format ($"fps: {fps,5}");
+						vkvg.TextExtents te = ctx.TextExtents (text);
+						vkvg.FontExtents fe = ctx.FontExtents;
+
+						ctx.Rectangle (x, y, te.XAdvance + 1.0f, fe.Height);
+						clearAndClip (ctx);
+						ctx.SetSource (0.1, 0.2, 0.8);
+						ctx.Fill ();
+						ctx.SetSource (0.8, 0.8, 0.8);
+						ctx.MoveTo (x, (float)y+fe.Ascent);
+						ctx.ShowText (text);
+						y += dy;
+						ctx.Restore ();
+					}
+					ctx.Flush ();
+					x += 100;
+					y = 10;
+
+				}
+
 			}
 		}
 		#endregion
 
-		Program () : base () {
+		bool recreateSurfaceStatus = true;
+
+		void recreateSurface () {
+			vkvgImage?.Dispose ();
+			vkvgSurf?.Dispose ();
+			vkvgSurf = new vkvg.Surface (vkvgDev, (int)swapChain.Width, (int)swapChain.Height);
+			vkvgSurf.Clear ();
+			vkvgImage = new Image (dev, new VkImage ((ulong)vkvgSurf.VkImage.ToInt64 ()), VkFormat.B8g8r8a8Unorm,
+				VkImageUsageFlags.ColorAttachment, (uint)vkvgSurf.Width, (uint)vkvgSurf.Height);
+			vkvgImage.CreateView (VkImageViewType.ImageView2D, VkImageAspectFlags.Color);
+			vkvgImage.CreateSampler (VkFilter.Nearest, VkFilter.Nearest, VkSamplerMipmapMode.Nearest, VkSamplerAddressMode.ClampToBorder);
+			recreateSurfaceStatus = false;
+		}
+
+		void uiThreadFunc () {
 			vkvgDev = new vkvg.Device (instance.Handle, phy.Handle, dev.VkDev.Handle, presentQueue.qFamIndex,
-				vkvg.SampleCount.Sample_4, presentQueue.index);
+				vkvg.SampleCount.Sample_1, presentQueue.index);
+
+			while (true) {
+				if (recreateSurfaceStatus == true)
+					recreateSurface ();
+				lock (Qmutex) {
+					vkvgDraw ();
+				}
+				Thread.Sleep (10);
+			}
+		}
+
+		Program () : base () {
+			Thread uiThread = new Thread (uiThreadFunc);
+			uiThread.IsBackground = true;
+			uiThread.Start ();
 					
 			init ();
 
+			UpdateFrequency = 5;
+		}
+		object Qmutex = new object ();
+
+		protected override void render () {
+			int idx = swapChain.GetNextImage ();
+			if (idx < 0) {
+				OnResize ();
+				return;
+			}
+
+			lock (Qmutex) {
+				presentQueue.Submit (cmds[idx], swapChain.presentComplete, drawComplete[idx]);
+				presentQueue.Present (swapChain, drawComplete[idx]);
+
+				presentQueue.WaitIdle ();
+			}
 		}
 
 		void init (VkSampleCountFlags samples = VkSampleCountFlags.SampleCount4) { 
@@ -71,9 +141,7 @@ namespace vkvg_test {
 
 			descLayout = new DescriptorSetLayout (dev,
 				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler)
-			);
-
-			dsVkvg = descriptorPool.Allocate (descLayout);
+			);				
 
 			GraphicPipelineConfig cfg = GraphicPipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, samples);
 
@@ -87,6 +155,8 @@ namespace vkvg_test {
 			cfg.blendAttachments[0] = new VkPipelineColorBlendAttachmentState (true);
 
 			uiPipeline = new GraphicPipeline (cfg);
+
+			dsVkvg = descriptorPool.Allocate (descLayout);
 		}
 
 		void buildCommandBuffers () {
@@ -123,18 +193,13 @@ namespace vkvg_test {
 		}
 
 		public override void Update () {
-			vkvgDraw ();
-			dev.WaitIdle ();
+		
 		}
 		protected override void OnResize () {
-
-			vkvgImage?.Dispose ();
-			vkvgSurf?.Dispose ();
-			vkvgSurf = new vkvg.Surface (vkvgDev, (int)swapChain.Width, (int)swapChain.Height);
-			vkvgImage = new Image (dev, new VkImage ((ulong)vkvgSurf.VkImage.ToInt64 ()), VkFormat.B8g8r8a8Unorm,
-				VkImageUsageFlags.ColorAttachment, (uint)vkvgSurf.Width, (uint)vkvgSurf.Height);
-			vkvgImage.CreateView (VkImageViewType.ImageView2D, VkImageAspectFlags.Color);
-			vkvgImage.CreateSampler (VkFilter.Nearest,VkFilter.Nearest, VkSamplerMipmapMode.Nearest, VkSamplerAddressMode.ClampToBorder);
+			dev.WaitIdle ();
+			recreateSurfaceStatus = true;
+			while (recreateSurfaceStatus)
+				Thread.Sleep (1);
 
 			vkvgImage.Descriptor.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
 			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (dsVkvg, descLayout);				

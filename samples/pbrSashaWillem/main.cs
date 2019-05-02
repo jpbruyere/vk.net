@@ -12,9 +12,8 @@ namespace pbrSachaWillem {
 				vke.Run ();
 			}
 		}
-
-		protected override void configureEnabledFeatures (ref VkPhysicalDeviceFeatures features) {
-			base.configureEnabledFeatures (ref features);
+		protected override void configureEnabledFeatures (VkPhysicalDeviceFeatures available_features, ref VkPhysicalDeviceFeatures features) {
+			base.configureEnabledFeatures (available_features, ref features);
 #if PIPELINE_STATS
 			features.pipelineStatisticsQuery = true;
 #endif
