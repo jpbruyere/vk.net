@@ -3,13 +3,13 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     
     <Copyright></Copyright>
-    <AssemblyVersion>0.1.2.6</AssemblyVersion>
+    <AssemblyVersion>0.1.2.7</AssemblyVersion>
     <Description>C# vulkan binding</Description>
     <Company></Company>
     <Product>VK</Product>
     <PackageId>Vulkan</PackageId>
     <PackageTags>C# vulkan net binding</PackageTags>    
-    <PackageVersion>$(AssemblyVersion)</PackageVersion>
+    <PackageVersion>$(AssemblyVersion)-beta</PackageVersion>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <PackageProjectUrl>https://github.com/jpbruyere/vk.net/blob/master/README.md</PackageProjectUrl>

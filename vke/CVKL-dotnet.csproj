@@ -3,7 +3,7 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     
     <Copyright></Copyright>
-    <AssemblyVersion>0.1.1</AssemblyVersion>
+    <AssemblyVersion>0.1.2</AssemblyVersion>
     <Description>C# vulkan library with IDispose model and references counting</Description>
     <Company></Company>
     <Product>CVKL</Product>
