@@ -101,20 +101,6 @@ namespace triangulation {
 				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Compute, VkDescriptorType.StorageBuffer),
 				new VkDescriptorSetLayoutBinding (1, VkShaderStageFlags.Compute, VkDescriptorType.StorageBuffer)
 			);
-			dsImage = dsPool.Allocate (dslImage);
-			dsPing = dsPool.Allocate (dslCompute);
-			dsPong = dsPool.Allocate (dslCompute);
-			dsVAO = dsPool.Allocate (dslCompute);
-
-
-			DescriptorSetWrites dsUpdate = new DescriptorSetWrites (dsPing, dslCompute);
-			dsUpdate.Write (dev, inBuff.Descriptor, outBuff.Descriptor);
-			dsUpdate.Write (dev, dsPong, outBuff.Descriptor, inBuff.Descriptor);
-			dsUpdate = new DescriptorSetWrites (dsImage, dslImage);
-			dsUpdate.Write (dev, imgResult.Descriptor);
-			dsUpdate = new DescriptorSetWrites (dsVAO, dslVAO);
-			dsUpdate.Write (dev, vbo.Descriptor, ibo.Descriptor);
-
 
 			plInit = new ComputePipeline (
 				new PipelineLayout (dev, new VkPushConstantRange (VkShaderStageFlags.Compute, 3 * sizeof (int)), dslCompute, dslVAO),
@@ -143,6 +129,20 @@ namespace triangulation {
 			cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/triangle.frag.spv");
 
 			trianglesPipeline = new GraphicPipeline (cfg);
+
+			dsImage = dsPool.Allocate (dslImage);
+			dsPing = dsPool.Allocate (dslCompute);
+			dsPong = dsPool.Allocate (dslCompute);
+			dsVAO = dsPool.Allocate (dslCompute);
+
+
+			DescriptorSetWrites dsUpdate = new DescriptorSetWrites (dsPing, dslCompute);
+			dsUpdate.Write (dev, inBuff.Descriptor, outBuff.Descriptor);
+			dsUpdate.Write (dev, dsPong, outBuff.Descriptor, inBuff.Descriptor);
+			dsUpdate = new DescriptorSetWrites (dsImage, dslImage);
+			dsUpdate.Write (dev, imgResult.Descriptor);
+			dsUpdate = new DescriptorSetWrites (dsVAO, dslVAO);
+			dsUpdate.Write (dev, vbo.Descriptor, ibo.Descriptor);
 
 			UpdateFrequency = 5;
 

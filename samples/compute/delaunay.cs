@@ -85,22 +85,6 @@ namespace delaunay {
 				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Compute, VkDescriptorType.StorageBuffer),
 				new VkDescriptorSetLayoutBinding (1, VkShaderStageFlags.Compute, VkDescriptorType.StorageBuffer)
 			);
-			dsImage = dsPool.Allocate (dslImage);
-			dsetPing = dsPool.Allocate (dslCompute);
-			dsetPong = dsPool.Allocate (dslCompute);
-
-			DescriptorSetWrites dsUpdate = new DescriptorSetWrites (dsetPing, dslCompute);
-			dsUpdate.Write (dev, inBuff.Descriptor, outBuff.Descriptor);
-			dsUpdate.Write (dev, dsetPong, outBuff.Descriptor, inBuff.Descriptor);
-			dsUpdate = new DescriptorSetWrites (dsImage, dslImage);
-			dsUpdate.Write (dev, imgResult.Descriptor);
-
-			plCompute = new ComputePipeline (
-				new PipelineLayout (dev, new VkPushConstantRange (VkShaderStageFlags.Compute, 2 * sizeof (int)), dslCompute),
-				"shaders/computeTest.comp.spv" );
-			plNormalize = new ComputePipeline (
-				plCompute.Layout,
-				"shaders/normalize.comp.spv");
 
 			GraphicPipelineConfig cfg = GraphicPipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, VkSampleCountFlags.SampleCount1);
 
@@ -115,6 +99,23 @@ namespace delaunay {
 			cfg.blendAttachments[0] = new VkPipelineColorBlendAttachmentState (true);
 
 			grPipeline = new GraphicPipeline (cfg);
+
+			plCompute = new ComputePipeline (
+				new PipelineLayout (dev, new VkPushConstantRange (VkShaderStageFlags.Compute, 2 * sizeof (int)), dslCompute),
+				"shaders/computeTest.comp.spv");
+			plNormalize = new ComputePipeline (
+				plCompute.Layout,
+				"shaders/normalize.comp.spv");
+
+			dsImage = dsPool.Allocate (dslImage);
+			dsetPing = dsPool.Allocate (dslCompute);
+			dsetPong = dsPool.Allocate (dslCompute);
+
+			DescriptorSetWrites dsUpdate = new DescriptorSetWrites (dsetPing, dslCompute);
+			dsUpdate.Write (dev, inBuff.Descriptor, outBuff.Descriptor);
+			dsUpdate.Write (dev, dsetPong, outBuff.Descriptor, inBuff.Descriptor);
+			dsUpdate = new DescriptorSetWrites (dsImage, dslImage);
+			dsUpdate.Write (dev, imgResult.Descriptor);
 
 			UpdateFrequency = 5;
 		}
