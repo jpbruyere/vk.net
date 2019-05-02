@@ -63,9 +63,7 @@ namespace CVKL {
 				new VkDescriptorSetLayoutBinding (3, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
 				new VkDescriptorSetLayoutBinding (4, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler)
 			);
-
-			dsMain = descriptorPool.Allocate (descLayoutMain);
-
+				
 			GraphicPipelineConfig cfg = GraphicPipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, renderPass.Samples);
 			cfg.Layout = new PipelineLayout (Dev, descLayoutMain, descLayoutTextures);
 			cfg.Layout.AddPushConstants (
@@ -82,6 +80,8 @@ namespace CVKL {
 			layout = cfg.Layout;
 
 			init (cfg);
+
+			dsMain = descriptorPool.Allocate (descLayoutMain);
 
 			envCube = new EnvironmentCube (dsMain, layout, staggingQ, RenderPass);
 

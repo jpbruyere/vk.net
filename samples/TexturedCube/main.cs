@@ -99,9 +99,7 @@ namespace TextureCube {
 			dsLayout = new DescriptorSetLayout (dev, 0,
 				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Vertex, VkDescriptorType.UniformBuffer),
 				new VkDescriptorSetLayoutBinding (1, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler));
-
-			descriptorSet = descriptorPool.Allocate (dsLayout);
-
+				
 			GraphicPipelineConfig cfg = GraphicPipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, VkSampleCountFlags.SampleCount1);
 
 			cfg.Layout = new PipelineLayout (dev, dsLayout);
@@ -117,6 +115,8 @@ namespace TextureCube {
 
 			uboMats = new HostBuffer (dev, VkBufferUsageFlags.UniformBuffer, matrices);
 			uboMats.Map ();//permanent map
+
+			descriptorSet = descriptorPool.Allocate (dsLayout);
 
 			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (descriptorSet, dsLayout.Bindings[0]);				
 			uboUpdate.Write (dev, uboMats.Descriptor);
@@ -184,9 +184,9 @@ namespace TextureCube {
 			uboMats.Update (matrices, (uint)Marshal.SizeOf<Matrices> ());
 		}
 
-		protected override void configureEnabledFeatures (ref VkPhysicalDeviceFeatures features) {
-			base.configureEnabledFeatures (ref features);
-			features.textureCompressionBC = true;
+		protected override void configureEnabledFeatures (VkPhysicalDeviceFeatures available_features, ref VkPhysicalDeviceFeatures features) {
+			base.configureEnabledFeatures (available_features, ref features);
+			features.textureCompressionBC = available_features.textureCompressionBC;
 		}
 
 		public override void UpdateView () {

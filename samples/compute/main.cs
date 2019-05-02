@@ -58,11 +58,12 @@ namespace SimpleCompute {
 				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Compute, VkDescriptorType.StorageBuffer),
 				new VkDescriptorSetLayoutBinding (1, VkShaderStageFlags.Compute, VkDescriptorType.StorageBuffer)
 			);
+
+			plCompute = new ComputePipeline (new PipelineLayout (dev, dsLayout), "shaders/compute.comp.spv" );
+
 			dset = dsPool.Allocate (dsLayout);
 			DescriptorSetWrites dsUpdate = new DescriptorSetWrites (dset, dsLayout);
 			dsUpdate.Write (dev, inBuff.Descriptor, outBuff.Descriptor);
-
-			plCompute = new ComputePipeline (new PipelineLayout (dev, dsLayout), "shaders/compute.comp.spv" );
 		}
 
 

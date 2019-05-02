@@ -13,10 +13,9 @@ namespace TextureSample {
 				vke.Run ();
 			}
 		}
-
-		protected override void configureEnabledFeatures (ref VkPhysicalDeviceFeatures features) {
-			base.configureEnabledFeatures (ref features);
-			features.textureCompressionBC = true;
+		protected override void configureEnabledFeatures (VkPhysicalDeviceFeatures available_features, ref VkPhysicalDeviceFeatures features) {
+			base.configureEnabledFeatures (available_features, ref features);
+			features.textureCompressionBC = available_features.textureCompressionBC;
 		}
 
 		float rotSpeed = 0.01f, zoomSpeed = 0.01f;
@@ -70,9 +69,7 @@ namespace TextureSample {
 			dsLayout = new DescriptorSetLayout (dev, 0,
 				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Vertex, VkDescriptorType.UniformBuffer),
 				new VkDescriptorSetLayoutBinding (1, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler));
-
-			descriptorSet = descriptorPool.Allocate (dsLayout);
-
+				
 			GraphicPipelineConfig cfg = GraphicPipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, VkSampleCountFlags.SampleCount1);
 
 			cfg.Layout = new PipelineLayout (dev, dsLayout);
@@ -88,6 +85,8 @@ namespace TextureSample {
 
 			uboMats = new HostBuffer (dev, VkBufferUsageFlags.UniformBuffer, matrices);
 			uboMats.Map ();//permanent map
+
+			descriptorSet = descriptorPool.Allocate (dsLayout);
 
 			using (DescriptorSetWrites2 uboUpdate = new DescriptorSetWrites2 (dev)) {
 				uboUpdate.AddWriteInfo (descriptorSet, dsLayout.Bindings[0], uboMats.Descriptor);
