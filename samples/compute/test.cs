@@ -61,6 +61,10 @@ namespace test {
 				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Compute, VkDescriptorType.StorageBuffer),
 				new VkDescriptorSetLayoutBinding (1, VkShaderStageFlags.Compute, VkDescriptorType.StorageBuffer)
 			);
+				
+			plCompute = new ComputePipeline (
+				new PipelineLayout (dev, new VkPushConstantRange (VkShaderStageFlags.Compute, sizeof (int)), dsLayoutCompute),
+				"shaders/computeTest.comp.spv" );
 
 			dsetPing = dsPool.Allocate (dsLayoutCompute);
 			dsetPong = dsPool.Allocate (dsLayoutCompute);
@@ -68,10 +72,6 @@ namespace test {
 			dsUpdate.Write (dev, inBuff.Descriptor, outBuff.Descriptor);
 
 			dsUpdate.Write (dev, dsetPong, outBuff.Descriptor, inBuff.Descriptor);
-
-			plCompute = new ComputePipeline (
-				new PipelineLayout (dev, new VkPushConstantRange (VkShaderStageFlags.Compute, sizeof (int)), dsLayoutCompute),
-				"shaders/computeTest.comp.spv" );
 		}
 
 

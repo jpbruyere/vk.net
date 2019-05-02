@@ -194,12 +194,8 @@ namespace CVKL {
 			DescriptorSetLayout dsLayout = new DescriptorSetLayout (Dev,
 				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler));
 
-			DescriptorSet dset = dsPool.Allocate (dsLayout);
 
 			GraphicPipelineConfig cfg = GraphicPipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, VkSampleCountFlags.SampleCount1, false);
-
-			DescriptorSetWrites dsUpdate = new DescriptorSetWrites (dsLayout);
-			dsUpdate.Write (Dev, dset, cubemap.Descriptor);
 
 			cfg.Layout = new PipelineLayout (Dev, dsLayout);
 			cfg.Layout.AddPushConstants (
@@ -237,6 +233,10 @@ namespace CVKL {
 			VkImageSubresourceRange subRes = new VkImageSubresourceRange (VkImageAspectFlags.Color, 0, numMips, 0, 6);
 
 			using (GraphicPipeline pl = new GraphicPipeline (cfg)) {
+				DescriptorSet dset = dsPool.Allocate (dsLayout);
+				DescriptorSetWrites dsUpdate = new DescriptorSetWrites (dsLayout);
+				dsUpdate.Write (Dev, dset, cubemap.Descriptor);
+
 				using (Framebuffer fb = new Framebuffer (pl.RenderPass, dim, dim, imgFbOffscreen)) {
 					CommandBuffer cmd = cmdPool.AllocateCommandBuffer ();
 					cmd.Start (VkCommandBufferUsageFlags.OneTimeSubmit);
