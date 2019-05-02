@@ -56,9 +56,7 @@ namespace Triangle {
 
 			descriptorPool = new DescriptorPool (dev, 1, new VkDescriptorPoolSize (VkDescriptorType.UniformBuffer));
 			dsLayout = new DescriptorSetLayout (dev,
-				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Vertex|VkShaderStageFlags.Fragment, VkDescriptorType.UniformBuffer));
-
-			descriptorSet = descriptorPool.Allocate (dsLayout);
+				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Vertex|VkShaderStageFlags.Fragment, VkDescriptorType.UniformBuffer));				
 
 			GraphicPipelineConfig cfg = GraphicPipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, VkSampleCountFlags.SampleCount1);
 
@@ -76,6 +74,7 @@ namespace Triangle {
 
 			pipeline = new GraphicPipeline (cfg);
 
+			descriptorSet = descriptorPool.Allocate (dsLayout);
 			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (descriptorSet, dsLayout);
 			uboUpdate.Write (dev, uboMats.Descriptor);
 
