@@ -24,11 +24,57 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using VK;
 
 namespace CVKL {
-    public class MarshaledObject<T> : IDisposable where T : struct {
+	//public class NativeList2<T> : IDisposable where T : struct {
+	//	const int sizeStep = 4;
+	//	int eltSize;
+	//	int capacity;
+	//	int count;
+	//	IntPtr handle;
+
+	//	public IntPtr Pointer => handle;
+
+	//	public NativeList2 (T[] array) {
+	//		eltSize = Marshal.SizeOf<T> ();
+	//		capacity = count = array.Length;
+	//		GCHandle hnd = GCHandle.Alloc (array, GCHandleType.Pinned);
+	//		handle = GCHandle.ToIntPtr (hnd);
+	//	}
+
+	//	public void Add (T elem) {
+	//		if (count == capacity) { 
+	//		}
+	//	}
+
+	//	void resize (int newSize) {
+
+	//	}
+
+	//	#region IDisposable Support
+	//	private bool disposedValue;
+	//	protected virtual void Dispose (bool disposing) {
+	//		if (!disposedValue) {
+	//			if (disposing) {
+	//			}
+	//			handle.Free ();
+	//			disposedValue = true;
+	//		}
+	//	}
+	//	public void Dispose () {
+	//		Dispose (true);
+	//		GC.SuppressFinalize(this);
+	//	}
+	//	~NativeList2 () { Dispose (false); }
+	//	#endregion
+	//}
+
+
+	public class MarshaledObject<T> : IDisposable where T : struct {
+
         GCHandle handle;
 
         public IntPtr Pointer {
@@ -62,12 +108,12 @@ namespace CVKL {
         #endregion
     }
 
-	public class SubPass : IDisposable {
-        NativeList<VkAttachmentReference> colorRefs;
-        NativeList<VkAttachmentReference> inputRefs;
+	public class SubPass {
+        List<VkAttachmentReference> colorRefs = new List<VkAttachmentReference>();
+        List<VkAttachmentReference> inputRefs = new List<VkAttachmentReference>();
         MarshaledObject<VkAttachmentReference> depthRef;
-        NativeList<VkAttachmentReference> resolveRefs;
-        NativeList<uint> preservedRefs;
+        List<VkAttachmentReference> resolveRefs = new List<VkAttachmentReference>();
+        List<uint> preservedRefs = new List<uint>();
 
         public SubPass () {
         }
@@ -82,30 +128,21 @@ namespace CVKL {
         }
         public void AddColorReference (params VkAttachmentReference[] refs) {
             if (colorRefs == null)
-                colorRefs = new NativeList<VkAttachmentReference> ((uint)refs.Length);
+                colorRefs = new List<VkAttachmentReference> ();
             for (int i = 0; i < refs.Length; i++)
                 colorRefs.Add (refs[i]);
         }
         public void AddInputReference (params VkAttachmentReference[] refs) {
-            if (inputRefs == null)
-                inputRefs = new NativeList<VkAttachmentReference> ((uint)refs.Length);
-            for (int i = 0; i < refs.Length; i++)
-                inputRefs.Add (refs[i]);
+        	inputRefs.AddRange (refs);
         }
         public void AddPreservedReference (params uint[] refs) {
-            if (preservedRefs == null)
-                preservedRefs = new NativeList<uint> ((uint)refs.Length);
-            for (int i = 0; i < refs.Length; i++)
-                preservedRefs.Add (refs[i]);
+            preservedRefs.AddRange (refs);
         }
         public void SetDepthReference (uint attachment, VkImageLayout layout = VkImageLayout.DepthStencilAttachmentOptimal) {
             DepthReference = new VkAttachmentReference { attachment = attachment, layout = layout };
         }
 		public void AddResolveReference (params VkAttachmentReference[] refs) {
-			if (resolveRefs == null)
-				resolveRefs = new NativeList<VkAttachmentReference> ((uint)refs.Length);
-			for (int i = 0; i < refs.Length; i++)
-				resolveRefs.Add (refs[i]);
+			resolveRefs.AddRange (refs);
 		}
 		public void AddResolveReference (uint attachment, VkImageLayout layout = VkImageLayout.ColorAttachmentOptimal) {
 			AddResolveReference (new VkAttachmentReference { attachment = attachment, layout = layout });
@@ -118,24 +155,28 @@ namespace CVKL {
             }
         }
 
-        public VkSubpassDescription SubpassDescription {
+		/// <summary>
+		/// after having fetched the vkSubpassDescription structure, the lists of attachment are pinned,
+		/// so it is mandatory to call the UnpinLists methods after.
+		/// </summary>
+		public VkSubpassDescription SubpassDescription {
             get {
                 VkSubpassDescription subpassDescription = new VkSubpassDescription ();
                 subpassDescription.pipelineBindPoint = VkPipelineBindPoint.Graphics;
-                if (colorRefs?.Count > 0) {
-                    subpassDescription.colorAttachmentCount = colorRefs.Count;
-                    subpassDescription.pColorAttachments = colorRefs.Data; ; 
+                if (colorRefs.Count > 0) {
+                    subpassDescription.colorAttachmentCount = (uint)colorRefs.Count;
+                    subpassDescription.pColorAttachments = colorRefs.Pin(); ; 
                 }
-                if (inputRefs?.Count > 0) {
-                    subpassDescription.inputAttachmentCount = inputRefs.Count;
-                    subpassDescription.pInputAttachments = inputRefs.Data; ;
+                if (inputRefs.Count > 0) {
+                    subpassDescription.inputAttachmentCount = (uint)inputRefs.Count;
+                    subpassDescription.pInputAttachments = inputRefs.Pin (); ;
                 }
-                if (preservedRefs?.Count > 0) {
-                    subpassDescription.preserveAttachmentCount = preservedRefs.Count;
-                    subpassDescription.pPreserveAttachments = preservedRefs.Data; ;
+                if (preservedRefs.Count > 0) {
+                    subpassDescription.preserveAttachmentCount = (uint)preservedRefs.Count;
+                    subpassDescription.pPreserveAttachments = preservedRefs.Pin (); ;
                 }
-				if (resolveRefs?.Count > 0)
-					subpassDescription.pResolveAttachments = resolveRefs.Data;
+				if (resolveRefs.Count > 0)
+					subpassDescription.pResolveAttachments = resolveRefs.Pin ();
 
 				if (depthRef != null)
                     subpassDescription.pDepthStencilAttachment = depthRef.Pointer;
@@ -144,31 +185,15 @@ namespace CVKL {
             }        
         }
 
-		/*public void GetAttachmentUsage (uint frameBufferAttachmentIndex, ref VkImageUsageFlags usage, ref VkImageAspectFlags aspect) {
-			for (int i = 0; i < colorRefs.Count; i++) {
-				if (colorRefs[i].attachment == frameBufferAttachmentIndex)
-					Utils.QueryLayoutRequirements (colorRefs[i].layout, ref usage, ref aspect);
-			}
-			for (int i = 0; i < inputRefs.Count; i++) {
-				if (colorRefs[i].attachment == frameBufferAttachmentIndex)
-					Utils.QueryLayoutRequirements (colorRefs[i].layout, ref usage, ref aspect);
-			}
-		}*/
-
-		#region IDisposable Support
-		protected virtual void Dispose (bool disposing) {
-            if (disposing) {
-                colorRefs?.Dispose ();
-                inputRefs?.Dispose ();
-                preservedRefs?.Dispose ();
-                depthRef?.Dispose ();
-                resolveRefs?.Dispose ();
-            }
-        }
-        public void Dispose () {
-            Dispose (true);
-            GC.SuppressFinalize (this);
-        }
-        #endregion
+		public void UnpinLists () {
+			if (colorRefs.Count > 0) 
+				colorRefs.Unpin (); 
+			if (inputRefs.Count > 0) 			
+				inputRefs.Unpin ();
+			if (preservedRefs.Count > 0) 
+				preservedRefs.Unpin ();
+			if (resolveRefs.Count > 0)
+				resolveRefs.Unpin ();
+		}
     }
 }

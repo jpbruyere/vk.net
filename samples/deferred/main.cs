@@ -70,17 +70,9 @@ namespace deferred {
 			crow = new Crow.Interface (vkvgDev, 800, 600);
 
 			isRunning = true;
-			//int frameCount = 0;
 
 			while (isRunning) {
 				crow.Update ();
-
-				/*if (frameCount++ > 100) {
-					for (int i = 0; i < crow.PerfMeasures.Count; i++) 
-						crow.PerfMeasures[i].NotifyChanges ();
-					frameCount = 0;
-				}*/
-
 				Thread.Sleep (2);
 			}
 

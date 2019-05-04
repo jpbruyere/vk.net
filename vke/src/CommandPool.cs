@@ -94,18 +94,19 @@ namespace CVKL {
                 vkFreeCommandBuffers (Dev.VkDev, handle, 1, ref hnd);
                 return;
             }
-            using (NativeList<VkCommandBuffer> nlCmds = new NativeList<VkCommandBuffer> ((uint)cmds.Length, (uint)cmds.Length)) {
-				int count = 0;
-				for (int i = 0; i < cmds.Length; i++) {
-					if (cmds[i] == null)
-						continue;
-					nlCmds[count] = cmds[i].Handle;
-					count++;
-				}
-				if (count == 0)
-					return;
-                vkFreeCommandBuffers (Dev.VkDev, handle, (uint)count, nlCmds.Data);
-            }
+			int sizeElt = Marshal.SizeOf<IntPtr> ();
+			IntPtr cmdsPtr = Marshal.AllocHGlobal (cmds.Length * sizeElt);
+			int count = 0;
+			for (int i = 0; i < cmds.Length; i++) {
+				if (cmds[i] == null)
+					continue;
+				Marshal.WriteIntPtr (cmdsPtr + count * sizeElt, cmds[i].Handle.Handle);
+				count++;
+			}
+			if (count > 0)
+				vkFreeCommandBuffers (Dev.VkDev, handle, (uint)count, cmdsPtr);
+
+			Marshal.FreeHGlobal (cmdsPtr);
         }
 
 		public override string ToString () {

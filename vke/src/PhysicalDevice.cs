@@ -55,23 +55,21 @@ namespace CVKL {
             return ((IEnumerable<PhysicalDevice>)phys).GetEnumerator ();
         }
 
-        unsafe void init () {
+        void init () {
             uint gpuCount = 0;
             CheckResult (vkEnumeratePhysicalDevices (inst, out gpuCount, IntPtr.Zero));
             if (gpuCount <= 0)
                 throw new Exception ("No GPU found");
-            NativeList<VkPhysicalDevice> gpus = new NativeList<VkPhysicalDevice> (gpuCount, gpuCount);
-            //fixed (IntPtr* physicalDevices = gpus) {
-            CheckResult (vkEnumeratePhysicalDevices (inst, out gpuCount, gpus.Data),
-                    "Could not enumerate physical devices.");
-            //}
+
+			IntPtr gpus = Marshal.AllocHGlobal (Marshal.SizeOf<IntPtr> ()* (int)gpuCount); 
+            CheckResult (vkEnumeratePhysicalDevices (inst, out gpuCount, gpus), "Could not enumerate physical devices.");
+            
             phys = new PhysicalDevice[gpuCount];
-            Console.WriteLine ("gpu count " + gpuCount);
 
             for (int i = 0; i < gpuCount; i++)
-                phys[i] = new PhysicalDevice (gpus[i].Handle);
+                phys[i] = new PhysicalDevice (Marshal.ReadIntPtr(gpus + i * Marshal.SizeOf<IntPtr>()));
 
-            gpus.Dispose ();
+			Marshal.FreeHGlobal (gpus);
         }
     }
     public class PhysicalDevice {

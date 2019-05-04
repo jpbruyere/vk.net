@@ -136,11 +136,13 @@ namespace CVKL {
 		public void ResetFence (VkFence fence) {
 			vkResetFences (dev, 1, ref fence);
 		}
-		public void WaitForFences (NativeList<VkFence> fences, ulong timeOut = UInt64.MaxValue) {
-			vkWaitForFences (dev, fences.Count, fences.Data, 1, timeOut);
+		public void WaitForFences (VkFence[] fences, ulong timeOut = UInt64.MaxValue) {
+			vkWaitForFences (dev, (uint)fences.Length, fences.Pin(), 1, timeOut);
+			fences.Unpin ();
 		}
-		public void ResetFences (NativeList<VkFence> fences) {
-			vkResetFences (dev, fences.Count, fences.Data);
+		public void ResetFences (params VkFence[] fences) {
+			vkResetFences (dev, (uint)fences.Length, fences.Pin());
+			fences.Unpin ();
 		}
 
 		public void DestroyShaderModule (VkShaderModule module) {

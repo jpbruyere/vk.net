@@ -79,7 +79,15 @@ namespace CVKL {
             handles.Add (obj, hnd);
             return hnd.AddrOfPinnedObject ();
         }
-        public static IntPtr Pin (this string obj) {
+		public static IntPtr Pin<T> (this T[] obj) {
+			if (handles.ContainsKey (obj))
+				Debug.WriteLine ("Pinning already pinned object: {0}", obj);
+
+			GCHandle hnd = GCHandle.Alloc (obj, GCHandleType.Pinned);
+			handles.Add (obj, hnd);
+			return hnd.AddrOfPinnedObject ();
+		}
+		public static IntPtr Pin (this string obj) {
 			if (handles.ContainsKey (obj)) {
 				Debug.WriteLine ("Trying to pin already pinned object: {0}", obj);
 				return handles[obj].AddrOfPinnedObject ();
