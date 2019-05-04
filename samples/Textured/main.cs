@@ -108,7 +108,10 @@ namespace TextureSample {
 				cmds[i].End ();				 
 			}
 		} 
-		void recordDraw (CommandBuffer cmd, Framebuffer fb) { 
+		void recordDraw (CommandBuffer cmd, Framebuffer fb) {
+			texture.SetLayout (cmd, VkImageAspectFlags.Color, VkImageLayout.Undefined, VkImageLayout.ShaderReadOnlyOptimal,
+				VkPipelineStageFlags.BottomOfPipe, VkPipelineStageFlags.FragmentShader);
+
 			pipeline.RenderPass.Begin (cmd, fb);
 
 			cmd.SetViewport (fb.Width, fb.Height);
