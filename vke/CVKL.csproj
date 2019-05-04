@@ -1,53 +1,59 @@
-<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="$(SolutionDir)netfx.props" />
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{32B7E80D-BEA7-4811-B82D-CC2533069F0A}</ProjectGuid>
-    <OutputType>Library</OutputType>
+    <TargetFrameworks>net471;netstandard2.0</TargetFrameworks>
+    
+    <Copyright></Copyright>
+    <AssemblyVersion>0.1.3</AssemblyVersion>
+    <Description>C# vulkan library with IDispose model and references counting</Description>
+    <Company></Company>
+    <Product>CVKL</Product>
+    <PackageId>CVKL</PackageId>
+    <PackageTags>C# vulkan game library compute glfw</PackageTags>    
+    <PackageVersion>$(AssemblyVersion)-beta</PackageVersion>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <PackageRequireLicenseAcceptance>False</PackageRequireLicenseAcceptance>
+    <PackageProjectUrl>https://github.com/jpbruyere/vk.net/blob/master/README.md</PackageProjectUrl>
+    <PackageLicense>https://opensource.org/licenses/MIT</PackageLicense>
+    <PackageReleaseNotes></PackageReleaseNotes>
+    <RepositoryUrl>https://github.com/jpbruyere/vk.net</RepositoryUrl>
+    <!--<PackageIconUrl>https://github.com/KhronosGroup/glTF/blob/master/specification/figures/gltf.png</PackageIconUrl>-->    
+    <Authors>Jean-Philippe Bruyère</Authors>
+    <SynchReleaseVersion>false</SynchReleaseVersion>
     <AssemblyName>CVKL</AssemblyName>
-    <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <OutputPath>bin\$(Configuration)</OutputPath>
+    <OutputPath>$(SolutionDir)build\$(Configuration)\</OutputPath>          
+    <LangVersion>7.2</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>        
   </PropertyGroup>
+    
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <WarningLevel>4</WarningLevel>
     <Optimize>false</Optimize>    
     <CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
-    <DefineConstants>DEBUG;_RENDERDOC;</DefineConstants>
-    <LangVersion>7.2</LangVersion>
+    <DefineConstants>DEBUG;_RENDERDOC;NETSTANDARD;NETSTANDARD2_0</DefineConstants>    
   </PropertyGroup>
+    
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <Optimize>true</Optimize>
-    <LangVersion>7.2</LangVersion>
   </PropertyGroup>
-  <ItemGroup>
+    
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">
     <Reference Include="System" />
-    <Reference Include="mscorlib" />
-    <Reference Include="System.ComponentModel.Composition" />
+    <Reference Include="System.Runtime" />        
     <Reference Include="System.Core" />
     <Reference Include="System.Runtime.CompilerServices.Unsafe">
-      <HintPath>..\packages\System.Runtime.CompilerServices.Unsafe.4.6.0-preview4.19212.13\lib\netstandard2.0\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
+      <HintPath>..\..\..\..\..\usr\lib\monodevelop\bin\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
     </Reference>
-    <Reference Include="Newtonsoft.Json">
-      <HintPath>..\packages\Newtonsoft.Json.12.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
-    </Reference>
-    <Reference Include="glTFLoader">
-      <HintPath>..\packages\glTF2Loader.1.1.3-alpha\lib\net35\glTFLoader.dll</HintPath>
-    </Reference>
-    <Reference Include="VK">
-      <HintPath>..\packages\Vulkan.0.1.2.6\lib\netstandard2.0\VK.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Numerics.Vectors">
-      <HintPath>..\packages\System.Numerics.Vectors.4.6.0-preview4.19212.13\lib\net46\System.Numerics.Vectors.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Numerics" />
+  </ItemGroup>
+  <ItemGroup Condition="$(TargetFramework.StartsWith('netstandard'))">
+    <PackageReference Include="System.Numerics.Vectors" Version="4.6.0-preview4.19212.13" />
+    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="4.5.2" />
+  </ItemGroup>    
+  <ItemGroup>
+    <PackageReference Include="glTF2Loader" Version="1.1.3-alpha" />
+    <PackageReference Include="Vulkan" Version="0.1.2.8-beta" />        
   </ItemGroup>
   <ItemGroup>        
-    <Compile Include="**/*.cs" />    
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
-  </ItemGroup>
-  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />    
+    <Compile Remove="Properties\AssemblyInfo.cs;src\Renderer.cs;src\QueueFamily.cs" />
+  </ItemGroup>  
 </Project>

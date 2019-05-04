@@ -4,14 +4,146 @@ using System.Runtime.InteropServices;
 using Glfw;
 using VK;
 using CVKL;
+using System.Threading;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace deferred {
-	class Program : VkWindow{	
+	class Program : VkWindow, Crow.IValueChange {
 		static void Main (string[] args) {
 			using (Program vke = new Program ()) {
 				vke.Run ();
 			}
 		}
+		bool isRunning;
+
+		protected override void render () {
+			int idx = swapChain.GetNextImage ();
+
+			lock (crow.RenderMutex) {
+				if (idx < 0) {
+					OnResize ();
+					return;
+				}
+
+				presentQueue.Submit (cmds[idx], swapChain.presentComplete, drawComplete[idx]);
+				presentQueue.Present (swapChain, drawComplete[idx]);
+				presentQueue.WaitIdle ();
+			}
+		}
+
+		#region crow
+		vkvg.Device vkvgDev;
+		Image uiImage;
+
+		public Crow.Command CMDViewScenes, CMDViewEditor, CMDViewDebug, CMDViewMaterials;
+		void init_crow_commands () {
+			CMDViewScenes = new Crow.Command (new Action (() => loadWindow ("#deferred.main.crow", this))) { Caption = "Lighting", Icon = new Crow.SvgPicture ("#deferred.crow.svg"), CanExecute = true };
+			CMDViewEditor = new Crow.Command (new Action (() => loadWindow ("#deferred.scenes.crow", this))) { Caption = "Scenes", Icon = new Crow.SvgPicture ("#deferred.crow.svg"), CanExecute = true };
+			CMDViewDebug = new Crow.Command (new Action (() => loadWindow ("#deferred.debug.crow", this))) { Caption = "Debug", Icon = new Crow.SvgPicture ("#deferred.crow.svg"), CanExecute = true };
+			CMDViewMaterials = new Crow.Command (new Action (() => loadWindow ("#deferred.materials.crow", this))) { Caption = "Materials", Icon = new Crow.SvgPicture ("#deferred.crow.svg"), CanExecute = true };
+		}
+
+		void onApplyMaterialChanges (object sender, Crow.MouseButtonEventArgs e) {
+			Crow.ListBox lb = ((sender as Crow.Widget).Parent as Crow.Group).Children[0] as Crow.ListBox;
+			renderer.model.materialUBO.Update (renderer.model.materials);
+		}
+
+
+		void initUISurface () {
+			lock (crow.UpdateMutex) {
+				uiImage?.Dispose ();
+				uiImage = new CVKL.Image (dev, new VkImage ((ulong)crow.surf.VkImage.ToInt64 ()), VkFormat.B8g8r8a8Unorm,
+					VkImageUsageFlags.Sampled, swapChain.Width, swapChain.Height);
+				uiImage.SetName ("uiImage");
+				uiImage.CreateView (VkImageViewType.ImageView2D, VkImageAspectFlags.Color);
+				uiImage.CreateSampler (VkFilter.Nearest, VkFilter.Nearest, VkSamplerMipmapMode.Nearest, VkSamplerAddressMode.ClampToBorder);
+				uiImage.Descriptor.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
+			}
+		}
+
+
+		void crow_thread_func () {
+			vkvgDev = new vkvg.Device (instance.Handle, phy.Handle, dev.VkDev.Handle, presentQueue.qFamIndex,
+	   			vkvg.SampleCount.Sample_4, presentQueue.index);
+
+			crow = new Crow.Interface (vkvgDev, 800, 600);
+
+			isRunning = true;
+			//int frameCount = 0;
+
+			while (isRunning) {
+				crow.Update ();
+
+				/*if (frameCount++ > 100) {
+					for (int i = 0; i < crow.PerfMeasures.Count; i++) 
+						crow.PerfMeasures[i].NotifyChanges ();
+					frameCount = 0;
+				}*/
+
+				Thread.Sleep (2);
+			}
+
+			dev.WaitIdle ();
+			crow.Dispose ();
+			vkvgDev.Dispose ();
+		}
+
+		#region IValueChange implementation
+		public event EventHandler<Crow.ValueChangeEventArgs> ValueChanged;
+		public virtual void NotifyValueChanged (string MemberName, object _value) {
+			if (ValueChanged != null)
+				ValueChanged.Invoke (this, new Crow.ValueChangeEventArgs (MemberName, _value));
+		}
+		#endregion
+
+		public DeferredPbrRenderer.DebugView CurrentDebugView {
+			get { return renderer.currentDebugView; }
+			set {
+				if (value == renderer.currentDebugView)
+					return;
+				lock(crow.UpdateMutex)
+					renderer.currentDebugView = value;
+				rebuildBuffers = true;
+				NotifyValueChanged ("CurrentDebugView", renderer.currentDebugView);
+			}
+		}
+
+		public float Gamma {
+			get { return renderer.matrices.gamma; }
+			set {
+				if (value == renderer.matrices.gamma)
+					return;
+				renderer.matrices.gamma = value;
+				NotifyValueChanged ("Gamma", value);
+				updateViewRequested = true;
+			}
+		}
+		public float Exposure {
+			get { return renderer.matrices.exposure; }
+			set {
+				if (value == renderer.matrices.exposure)
+					return;
+				renderer.matrices.exposure = value;
+				NotifyValueChanged ("Exposure", value);
+				updateViewRequested = true;
+			}
+		}
+		public float LightStrength {
+			get { return renderer.lights[renderer.lightNumDebug].color.X; }
+			set {
+				if (value == renderer.lights[renderer.lightNumDebug].color.X)
+					return;
+				renderer.lights[renderer.lightNumDebug].color = new Vector4(value);
+				NotifyValueChanged ("LightStrength", value);
+				renderer.uboLights.Update (renderer.lights);
+			}
+		}
+		public List<DeferredPbrRenderer.Light> Lights => renderer.lights.ToList ();
+		public List<Model.Scene> Scenes => renderer.model.Scenes;
+		public PbrModel.PbrMaterial[] Materials => renderer.model.materials;
+		Crow.Interface crow;
+		#endregion
 
 		protected override void configureEnabledFeatures (VkPhysicalDeviceFeatures available_features, ref VkPhysicalDeviceFeatures features) {
 			base.configureEnabledFeatures (available_features, ref features);
@@ -30,8 +162,8 @@ namespace deferred {
 		}
 
 		string[] modelPathes = {
-				"../data/models/DamagedHelmet/glTF/DamagedHelmet.gltf",
-				"../data/models/shadow.glb",
+				"../../../samples/data/models/DamagedHelmet/glTF/DamagedHelmet.gltf",
+				"../../../samples/data/models/shadow.glb",
 				//"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/Avocado/glTF/Avocado.gltf",
 				//"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/BarramundiFish/glTF/BarramundiFish.gltf",
 				//"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/BoomBoxWithAxes/glTF/BoomBoxWithAxes.gltf",
@@ -45,7 +177,7 @@ namespace deferred {
 				//"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/GearboxAssy/glTF/GearboxAssy.gltf",
 				//"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/Lantern/glTF/Lantern.gltf",
 				//"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/SciFiHelmet/glTF/SciFiHelmet.gltf",
-				//"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/Sponza/glTF/Sponza.gltf",
+				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/Sponza/glTF/Sponza.gltf",
 				//"/mnt/devel/vkChess/data/chess.gltf",
 				//"/home/jp/gltf/camaro/scene.gltf",
 				//"/home/jp/gltf/chessold/scene.gltf",
@@ -60,70 +192,8 @@ namespace deferred {
 		Queue transferQ;
 		DeferredPbrRenderer renderer;
 
-		#if WITH_VKVG
-		vkvg.Device vkvgDev;
-		vkvg.Surface vkvgSurf;
-		Image uiImage;
+#if WITH_VKVG
 
-		void initUISurface () {
-			uiImage?.Dispose ();
-			vkvgSurf?.Dispose ();
-			vkvgSurf = new vkvg.Surface (vkvgDev, (int)swapChain.Width, (int)swapChain.Height);
-			uiImage = new Image (dev, new VkImage ((ulong)vkvgSurf.VkImage.ToInt64 ()), VkFormat.B8g8r8a8Unorm,
-				VkImageUsageFlags.ColorAttachment, (uint)vkvgSurf.Width, (uint)vkvgSurf.Height);
-			uiImage.CreateView (VkImageViewType.ImageView2D, VkImageAspectFlags.Color);
-			uiImage.CreateSampler (VkFilter.Nearest, VkFilter.Nearest, VkSamplerMipmapMode.Nearest, VkSamplerAddressMode.ClampToBorder);
-			uiImage.Descriptor.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
-			uiImage.SetName ("uiImage");
-		}
-
-		void vkvgDraw () {
-			using (vkvg.Context ctx = new vkvg.Context (vkvgSurf)) {
-				ctx.Operator = vkvg.Operator.Clear;
-				ctx.Paint ();
-				ctx.Operator = vkvg.Operator.Over;
-
-				ctx.LineWidth = 1;
-				ctx.SetSource (0.1, 0.1, 0.1, 0.8);
-				ctx.Rectangle (5.5, 5.5, 320, 300);
-				ctx.FillPreserve ();
-				ctx.Flush ();
-				ctx.SetSource (0.8, 0.8, 0.8);
-				ctx.Stroke ();
-
-				ctx.FontFace = "mono";
-				ctx.FontSize = 8;
-				int x = 16;
-				int y = 40, dy = 16;
-				ctx.MoveTo (x, y);
-				ctx.ShowText (string.Format ($"fps:     {fps,5} "));
-				ctx.MoveTo (x + 200, y - 0.5);
-				ctx.Rectangle (x + 200, y - 8.5, 0.1 * fps, 10);
-				ctx.SetSource (0.1, 0.9, 0.1);
-				ctx.Fill ();
-				ctx.SetSource (0.8, 0.8, 0.8);
-				y += dy;
-				ctx.MoveTo (x, y);
-				ctx.ShowText (string.Format ($"Exposure:{renderer.matrices.exposure,5} "));
-				y += dy;
-				ctx.MoveTo (x, y);
-				ctx.ShowText (string.Format ($"Gamma:   {renderer.matrices.gamma,5} "));
-				y += dy;
-				ctx.MoveTo (x, y);
-				ctx.ShowText (string.Format ($"Light pos:   {renderer.lights[0].position.ToString ()} "));
-				y += dy;
-				ctx.MoveTo (x, y);
-				ctx.ShowText (string.Format ($"{"Debug draw (numpad 0->9)",-30} : {renderer.currentDebugView.ToString ()} "));
-				y += dy;
-				ctx.MoveTo (x, y);
-				ctx.ShowText (string.Format ($"{"Debug Prefil Face: (f)",-30} : {renderer.envCube.debugFace.ToString ()} "));
-				y += dy;
-				ctx.MoveTo (x, y);
-				ctx.ShowText (string.Format ($"{"Debug Prefil Mip: (m)",-30} : {renderer.envCube.debugMip.ToString ()} "));
-
-				//drawResources (ctx);
-			}
-		}
 
 		void drawResources (vkvg.Context ctx) {
 			ResourceManager rm = dev.resourceManager;
@@ -185,22 +255,48 @@ namespace deferred {
 				y += memPoolHeight;
 			}
 		}
-		#endif
+#endif
+
 
 		Program () : base(true) {
 			camera = new Camera (Utils.DegreesToRadians (45f), 1f, 0.1f, 16f);
 			camera.SetPosition (0, 0, 2);
 
-			#if WITH_VKVG
-			vkvgDev = new vkvg.Device (instance.Handle, phy.Handle, dev.VkDev.Handle, presentQueue.qFamIndex,
-				vkvg.SampleCount.Sample_4, presentQueue.index);
+			Thread crowThread = new Thread (crow_thread_func);
+			crowThread.IsBackground = true;
+			crowThread.Start ();
+
+			while (crow == null)
+				Thread.Sleep (5);
 
 			initUISurface ();
-			#endif
 
 			renderer = new DeferredPbrRenderer (dev, swapChain, presentQueue, camera.NearPlane, camera.FarPlane);
 			renderer.LoadModel (transferQ, modelPathes[curModelIndex]);
 			camera.Model = Matrix4x4.CreateScale (1f / Math.Max (Math.Max (renderer.modelAABB.Width, renderer.modelAABB.Height), renderer.modelAABB.Depth));
+
+			init_crow_commands ();
+
+			crow.Load ("#deferred.menu.crow").DataSource = this;
+			//crow.Load ("#deferred.testImage.crow").DataSource = this;
+
+			//crow.LoadIMLFragment (@"<Image Width='32' Height='32' Margin='2' HorizontalAlignment='Left' VerticalAlignment='Top' Path='/mnt/devel/gts/vkvg/build/data/tiger.svg' Background='Grey' MouseEnter='{Background=Blue}' MouseLeave='{Background=White}'/>");
+		}
+
+		void loadWindow (string path, object dataSource = null) {
+			try {
+				Crow.Widget w = crow.FindByName (path);
+				if (w != null) {
+					crow.PutOnTop (w);
+					return;
+				}
+				w = crow.Load (path);
+				w.Name = path;
+				w.DataSource = dataSource;
+
+			} catch (Exception ex) {
+				System.Diagnostics.Debug.WriteLine (ex.ToString ());
+			}
 		}
 
 		void buildCommandBuffers () {
@@ -218,6 +314,7 @@ namespace deferred {
 #endif
 		}
 
+		int frameCount = 0;
 		public override void Update () {
 			if (reloadModel) {
 				renderer.LoadModel (transferQ, modelPathes[curModelIndex]);
@@ -234,23 +331,58 @@ namespace deferred {
 				buildCommandBuffers ();
 				rebuildBuffers = false;
 			}
-#if WITH_VKVG
-			vkvgDraw ();
-#endif
+
+			if (++frameCount > 20) {
+				NotifyValueChanged ("fps", fps);
+				frameCount = 0;
+			}
 		}
 		protected override void OnResize () {
-#if WITH_VKVG
+			crow.ProcessResize (new Crow.Rectangle (0, 0, (int)swapChain.Width, (int)swapChain.Height));
+
 			initUISurface ();
 			renderer.WriteUiImgDesciptor (uiImage);
-#endif
 
 			UpdateView ();
 			renderer.Resize ();
 			buildCommandBuffers ();
 		}
 
-#region Mouse and keyboard
+		#region Mouse and keyboard
+		protected override void onScroll (double xOffset, double yOffset) {
+			if (KeyModifiers.HasFlag (Modifier.Shift))
+				crow.ProcessMouseWheelChanged ((float)xOffset);
+			else
+				crow.ProcessMouseWheelChanged ((float)yOffset);
+		}
+		protected override void onMouseMove (double xPos, double yPos) {
+			if (crow.ProcessMouseMove ((int)xPos, (int)yPos))
+				return;
+
+			double diffX = lastMouseX - xPos;
+			double diffY = lastMouseY - yPos;
+			if (MouseButton[0]) {
+				camera.Rotate ((float)-diffX, (float)-diffY);
+			} else if (MouseButton[1]) {
+				camera.SetZoom ((float)diffY);
+			} else
+				return;
+
+			updateViewRequested = true;
+		}
+		protected override void onMouseButtonDown (Glfw.MouseButton button) {
+			if (crow.ProcessMouseButtonDown ((Crow.MouseButton)button))
+				return;
+			base.onMouseButtonDown (button);
+		}
+		protected override void onMouseButtonUp (Glfw.MouseButton button) {
+			if (crow.ProcessMouseButtonUp ((Crow.MouseButton)button))
+				return;
+			base.onMouseButtonUp (button);
+		}
 		protected override void onKeyDown (Key key, int scanCode, Modifier modifiers) {
+			if (crow.ProcessKeyDown ((Crow.Key)key))
+				return;
 			switch (key) {
 				case Key.F:
 					if (modifiers.HasFlag (Modifier.Shift)) {
@@ -387,17 +519,25 @@ namespace deferred {
 			}
 			updateViewRequested = true;
 		}
-#endregion
+		protected override void onKeyUp (Key key, int scanCode, Modifier modifiers) {
+			if (crow.ProcessKeyUp ((Crow.Key)key))
+				return;
+		}
+		protected override void onChar (CodePoint cp) {
+			if (crow.ProcessKeyPress (cp.ToChar ()))
+				return;
+		}
+		#endregion
 
 		protected override void Dispose (bool disposing) {
 			if (disposing) {
 				if (!isDisposed) {
+					isRunning = false;
+					Thread.Sleep (2);
+
 					renderer.Dispose ();
-#if WITH_VKVG
+
 					uiImage?.Dispose ();
-					vkvgSurf?.Dispose ();
-					vkvgDev.Dispose ();
-#endif
 				}
 			}
 

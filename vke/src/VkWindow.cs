@@ -66,6 +66,7 @@ namespace CVKL {
 
         uint width, height;
 		bool[] buttons = new bool[10];
+		public Modifier KeyModifiers = 0;
 
 		uint frameCount;
 		Stopwatch frameChrono;
@@ -104,9 +105,11 @@ namespace CVKL {
             Glfw3.SetMouseButtonPosCallback (hWin, HandleMouseButtonDelegate);
             Glfw3.SetCursorPosCallback (hWin, HandleCursorPosDelegate);
             Glfw3.SetWindowSizeCallback (hWin, HandleWindowSizeDelegate);
+			Glfw3.SetScrollCallback (hWin, HandleScrollDelegate);
+			Glfw3.SetCharCallback (hWin, HandleCharDelegate);
 
             initVulkan (vSync, debugMarkers);
-        }
+		}
 
 		void initVulkan (bool vSync, bool debugMarkers) {
             instance = new Instance ();
@@ -184,8 +187,8 @@ namespace CVKL {
             presentQueue.WaitIdle ();
         }
 
-
-        protected virtual void onMouseMove (double xPos, double yPos) { 
+		protected virtual void onScroll (double xOffset, double yOffset) {}
+		protected virtual void onMouseMove (double xPos, double yPos) { 
 			double diffX = lastMouseX - xPos;
 			double diffY = lastMouseY - yPos;
 			if (MouseButton[0]) {
@@ -235,8 +238,10 @@ namespace CVKL {
 			updateViewRequested = true;
 		}
 		protected virtual void onKeyUp (Key key, int scanCode, Modifier modifiers) { }
+		protected virtual void onChar (CodePoint cp) { }
 
-        static void HandleWindowSizeDelegate (IntPtr window, int width, int height) {}
+		#region events delegates
+		static void HandleWindowSizeDelegate (IntPtr window, int width, int height) {}
         static void HandleCursorPosDelegate (IntPtr window, double xPosition, double yPosition) {
             currentWindow.onMouseMove (xPosition, yPosition);
 			currentWindow.lastMouseX = xPosition;
@@ -251,18 +256,26 @@ namespace CVKL {
                 currentWindow.onMouseButtonUp (button);
             }
         }
-        static void HandleKeyDelegate (IntPtr window, Key key, int scanCode, InputAction action, Modifier modifiers) {
+		static void HandleScrollDelegate (IntPtr window, double xOffset, double yOffset) {
+			currentWindow.onScroll (xOffset, yOffset);
+		}
+		static void HandleKeyDelegate (IntPtr window, Key key, int scanCode, InputAction action, Modifier modifiers) {
+			currentWindow.KeyModifiers = modifiers;
 			if (action == InputAction.Press || action == InputAction.Repeat) {
 				currentWindow.onKeyDown (key, scanCode, modifiers);
 			} else { 
 				currentWindow.onKeyUp (key, scanCode, modifiers);
 			}
         }
-        
+		static void HandleCharDelegate (IntPtr window, CodePoint codepoint) {
+			currentWindow.onChar (codepoint);
+		}
+		#endregion
+
 		/// <summary>
 		/// main window loop, exits on GLFW3 exit event
 		/// </summary>
-        public virtual void Run () {
+		public virtual void Run () {
             OnResize ();
             UpdateView ();
 

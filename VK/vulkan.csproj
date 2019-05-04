@@ -1,0 +1,63 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="$(SolutionDir)netfx.props" />
+  <PropertyGroup>
+    <TargetFrameworks>net471;netstandard2.0</TargetFrameworks>
+    
+    <Copyright></Copyright>
+    <AssemblyVersion>0.1.2.8</AssemblyVersion>
+    <AssemblyName>VK</AssemblyName>
+    <Description>C# vulkan binding</Description>
+    <Company></Company>
+    <Product>VK</Product>
+        
+    <PackageId>Vulkan</PackageId>
+    <PackageTags>C# vulkan net binding</PackageTags>    
+    <PackageVersion>$(AssemblyVersion)-beta</PackageVersion>        
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <PackageProjectUrl>https://github.com/jpbruyere/vk.net/blob/master/README.md</PackageProjectUrl>
+    <PackageLicense>https://opensource.org/licenses/MIT</PackageLicense>
+    <PackageReleaseNotes></PackageReleaseNotes>
+    <RepositoryUrl>https://github.com/jpbruyere/vk.net</RepositoryUrl>
+    <!--<PackageIconUrl>https://github.com/KhronosGroup/glTF/blob/master/specification/figures/gltf.png</PackageIconUrl>-->
+    
+    <Authors>Jean-Philippe Bruyère</Authors> 
+    <SynchReleaseVersion>false</SynchReleaseVersion>
+    <OutputPath>$(SolutionDir)build\$(TargetFramework)\$(Configuration)\</OutputPath>
+  </PropertyGroup>
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">
+    <Reference Include="System" />    
+  </ItemGroup>
+    
+  <ItemGroup>
+    <ProjectReference Include="..\vk.generator\vk.generator.csproj" />
+    <ProjectReference Include="..\vk.rewrite\vk.rewrite.csproj" />
+  </ItemGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <DefineConstants>TRACE;DEBUG;NETSTANDARD;NETSTANDARD2_0</DefineConstants>    
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+    
+  <ItemGroup>
+    <Compile Include="$(SolutionDir)vk.generator\bin\**\*.cs">
+      <Link>generated\%(Filename)%(Extension)</Link>
+    </Compile>
+  </ItemGroup> 
+    
+  <Target Name="generate" BeforeTargets="BeforeBuild">
+    <Exec Condition="$(OS) == 'Windows_NT'" Command="$(SolutionDir)build/$(TargetFramework)rewrite/vk.rewrite.exe $(OutputPath)VK.dll" />
+    <Exec Condition="$(OS) != 'Windows_NT'" Command="mono $(SolutionDir)vk.generator/bin/$(Configuration)/$(TargetFramework)/vk.generator.exe" WorkingDirectory="$(SolutionDir)vk.generator/bin/$(Configuration)/$(TargetFramework)/" ConsoleToMSBuild="true" EchoOff="true">
+        <Output TaskParameter="ConsoleOutput" PropertyName="OutputOfExec" />
+    </Exec>        
+  </Target>
+        
+  <Target Name="rewrite" AfterTargets="CoreBuild">
+    <Exec Condition="$(OS) == 'Windows_NT'" Command="$(SolutionDir)build/$(TargetFramework)rewrite/vk.rewrite.exe $(OutputPath)VK.dll" />
+    <Exec Condition="$(OS) != 'Windows_NT'" Command="mono $(SolutionDir)vk.rewrite/bin/$(Configuration)/$(TargetFramework)/vk.rewrite.exe $(OutputPath)VK.dll" ConsoleToMSBuild="true" EchoOff="true">
+        <Output TaskParameter="ConsoleOutput" PropertyName="OutputOfExec" />
+    </Exec>
+  </Target>
+</Project>

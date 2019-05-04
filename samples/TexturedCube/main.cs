@@ -80,11 +80,11 @@ namespace TextureCube {
 		};
 		int currentImgIndex = 0;
 		string[] imgPathes = {
-			"../data/textures/papermill.ktx",
-			"../data/textures/cubemap_yokohama_bc3_unorm.ktx",
-			"../data/textures/gcanyon_cube.ktx",
-			"../data/textures/pisa_cube.ktx",
-			"../data/textures/uffizi_cube.ktx",
+			"../../../samples/data/textures/papermill.ktx",
+			"../../../data/textures/cubemap_yokohama_bc3_unorm.ktx",
+			"../../../data/textures/gcanyon_cube.ktx",
+			"../../../data/textures/pisa_cube.ktx",
+			"../../../data/textures/uffizi_cube.ktx",
 		};
 
 

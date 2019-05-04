@@ -58,11 +58,11 @@ namespace CVKL {
 
 		#region skybox
 		public List<string> cubemapPathes = new List<string> () {
-			"../data/textures/papermill.ktx",
-			"../data/textures/cubemap_yokohama_bc3_unorm.ktx",
-			"../data/textures/gcanyon_cube.ktx",
-			"../data/textures/pisa_cube.ktx",
-			"../data/textures/uffizi_cube.ktx",
+			"../../../samples/data/textures/papermill.ktx",
+			"../../../samples/data/textures/cubemap_yokohama_bc3_unorm.ktx",
+			"../../../samples/data/textures/gcanyon_cube.ktx",
+			"../../../samples/data/textures/pisa_cube.ktx",
+			"../../../samples/data/textures/uffizi_cube.ktx",
 		};
 		static float[] box_vertices = {
 			 1.0f, 1.0f,-1.0f,  // +X side

@@ -52,9 +52,9 @@ namespace TextureSample {
 		ushort[] indices = { 0, 1, 2, 2, 0, 3 };
 		int currentImgIndex = 0;
 		string[] imgPathes = {
-			"../data/textures/texture.jpg",
-			"../data/textures/rgba-reference.ktx",
-			"../data/textures/texturearray_rocks_bc3_unorm.ktx",
+			"../../../samples/data/textures/texture.jpg",
+			"../../../samples/data/textures/rgba-reference.ktx",
+			"../../../samples/data/textures/texturearray_rocks_bc3_unorm.ktx",
 		};
 			
 		Program () : base () {
