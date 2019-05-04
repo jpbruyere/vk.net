@@ -141,6 +141,7 @@ namespace CVKL {
 		public class Scene {
 			public string Name;
 			public Node Root;
+			public List<Node> GetNodes () => Root.Children;
 
 			public BoundingBox AABB => Root.GetAABB (Matrix4x4.Identity);
 		}

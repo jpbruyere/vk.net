@@ -1,0 +1,13 @@
+﻿<?xml version="1.0"?>
+<Window Caption="Debug" Icon="#deferred.crow.svg" Left="10" Top="100" Width="40%" Height="50%">
+    <VerticalStack Spacing="1" Margin="10" CacheEnabled="true">     
+        <HorizontalStack Height="Fit">
+            <Label Text="Fps:" Width="80"/>            
+            <Label Text="{fps}" Width="Stretched" TextAlignment="Center"/>    
+        </HorizontalStack>       
+        <Expandable Caption="Debug Views">
+            <EnumSelector Left="20" EnumValue="{²CurrentDebugView}" Width="50%"/>        
+        </Expandable>
+    </VerticalStack>
+</Window>
+

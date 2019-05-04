@@ -314,10 +314,8 @@ namespace deferred {
 		public void buildCommandBuffers (CommandBuffer[] cmds) {
 			for (int i = 0; i < swapChain.ImageCount; ++i) {
 				cmds[i].Start ();
-#if WITH_VKVG
 				uiImage.SetLayout (cmds[i], VkImageAspectFlags.Color, VkImageLayout.Undefined, VkImageLayout.ShaderReadOnlyOptimal,
 					VkPipelineStageFlags.TopOfPipe, VkPipelineStageFlags.FragmentShader);
-#endif
 				recordDraw (cmds[i], frameBuffers[i]);
 				cmds[i].End ();
 			}

@@ -1,4 +1,6 @@
-﻿using System.Threading;
+﻿using System;
+using System.IO;
+using System.Threading;
 using CVKL;
 using VK;
 
@@ -29,6 +31,37 @@ namespace vkvg_test {
 			ctx.Operator = vkvg.Operator.Over;
 		}
 		void vkvgDraw () {
+
+			using (vkvg.Surface svgSurf = new vkvg.Surface (vkvgDev, 300, 300)) {
+				using (vkvg.Context ctx = new vkvg.Context (svgSurf)) {
+					IntPtr nsvg = IntPtr.Zero;
+
+					using (Stream nsvgStream = Crow.Interface.StaticGetStreamFromPath ("../../../samples/data/tiger.svg")) {
+						using (StreamReader sr = new StreamReader (nsvgStream)) {
+							nsvg = vkvgDev.LoadSvgFragment (sr.ReadToEnd ());
+						}
+					}
+
+
+					ctx.SetSource (0.8f, 0.8f, 0.8f);
+					ctx.Paint ();
+
+					ctx.Scale (0.2f, 0.2f);
+					ctx.RenderSvg (nsvg, null);
+
+					vkvgDev.DestroySvg (nsvg);
+				}
+
+				//svgSurf.WriteToPng ("/mnt/data/test.png");
+
+				using (vkvg.Context ctx = new vkvg.Context (vkvgSurf)) {
+					ctx.SetSourceSurface (svgSurf, 0, 0);
+					ctx.Paint ();
+				}
+			}
+		}
+				#region fps print
+		void vkvgDraw1 () {
 
 			using (vkvg.Context ctx = new vkvg.Context (vkvgSurf)) {
 				//ctx.SetSource (1.0, 0.1, 0.1, 0.2);
@@ -80,6 +113,8 @@ namespace vkvg_test {
 		}
 		#endregion
 
+		#endregion
+
 		bool recreateSurfaceStatus = true;
 
 		void recreateSurface () {
@@ -96,7 +131,7 @@ namespace vkvg_test {
 
 		void uiThreadFunc () {
 			vkvgDev = new vkvg.Device (instance.Handle, phy.Handle, dev.VkDev.Handle, presentQueue.qFamIndex,
-				vkvg.SampleCount.Sample_1, presentQueue.index);
+				vkvg.SampleCount.Sample_8, presentQueue.index);
 
 			while (true) {
 				if (recreateSurfaceStatus == true)

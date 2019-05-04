@@ -89,7 +89,7 @@ namespace CVKL {
 			uboMats = new HostBuffer (Dev, VkBufferUsageFlags.UniformBuffer, matrices, true);
 
 			string[] modelPathes = {
-				"../data/models/DamagedHelmet/glTF/DamagedHelmet.gltf",
+				"../../../samples/data/models/DamagedHelmet/glTF/DamagedHelmet.gltf",
 				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/Avocado/glTF/Avocado.gltf",
 				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/BarramundiFish/glTF/BarramundiFish.gltf",
 				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/BoomBoxWithAxes/glTF/BoomBoxWithAxes.gltf",

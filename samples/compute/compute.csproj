@@ -1,65 +1,42 @@
-<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="$(SolutionDir)netfx.props" />
   <PropertyGroup>
-    <ProjectGuid>{1F05E74F-AEE8-481C-8FDF-4566654897BE}</ProjectGuid>
-    <OutputType>Exe</OutputType>
-    <AssemblyName>compute</AssemblyName>
-    <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
-    <OutputPath>$(SolutionDir)build\$(Configuration)\samples\compute</OutputPath>
-    <IntermediateOutputPath>$(SolutionDir)build\obj\$(Configuration)</IntermediateOutputPath>        
-    <StartupObject>delaunay.Program</StartupObject>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <DefineConstants>DEBUG;</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
+    <TargetFrameworks>net471;netstandard2.0</TargetFrameworks>
+    <OutputPath>$(SolutionDir)build\$(Configuration)\</OutputPath>
+    <OutputType>Exe</OutputType>        
+    <RepositoryUrl>https://github.com/jpbruyere/vk.net</RepositoryUrl>
+    <License>https://opensource.org/licenses/MIT</License>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+        
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">    
+    <DefineConstants>TRACE;DEBUG;NETSTANDARD;NETSTANDARD2_0</DefineConstants>    
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <Optimize>true</Optimize>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
+    
+  <ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">
+    <Reference Include="System" />
+  </ItemGroup>    
+    
   <ItemGroup>
+    <PackageReference Include="Vulkan" Version="0.1.2.8-beta" />        
+  </ItemGroup>    
+    
+  <ItemGroup>
+    <ProjectReference Include="..\..\vke\CVKL.csproj">
+    </ProjectReference>
+  </ItemGroup>    
+  
+  <ItemGroup>    
+    <GLSLShader Include="shaders\**\*.frag;shaders\**\*.vert;shaders\**\*.comp" />
+    <None Remove="shaders\**\*.frag;shaders\**\*.vert" />     
+    <Compile Include="delaunay.cs" /> 
     <Datas Include="..\data\**\*.*">      
       <Link>data\%(RecursiveDir)%(Filename)%(Extension)</Link>
     </Datas>
-    <GLSLShader Include="shaders\**\*.frag;shaders\**\*.vert;shaders\**\*.comp" />    
-    <Compile Include="*.cs" />    
-  </ItemGroup>
-  <ItemGroup>
-    <Reference Include="System.Numerics" />
-    <Reference Include="System" />
-    <Reference Include="System.Numerics.Vectors">
-      <HintPath>..\..\packages\System.Numerics.Vectors.4.5.0\lib\net46\System.Numerics.Vectors.dll</HintPath>
-    </Reference>
-    <Reference Include="mscorlib" />
-    <Reference Include="System.Buffers">
-      <HintPath>..\..\packages\System.Buffers.4.5.0\lib\netstandard2.0\System.Buffers.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Runtime.CompilerServices.Unsafe">
-      <HintPath>..\..\packages\System.Runtime.CompilerServices.Unsafe.4.5.2\lib\netstandard2.0\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Memory">
-      <HintPath>..\..\packages\System.Memory.4.5.2\lib\netstandard2.0\System.Memory.dll</HintPath>
-    </Reference>
-    <Reference Include="VK">
-      <HintPath>..\..\packages\Vulkan.0.1.2.6\lib\netstandard2.0\VK.dll</HintPath>
-    </Reference>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\vke\CVKL.csproj">
-      <Project>{32B7E80D-BEA7-4811-B82D-CC2533069F0A}</Project>
-      <Name>CVKL</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  </ItemGroup>     
+    
   <Import Project="$(SolutionDir)spirv.targets" />    
 </Project>

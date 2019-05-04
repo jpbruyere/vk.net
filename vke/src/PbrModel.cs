@@ -70,13 +70,13 @@ namespace CVKL {
 		}
 
 		Image[] textures;
-		PbrMaterial[] materials;
+		public PbrMaterial[] materials;
 		DescriptorSet[] descriptorSets;
 
 		DescriptorPool descriptorPool;
 		public GPUBuffer vbo;
 		public GPUBuffer ibo;
-		public GPUBuffer<PbrMaterial> materialUBO;
+		public HostBuffer<PbrMaterial> materialUBO;
 
 		public PbrModel (Queue transferQ, string path) {
 			dev = transferQ.Dev;
@@ -123,7 +123,7 @@ namespace CVKL {
 
 					loadMaterials (ctx, layout, attachments);
 
-					materialUBO = new GPUBuffer<PbrMaterial> (transferQ, cmdPool, VkBufferUsageFlags.UniformBuffer, materials);
+					materialUBO = new HostBuffer<PbrMaterial> (dev, VkBufferUsageFlags.UniformBuffer, materials);
 
 					Scenes = new List<Scene> (ctx.LoadScenes (out defaultSceneIndex));
 				}

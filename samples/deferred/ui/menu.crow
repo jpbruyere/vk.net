@@ -1,0 +1,9 @@
+﻿<?xml version="1.0"?>
+<Menu>
+    <MenuItem Caption="View" Fit="true" PopWidth="150">
+        <MenuItem Command="{CMDViewScenes}"/>
+        <MenuItem Command="{CMDViewDebug}"/>
+        <MenuItem Command="{CMDViewEditor}"/>
+        <MenuItem Command="{CMDViewMaterials}"/>
+    </MenuItem>
+</Menu>
