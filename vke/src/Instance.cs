@@ -67,18 +67,18 @@ namespace CVKL {
             get { return inst.Handle; }
         }
 
-        void init () {        
-            NativeList<IntPtr> instanceExtensions = new NativeList<IntPtr> ();
-			NativeList<IntPtr> enabledLayerNames = new NativeList<IntPtr> ();
+		void init () {
+			List<IntPtr> instanceExtensions = new List<IntPtr> ();
+			List<IntPtr> enabledLayerNames = new List<IntPtr> ();
 
 			instanceExtensions.Add (Strings.VK_KHR_SURFACE_EXTENSION_NAME);
-            if (RuntimeInformation.IsOSPlatform (OSPlatform.Windows)) {
-                instanceExtensions.Add (Strings.VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
-            } else if (RuntimeInformation.IsOSPlatform (OSPlatform.Linux)) {
-                instanceExtensions.Add (Strings.VK_KHR_XCB_SURFACE_EXTENSION_NAME);
-            } else {
-                throw new PlatformNotSupportedException ();
-            }
+			if (RuntimeInformation.IsOSPlatform (OSPlatform.Windows)) {
+				instanceExtensions.Add (Strings.VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+			} else if (RuntimeInformation.IsOSPlatform (OSPlatform.Linux)) {
+				instanceExtensions.Add (Strings.VK_KHR_XCB_SURFACE_EXTENSION_NAME);
+			} else {
+				throw new PlatformNotSupportedException ();
+			}
 
 #if DEBUG
 			instanceExtensions.Add (Strings.VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
@@ -96,31 +96,33 @@ namespace CVKL {
 				pEngineName = Strings.Name,
 			};
 
-			VkInstanceCreateInfo instanceCreateInfo = VkInstanceCreateInfo.New();
-	         instanceCreateInfo.pApplicationInfo = appInfo.Pin();
+			VkInstanceCreateInfo instanceCreateInfo = VkInstanceCreateInfo.New ();
+			instanceCreateInfo.pApplicationInfo = appInfo.Pin ();
 
 			if (instanceExtensions.Count > 0) {
-			    instanceCreateInfo.enabledExtensionCount = instanceExtensions.Count;
-			    instanceCreateInfo.ppEnabledExtensionNames = instanceExtensions.Data;
+				instanceCreateInfo.enabledExtensionCount = (uint)instanceExtensions.Count;
+				instanceCreateInfo.ppEnabledExtensionNames = instanceExtensions.Pin ();
 			}
 			if (enabledLayerNames.Count > 0) {
-				instanceCreateInfo.enabledLayerCount = enabledLayerNames.Count;
-				instanceCreateInfo.ppEnabledLayerNames = enabledLayerNames.Data;
+				instanceCreateInfo.enabledLayerCount = (uint)enabledLayerNames.Count;
+				instanceCreateInfo.ppEnabledLayerNames = enabledLayerNames.Pin ();
 			}
 
 			VkResult result = vkCreateInstance (ref instanceCreateInfo, IntPtr.Zero, out inst);
-			if (result != VkResult.Success) 
-			    throw new InvalidOperationException ("Could not create Vulkan instance. Error: " + result);
+			if (result != VkResult.Success)
+				throw new InvalidOperationException ("Could not create Vulkan instance. Error: " + result);
 
 			Vk.LoadInstanceFunctionPointers (inst);
 
 			appInfo.Unpin ();
-			instanceExtensions.Dispose ();
-			enabledLayerNames.Dispose ();            
-        }
 
+			if (instanceExtensions.Count > 0)
+				instanceExtensions.Unpin ();
+			if (enabledLayerNames.Count > 0)
+				enabledLayerNames.Unpin ();
+		}
 
-        public void GetDelegate<T> (string name, out T del) {
+		public void GetDelegate<T> (string name, out T del) {
             using (FixedUtf8String n = new FixedUtf8String (name)) {
                 del = Marshal.GetDelegateForFunctionPointer<T> (vkGetInstanceProcAddr (Handle, (IntPtr)n));
             }

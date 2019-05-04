@@ -29,6 +29,7 @@ using System.IO;
 using VK;
 using CVKL;
 using System.Runtime.InteropServices;
+using System.Collections.Generic;
 
 namespace KTX {
 
@@ -108,10 +109,7 @@ namespace KTX {
 
 					if (imgType != VkImageType.Image3D)
 						pixelDepth = 1;
-
-
-					
-
+						
 					img = new Image (staggingQ.Dev, vkFormat, usage, memoryProperty, pixelWidth, pixelHeight, imgType, samples,
 						tiling, requestedMipsLevels, numberOfArrayElements, pixelDepth, createFlags);
 						
@@ -131,62 +129,63 @@ namespace KTX {
 								VkImageLayout.Undefined, VkImageLayout.TransferDstOptimal,
 								VkPipelineStageFlags.AllCommands, VkPipelineStageFlags.Transfer);
 
-							using (NativeList<VkBufferImageCopy> buffCopies = new NativeList<VkBufferImageCopy> ()) {
-								VkBufferImageCopy bufferCopyRegion = new VkBufferImageCopy {
-									imageExtent = img.CreateInfo.extent,
-									imageSubresource = new VkImageSubresourceLayers (VkImageAspectFlags.Color, img.CreateInfo.arrayLayers, 0)
-								};
+							List<VkBufferImageCopy> buffCopies = new List<VkBufferImageCopy> ();
 
-								ulong bufferOffset = 0;
-								uint imgWidth = img.CreateInfo.extent.height;
-								uint imgHeight = img.CreateInfo.extent.width;
+							VkBufferImageCopy bufferCopyRegion = new VkBufferImageCopy {
+								imageExtent = img.CreateInfo.extent,
+								imageSubresource = new VkImageSubresourceLayers (VkImageAspectFlags.Color, img.CreateInfo.arrayLayers, 0)
+							};
 
-								for (int mips = 0; mips < numberOfMipmapLevels; mips++) {
-									UInt32 imgSize = br.ReadUInt32 ();
+							ulong bufferOffset = 0;
+							uint imgWidth = img.CreateInfo.extent.height;
+							uint imgHeight = img.CreateInfo.extent.width;
 
-									bufferCopyRegion.bufferImageHeight = imgWidth;
-									bufferCopyRegion.bufferRowLength = imgHeight;
-									bufferCopyRegion.bufferOffset = bufferOffset;
+							for (int mips = 0; mips < numberOfMipmapLevels; mips++) {
+								UInt32 imgSize = br.ReadUInt32 ();
 
-									if (createFlags.HasFlag (VkImageCreateFlags.CubeCompatible)) {
-										IntPtr ptrFace = img.MappedData;
-										bufferCopyRegion.imageSubresource.layerCount = 1;
-										for (uint face = 0; face < numberOfFaces; face++) {
-											bufferCopyRegion.imageSubresource.baseArrayLayer = face;
-											Marshal.Copy (br.ReadBytes ((int)imgSize), 0, stagging.MappedData + (int)bufferOffset, (int)imgSize);
-											buffCopies.Add (bufferCopyRegion);
-											uint faceOffset = imgSize + (imgSize % 4);
-											ptrFace += (int)faceOffset;//cube padding
-											bufferOffset += faceOffset;
-											bufferCopyRegion.bufferOffset = bufferOffset;
-										}
-									} else {
-										Marshal.Copy (br.ReadBytes ((int)imgSize), 0, stagging.MappedData, (int)imgSize);
+								bufferCopyRegion.bufferImageHeight = imgWidth;
+								bufferCopyRegion.bufferRowLength = imgHeight;
+								bufferCopyRegion.bufferOffset = bufferOffset;
+
+								if (createFlags.HasFlag (VkImageCreateFlags.CubeCompatible)) {
+									IntPtr ptrFace = img.MappedData;
+									bufferCopyRegion.imageSubresource.layerCount = 1;
+									for (uint face = 0; face < numberOfFaces; face++) {
+										bufferCopyRegion.imageSubresource.baseArrayLayer = face;
+										Marshal.Copy (br.ReadBytes ((int)imgSize), 0, stagging.MappedData + (int)bufferOffset, (int)imgSize);
 										buffCopies.Add (bufferCopyRegion);
+										uint faceOffset = imgSize + (imgSize % 4);
+										ptrFace += (int)faceOffset;//cube padding
+										bufferOffset += faceOffset;
+										bufferCopyRegion.bufferOffset = bufferOffset;
 									}
-									bufferOffset += imgSize;
-									imgWidth /= 2;
-									imgHeight /= 2;
+								} else {
+									Marshal.Copy (br.ReadBytes ((int)imgSize), 0, stagging.MappedData, (int)imgSize);
+									buffCopies.Add (bufferCopyRegion);
 								}
-								stagging.Unmap ();
-								Vk.vkCmdCopyBufferToImage (cmd.Handle, stagging.handle, img.handle, VkImageLayout.TransferDstOptimal,
-									buffCopies.Count, buffCopies.Data);
-
-
-								if (requestedMipsLevels > numberOfMipmapLevels)
-									img.BuildMipmaps (cmd);
-								else
-									img.SetLayout (cmd, VkImageAspectFlags.Color,
-										VkImageLayout.TransferDstOptimal, VkImageLayout.ShaderReadOnlyOptimal,
-										VkPipelineStageFlags.Transfer, VkPipelineStageFlags.AllGraphics);
-
-								cmd.End ();
-
-								staggingQ.Submit (cmd);
-								staggingQ.WaitIdle ();
-
-								cmd.Free ();
+								bufferOffset += imgSize;
+								imgWidth /= 2;
+								imgHeight /= 2;
 							}
+							stagging.Unmap ();
+							Vk.vkCmdCopyBufferToImage (cmd.Handle, stagging.handle, img.handle, VkImageLayout.TransferDstOptimal,
+								(uint)buffCopies.Count, buffCopies.Pin());
+							buffCopies.Unpin ();
+
+							if (requestedMipsLevels > numberOfMipmapLevels)
+								img.BuildMipmaps (cmd);
+							else
+								img.SetLayout (cmd, VkImageAspectFlags.Color,
+									VkImageLayout.TransferDstOptimal, VkImageLayout.ShaderReadOnlyOptimal,
+									VkPipelineStageFlags.Transfer, VkPipelineStageFlags.AllGraphics);
+
+							cmd.End ();
+
+							staggingQ.Submit (cmd);
+							staggingQ.WaitIdle ();
+
+							cmd.Free ();
+
 						}
 
 						//for (int mips = 0; mips < numberOfMipmapLevels; mips++) {

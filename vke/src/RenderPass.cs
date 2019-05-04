@@ -130,6 +130,9 @@ namespace CVKL {
 
 				handle = Dev.CreateRenderPass (renderPassInfo);
 
+				foreach (SubPass sp in subpasses)
+					sp.UnpinLists ();
+
 				attachments.Unpin ();
 				spDescs.Unpin ();
 				dependencies.Unpin ();
@@ -231,8 +234,6 @@ namespace CVKL {
 		protected override void Dispose (bool disposing) {
 			if (state == ActivableState.Activated) {
 				if (disposing) {
-					foreach (SubPass sp in subpasses)
-						sp.Dispose ();				
 				} else
 					System.Diagnostics.Debug.WriteLine ("VKE Activable RenderPass disposed by finalizer");
 

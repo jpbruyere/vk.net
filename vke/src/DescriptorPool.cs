@@ -87,11 +87,8 @@ namespace CVKL {
                 Utils.CheckResult (vkFreeDescriptorSets (Dev.VkDev, handle, 1, ref descriptorSets[0].handle));
                 return;
             }
-            using (NativeList<VkDescriptorSet> dSets = new NativeList<VkDescriptorSet> ((uint)descriptorSets.Length)) {
-                foreach (DescriptorSet ds in descriptorSets)
-                    dSets.Add (ds.handle);
-                Utils.CheckResult (vkFreeDescriptorSets (Dev.VkDev, handle, dSets.Count, dSets.Data));
-            }
+            Utils.CheckResult (vkFreeDescriptorSets (Dev.VkDev, handle, (uint)descriptorSets.Length, descriptorSets.Pin()));
+			descriptorSets.Unpin ();
         }
         public void Reset () {
             Utils.CheckResult (vkResetDescriptorPool (Dev.VkDev, handle, 0));

@@ -15,7 +15,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SachaWillemPbr", "samples\p
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "vkvg_tests", "samples\vkvg_tests\vkvg_tests.csproj", "{1F05E74F-AEE8-481C-8FDF-456654CC30BE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "vulkan-netcore", "VK\vulkan.csproj", "{1603D809-D9C4-4EE5-B921-B053CE22E068}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "vulkan", "VK\vulkan.csproj", "{1603D809-D9C4-4EE5-B921-B053CE22E068}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CVKL", "vke\CVKL.csproj", "{9E12DFE6-7DC7-4BF2-8077-42DDC69FD0A1}"
 EndProject
