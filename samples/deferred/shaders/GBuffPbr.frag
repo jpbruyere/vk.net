@@ -48,7 +48,7 @@ layout (set = 0, binding = 0) uniform UBO {
     vec4 camPos;
 } ubo;
 
-layout (set = 0, binding = 6) uniform UBOMaterials {
+layout (set = 0, binding = 5) uniform UBOMaterials {
     Material materials[16];
 };
 

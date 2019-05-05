@@ -177,7 +177,7 @@ namespace VK {
 		}
 	}
 	public partial struct VkCommandBufferBeginInfo {
-		public VkCommandBufferBeginInfo (VkCommandBufferUsageFlags usage = 0) {
+		public VkCommandBufferBeginInfo (VkCommandBufferUsageFlags usage = (VkCommandBufferUsageFlags)0) {
 			sType = VkStructureType.CommandBufferBeginInfo;
 			pNext = pInheritanceInfo = IntPtr.Zero;
 			flags = usage;
@@ -185,7 +185,7 @@ namespace VK {
 	}
 	public partial struct VkQueryPoolCreateInfo {
 		public static VkQueryPoolCreateInfo New (VkQueryType queryType,
-			VkQueryPipelineStatisticFlags statisticFlags = 0, uint count = 1) {
+			VkQueryPipelineStatisticFlags statisticFlags = (VkQueryPipelineStatisticFlags)0, uint count = 1) {
 			VkQueryPoolCreateInfo ret = new VkQueryPoolCreateInfo ();
 			ret.sType = VkStructureType.QueryPoolCreateInfo;
 			ret.pipelineStatistics = statisticFlags;

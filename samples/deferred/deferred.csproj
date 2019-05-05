@@ -14,33 +14,44 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">    
     <DefineConstants>WITH_SHADOWS;_WITH_VKVG;TRACE;DEBUG;NETSTANDARD;NETSTANDARD2_0</DefineConstants>        
   </PropertyGroup>
+    
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
         <DefineConstants>WITH_SHADOWS;_WITH_VKVG</DefineConstants>
   </PropertyGroup>
+    
+  <PropertyGroup Condition="$(Configuration) == 'DebugCrow' ">
+    <DefineConstants>WITH_SHADOWS;_WITH_VKVG;TRACE;DEBUG;NETSTANDARD;NETSTANDARD2_0</DefineConstants>        
+  </PropertyGroup>
+    
+  <ItemGroup>    
+    <GLSLShader Include="shaders\**\*.frag;shaders\**\*.vert;shaders\**\*.comp;shaders\**\*.geom" />
+    <Datas Include="..\data\**\*.*">      
+      <Link>data\%(RecursiveDir)%(Filename)%(Extension)</Link>
+    </Datas>
+    <Compile Include="EnvironmentPipeline.cs;deferredPbrRenderer.cs;shadowMapRenderer.cs" />
+  </ItemGroup>     
+    
+  <ItemGroup Condition="$(Configuration) == 'DebugCrow' ">    
+    <PackageReference Include="Crow.VK" Version="0.9.0-beta" />
+    <Compile Include="../common/CrowWin.cs" />
+    <Compile Include="main-crow.cs" />
+    <EmbeddedResource Include="ui\**\*.*">
+      <LogicalName>deferred.%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>                
+  </ItemGroup>    
+    
+  <ItemGroup Condition="$(Configuration) != 'DebugCrow' ">
+    <Compile Include="main.cs" />
+  </ItemGroup>    
     
   <ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">
     <Reference Include="System" />
   </ItemGroup>    
     
   <ItemGroup>
-    <PackageReference Include="Vulkan" Version="0.1.2.8-beta" />        
-  </ItemGroup>    
-    
-  <ItemGroup>
+    <PackageReference Include="Vulkan" Version="0.1.2.8-beta" />            
     <ProjectReference Include="..\..\vke\CVKL.csproj" />    
-    <ProjectReference Include="..\..\crow\Crow\Crow.csproj" />
-  </ItemGroup>    
-  
-  <ItemGroup>    
-    <GLSLShader Include="shaders\**\*.frag;shaders\**\*.vert;shaders\**\*.comp;shaders\**\*.geom" />
-    <Datas Include="..\data\**\*.*">      
-      <Link>data\%(RecursiveDir)%(Filename)%(Extension)</Link>
-    </Datas>
-    <Compile Include="main.cs;EnvironmentPipeline.cs;deferredPbrRenderer.cs;shadowMapRenderer.cs" />
-    <EmbeddedResource Include="ui\**\*.*">
-      <LogicalName>deferred.%(Filename)%(Extension)</LogicalName>
-    </EmbeddedResource>                
-  </ItemGroup>     
+  </ItemGroup> 
     
   <Import Project="$(SolutionDir)spirv.targets" />    
 </Project>
