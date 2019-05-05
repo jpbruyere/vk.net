@@ -112,9 +112,9 @@ namespace CVKL {
 
 		public void Update () {
 			Projection = Matrix4x4.CreatePerspectiveFieldOfView (fov, aspectRatio, zNear, zFar) * VKProjectionCorrection;
-			Matrix4x4 translation = Matrix4x4.CreateTranslation (position * new Vector3(1,1,-1)) ;
+			Matrix4x4 translation = Matrix4x4.CreateTranslation (position * zoom * new Vector3(1,1,-1)) ;
 			if (Type == CamType.LookAt) {
-				View =  
+				View = 
 						Matrix4x4.CreateFromAxisAngle (Vector3.UnitZ, rotation.Z) *
 						Matrix4x4.CreateFromAxisAngle (Vector3.UnitY, rotation.Y) *
 						Matrix4x4.CreateFromAxisAngle (Vector3.UnitX, rotation.X) *

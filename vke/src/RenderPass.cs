@@ -212,7 +212,7 @@ namespace CVKL {
             info.pClearValues = ClearValues.Pin ();
             info.framebuffer = frameBuffer.handle;
 
-            vkCmdBeginRenderPass (cmd.Handle, ref info, VkSubpassContents.Inline);
+			vkCmdBeginRenderPass (cmd.Handle, ref info, VkSubpassContents.Inline);
 
 			ClearValues.Unpin ();
         }

@@ -37,7 +37,7 @@ layout (input_attachment_index = 3, set = 2, binding = 3) uniform subpassInputMS
 layout (set = 0, binding = 1) uniform samplerCube samplerIrradiance;
 layout (set = 0, binding = 2) uniform samplerCube prefilteredMap;
 layout (set = 0, binding = 3) uniform sampler2D samplerBRDFLUT;
-layout (set = 0, binding = 7) uniform sampler2DArray samplerShadowMap;
+layout (set = 0, binding = 6) uniform sampler2DArray samplerShadowMap;
 
 layout (location = 0) in vec2 inUV;
 

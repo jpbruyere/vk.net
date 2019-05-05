@@ -30,37 +30,49 @@ namespace vkvg_test {
 			ctx.Fill ();
 			ctx.Operator = vkvg.Operator.Over;
 		}
-		void vkvgDraw () {
-
-			using (vkvg.Surface svgSurf = new vkvg.Surface (vkvgDev, 300, 300)) {
-				using (vkvg.Context ctx = new vkvg.Context (svgSurf)) {
-					IntPtr nsvg = IntPtr.Zero;
-
-					using (Stream nsvgStream = Crow.Interface.StaticGetStreamFromPath ("../../../samples/data/tiger.svg")) {
-						using (StreamReader sr = new StreamReader (nsvgStream)) {
-							nsvg = vkvgDev.LoadSvgFragment (sr.ReadToEnd ());
-						}
-					}
-
-
-					ctx.SetSource (0.8f, 0.8f, 0.8f);
-					ctx.Paint ();
-
-					ctx.Scale (0.2f, 0.2f);
-					ctx.RenderSvg (nsvg, null);
-
-					vkvgDev.DestroySvg (nsvg);
-				}
-
-				//svgSurf.WriteToPng ("/mnt/data/test.png");
-
-				using (vkvg.Context ctx = new vkvg.Context (vkvgSurf)) {
-					ctx.SetSourceSurface (svgSurf, 0, 0);
-					ctx.Paint ();
-				}
+		void vkvgDraw () {		
+			using (vkvg.Context ctx = new vkvg.Context (vkvgSurf)) {
+				ctx.SetSource (1.0, 1.0, 1.0);
+				ctx.Paint ();
+				ctx.Translate (100, 100);
+				ctx.Scale (3, 3);
+				ctx.SetSource (0.1, 0.1, 0.1);
+				ctx.Arc (100, 100, 10.0, 0, Math.PI * 2.0);
+				ctx.LineWidth = 1.0;
+				ctx.Stroke ();
 			}
+
 		}
-				#region fps print
+		//void vkvgDrawSVG () {
+		//	using (vkvg.Surface svgSurf = new vkvg.Surface (vkvgDev, 300, 300)) {
+		//		using (vkvg.Context ctx = new vkvg.Context (svgSurf)) {
+		//			IntPtr nsvg = IntPtr.Zero;
+
+		//			using (Stream nsvgStream = Crow.Interface.StaticGetStreamFromPath ("../../../samples/data/tiger.svg")) {
+		//				using (StreamReader sr = new StreamReader (nsvgStream)) {
+		//					nsvg = vkvgDev.LoadSvgFragment (sr.ReadToEnd ());
+		//				}
+		//			}
+
+
+		//			ctx.SetSource (0.8f, 0.8f, 0.8f);
+		//			ctx.Paint ();
+
+		//			ctx.Scale (0.2f, 0.2f);
+		//			ctx.RenderSvg (nsvg, null);
+
+		//			vkvgDev.DestroySvg (nsvg);
+		//		}
+
+		//		//svgSurf.WriteToPng ("/mnt/data/test.png");
+
+		//		using (vkvg.Context ctx = new vkvg.Context (vkvgSurf)) {
+		//			ctx.SetSourceSurface (svgSurf, 0, 0);
+		//			ctx.Paint ();
+		//		}
+		//	}
+		//}
+		#region fps print
 		void vkvgDraw1 () {
 
 			using (vkvg.Context ctx = new vkvg.Context (vkvgSurf)) {

@@ -28,7 +28,6 @@
     
   <ItemGroup>
     <ProjectReference Include="..\..\vke\CVKL.csproj" />    
-    <ProjectReference Include="..\..\crow\Crow\Crow.csproj" />
   </ItemGroup>    
   
   <ItemGroup>    

@@ -24,11 +24,11 @@
     
   <ItemGroup>
     <PackageReference Include="Vulkan" Version="0.1.2.8-beta" />            
+    <PackageReference Include="vkvg.net" Version="0.2.2-beta" />
   </ItemGroup>    
     
   <ItemGroup>
     <ProjectReference Include="..\..\vke\CVKL.csproj" />    
-    <ProjectReference Include="..\..\crow\Crow\Crow.csproj" />
   </ItemGroup>    
   
   <ItemGroup>    

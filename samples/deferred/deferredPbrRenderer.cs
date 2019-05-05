@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Numerics;
 using System.Runtime.InteropServices;
-using Glfw;
-using VK;
 using CVKL;
+using VK;
 
 namespace deferred {
 	public class DeferredPbrRenderer : IDisposable {
@@ -32,6 +31,8 @@ namespace deferred {
 
 		public DebugView currentDebugView = DebugView.none;
 		public int lightNumDebug = 0;
+		public int debugMip = 0;
+		public int debugFace = 0;
 
 		public struct Matrices {
 			public Matrix4x4 projection;
@@ -43,7 +44,6 @@ namespace deferred {
 			public float prefilteredCubeMipLevels;
 			public float scaleIBLAmbient;
 		}
-
 		public struct Light {
 			public Vector4 position;
 			public Vector4 color;
@@ -55,7 +55,6 @@ namespace deferred {
 			exposure = 2.0f,
 			scaleIBLAmbient = 0.5f,
 		};
-
 		public Light[] lights = {
 			new Light {
 				position = new Vector4(2.5f,3.5f,2,0f),
@@ -95,11 +94,13 @@ namespace deferred {
 		const int SP_COMPOSE 		= 2;
 		const int SP_TONE_MAPPING 	= 3;
 
-		public DeferredPbrRenderer (Device dev, SwapChain swapChain, PresentQueue presentQueue, float nearPlane, float farPlane) {
+		string cubemapPath;
+
+		public DeferredPbrRenderer (Device dev, SwapChain swapChain, PresentQueue presentQueue, string cubemapPath, float nearPlane, float farPlane) {
 			this.dev = dev;
 			this.swapChain = swapChain;
 			this.presentQueue = presentQueue;
-
+			this.cubemapPath = cubemapPath;
 			pipelineCache = new PipelineCache (dev);
 
 			descriptorPool = new DescriptorPool (dev, 3,
@@ -186,10 +187,9 @@ namespace deferred {
 				new VkDescriptorSetLayoutBinding (2, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
 				new VkDescriptorSetLayoutBinding (3, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
 				new VkDescriptorSetLayoutBinding (4, VkShaderStageFlags.Fragment, VkDescriptorType.UniformBuffer),//lights
-				new VkDescriptorSetLayoutBinding (5, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),//ui overlay
-				new VkDescriptorSetLayoutBinding (6, VkShaderStageFlags.Fragment, VkDescriptorType.UniformBuffer));//materials
+				new VkDescriptorSetLayoutBinding (5, VkShaderStageFlags.Fragment, VkDescriptorType.UniformBuffer));//materials
 #if WITH_SHADOWS
-			descLayoutMain.Bindings.Add (new VkDescriptorSetLayoutBinding (7, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler));
+			descLayoutMain.Bindings.Add (new VkDescriptorSetLayoutBinding (6, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler));
 #endif
 
 			descLayoutTextures = new DescriptorSetLayout (dev,
@@ -270,7 +270,7 @@ namespace deferred {
 			dsMain = descriptorPool.Allocate (descLayoutMain);
 			dsGBuff = descriptorPool.Allocate (descLayoutGBuff);
 
-			envCube = new EnvironmentCube (dsMain, gBuffPipeline.Layout, presentQueue, renderPass);
+			envCube = new EnvironmentCube (cubemapPath, dsMain, gBuffPipeline.Layout, presentQueue, renderPass);
 
 			matrices.prefilteredCubeMipLevels = envCube.prefilterCube.CreateInfo.mipLevels;
 
@@ -283,7 +283,7 @@ namespace deferred {
 				uboLights.Descriptor);
 
 #if WITH_SHADOWS
-			dsMainWrite = new DescriptorSetWrites (dsMain, descLayoutMain.Bindings[7]);
+			dsMainWrite = new DescriptorSetWrites (dsMain, descLayoutMain.Bindings[6]);
 			dsMainWrite.Write (dev, shadowMapRenderer.shadowMap.Descriptor);
 #endif
 		}
@@ -299,26 +299,14 @@ namespace deferred {
 				AttachmentType.AmbientOcclusion,
 				AttachmentType.Emissive);
 
-			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (dsMain, descLayoutMain.Bindings[6]);
+			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (dsMain, descLayoutMain.Bindings[5]);
 			uboUpdate.Write (dev, model.materialUBO.Descriptor);
 
 			modelAABB = model.DefaultScene.AABB;
 		}
-		Image uiImage;
-		public void WriteUiImgDesciptor (Image uiImage) {
-			this.uiImage = uiImage;
-			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (dsMain, descLayoutMain.Bindings[5]);
-			uboUpdate.Write (dev, uiImage.Descriptor);
-		}
 
-		public void buildCommandBuffers (CommandBuffer[] cmds) {
-			for (int i = 0; i < swapChain.ImageCount; ++i) {
-				cmds[i].Start ();
-				uiImage.SetLayout (cmds[i], VkImageAspectFlags.Color, VkImageLayout.Undefined, VkImageLayout.ShaderReadOnlyOptimal,
-					VkPipelineStageFlags.TopOfPipe, VkPipelineStageFlags.FragmentShader);
-				recordDraw (cmds[i], frameBuffers[i]);
-				cmds[i].End ();
-			}
+		public void buildCommandBuffers (CommandBuffer cmd, int imageIndex) {
+			recordDraw (cmd, frameBuffers[imageIndex]);
 		}
 
 		void recordDraw (CommandBuffer cmd, Framebuffer fb) {
@@ -349,7 +337,7 @@ namespace deferred {
 				if (currentDebugView == DebugView.shadowMap)
 					debugValue += (uint)((lightNumDebug << 8));
 				else
-					debugValue += (uint)((envCube.debugFace << 8) + (envCube.debugMip << 16));
+					debugValue += (uint)((debugFace << 8) + (debugMip << 16));
 				cmd.PushConstant (debugPipeline.Layout, VkShaderStageFlags.Fragment, debugValue, (uint)Marshal.SizeOf<Matrix4x4> ());
 			}
 
@@ -369,14 +357,13 @@ namespace deferred {
 #endif
 		}
 
-#region update
+		#region update
 		public void UpdateView (Camera camera) {
 			camera.AspectRatio = (float)swapChain.Width / swapChain.Height;
 
 			matrices.projection = camera.Projection;
 			matrices.view = camera.View;
 			matrices.model = camera.Model;
-
 
 			matrices.camPos = new Vector4 (
 				-camera.Position.Z * (float)Math.Sin (camera.Rotation.Y) * (float)Math.Cos (camera.Rotation.X),

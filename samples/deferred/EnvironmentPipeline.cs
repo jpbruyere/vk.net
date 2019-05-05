@@ -14,17 +14,14 @@ namespace CVKL {
 		public Image irradianceCube { get; private set; }
 		public Image prefilterCube { get; set; }
 
-		public int debugMip = 0;
-		public int debugFace = 0;
-
-		public EnvironmentCube (DescriptorSet dsSkybox, PipelineLayout plLayout, Queue staggingQ, RenderPass renderPass, PipelineCache cache = null)
+		public EnvironmentCube (string cubemapPath, DescriptorSet dsSkybox, PipelineLayout plLayout, Queue staggingQ, RenderPass renderPass, PipelineCache cache = null)
 		: base (renderPass, cache, "EnvCube pipeline") {
 
 			using (CommandPool cmdPool = new CommandPool (staggingQ.Dev, staggingQ.index)) {
 
 				vboSkybox = new GPUBuffer<float> (staggingQ, cmdPool, VkBufferUsageFlags.VertexBuffer, box_vertices);
 
-				cubemap = KTX.KTX.Load (staggingQ, cmdPool, cubemapPathes[2],
+				cubemap = KTX.KTX.Load (staggingQ, cmdPool, cubemapPath,
 					VkImageUsageFlags.Sampled, VkMemoryPropertyFlags.DeviceLocal, true);
 				cubemap.CreateView (VkImageViewType.Cube, VkImageAspectFlags.Color, 6, 0, cubemap.CreateInfo.mipLevels);
 				cubemap.CreateSampler (VkSamplerAddressMode.ClampToEdge);
@@ -57,13 +54,7 @@ namespace CVKL {
 		}
 
 		#region skybox
-		public List<string> cubemapPathes = new List<string> () {
-			"../../../samples/data/textures/papermill.ktx",
-			"../../../samples/data/textures/cubemap_yokohama_bc3_unorm.ktx",
-			"../../../samples/data/textures/gcanyon_cube.ktx",
-			"../../../samples/data/textures/pisa_cube.ktx",
-			"../../../samples/data/textures/uffizi_cube.ktx",
-		};
+
 		static float[] box_vertices = {
 			 1.0f, 1.0f,-1.0f,  // +X side
 			 1.0f, 1.0f, 1.0f,

@@ -159,8 +159,8 @@ namespace CVKL {
 		/// <summary>
 		/// override this method to modify enabled features before device creation
 		/// </summary>
-		/// <param name="features">Features.</param>
-        protected virtual void configureEnabledFeatures (VkPhysicalDeviceFeatures available_features, ref VkPhysicalDeviceFeatures features) {
+		/// <param name="enabled_features">Features.</param>
+		protected virtual void configureEnabledFeatures (VkPhysicalDeviceFeatures available_features, ref VkPhysicalDeviceFeatures enabled_features) {
         }
 		/// <summary>
 		/// override this method to create additional queue. Dedicated queue of the requested type will be selected first, created queues may excess

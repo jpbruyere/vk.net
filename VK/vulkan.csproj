@@ -42,7 +42,7 @@
   </PropertyGroup>
     
   <ItemGroup>
-    <Compile Include="$(SolutionDir)vk.generator\bin\**\*.cs">
+    <Compile Include="$(SolutionDir)vk.generator\bin\$(Configuration)\**\*.cs">
       <Link>generated\%(Filename)%(Extension)</Link>
     </Compile>
   </ItemGroup> 

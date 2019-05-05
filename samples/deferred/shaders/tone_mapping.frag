@@ -2,8 +2,6 @@
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
 
-#define WITH_VKVG 1
-
 layout (set = 0, binding = 0) uniform UBO {
     mat4 projection;
     mat4 model;
@@ -14,7 +12,6 @@ layout (set = 0, binding = 0) uniform UBO {
 } ubo;
 
 layout (input_attachment_index = 0, set = 2, binding = 4) uniform subpassInputMS samplerHDR;
-layout (binding = 5) uniform sampler2D samplerUI;
 
 layout (location = 0) in vec2 inUV;
 layout (location = 0) out vec4 outColor;
@@ -55,15 +52,7 @@ vec3 SRGBtoLINEAR(vec3 srgbIn)
 void main() 
 {    
     vec4 hdrColor = subpassLoad(samplerHDR, gl_SampleID);        
-    hdrColor = vec4(SRGBtoLINEAR(tonemap(hdrColor.rgb)), hdrColor.a);
-    #if WITH_VKVG
-    vec4 ui = texture(samplerUI, inUV);
-    outColor = vec4 (mix (hdrColor.rgb, ui.rgb, ui.a), hdrColor.a);
-    #else
-    outColor = hdrColor;
-    #endif
-    
-    
+    outColor = vec4(SRGBtoLINEAR(tonemap(hdrColor.rgb)), hdrColor.a);
     /*
     vec3 mapped = vec3(1.0) - exp(-hdrColor.rgb * ubo.exposure);        
     mapped = pow(mapped, vec3(1.0 / ubo.gamma));
