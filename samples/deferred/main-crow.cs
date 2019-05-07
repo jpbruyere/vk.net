@@ -107,7 +107,7 @@ namespace deferred {
 			"../../../samples/data/textures/uffizi_cube.ktx",
 		};
 		string[] modelPathes = {
-				"/mnt/devel/gts/vkChess.net/data/models/chess.glb",
+				//"/mnt/devel/gts/vkChess.net/data/models/chess.glb",
 				"../../../samples/data/models/DamagedHelmet/glTF/DamagedHelmet.gltf",
 				"../../../samples/data/models/shadow.glb",
 				"../../../samples/data/models/Hubble.glb",
