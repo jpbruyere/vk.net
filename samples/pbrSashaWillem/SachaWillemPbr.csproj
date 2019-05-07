@@ -24,6 +24,7 @@
     
   <ItemGroup>
     <PackageReference Include="Vulkan" Version="0.1.2.8-beta" />            
+    <PackageReference Include="vkvg.net" Version="0.2.2-beta" />
   </ItemGroup>    
     
   <ItemGroup>

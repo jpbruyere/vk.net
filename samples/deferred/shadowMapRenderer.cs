@@ -147,7 +147,6 @@ namespace deferred {
 		public void Dispose () {
 			shadowPipeline?.Dispose ();
 			fbShadowMap?.Dispose ();
-			shadowPass?.Dispose ();
 			shadowMap?.Dispose ();
 			descriptorPool?.Dispose ();
 		}

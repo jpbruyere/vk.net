@@ -11,7 +11,7 @@ layout (set = 0, binding = 0) uniform UBO {
     float gamma;    
 } ubo;
 
-layout (input_attachment_index = 0, set = 2, binding = 4) uniform subpassInputMS samplerHDR;
+layout (input_attachment_index = 0, set = 1, binding = 4) uniform subpassInputMS samplerHDR;
 
 layout (location = 0) in vec2 inUV;
 layout (location = 0) out vec4 outColor;

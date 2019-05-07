@@ -1,5 +1,5 @@
 ﻿//
-// AttachmentReference.cs
+// SubPass.cs
 //
 // Author:
 //       Jean-Philippe Bruyère <jp_bruyere@hotmail.com>
@@ -23,91 +23,10 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
-using System;
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
 using VK;
 
 namespace CVKL {
-	//public class NativeList2<T> : IDisposable where T : struct {
-	//	const int sizeStep = 4;
-	//	int eltSize;
-	//	int capacity;
-	//	int count;
-	//	IntPtr handle;
-
-	//	public IntPtr Pointer => handle;
-
-	//	public NativeList2 (T[] array) {
-	//		eltSize = Marshal.SizeOf<T> ();
-	//		capacity = count = array.Length;
-	//		GCHandle hnd = GCHandle.Alloc (array, GCHandleType.Pinned);
-	//		handle = GCHandle.ToIntPtr (hnd);
-	//	}
-
-	//	public void Add (T elem) {
-	//		if (count == capacity) { 
-	//		}
-	//	}
-
-	//	void resize (int newSize) {
-
-	//	}
-
-	//	#region IDisposable Support
-	//	private bool disposedValue;
-	//	protected virtual void Dispose (bool disposing) {
-	//		if (!disposedValue) {
-	//			if (disposing) {
-	//			}
-	//			handle.Free ();
-	//			disposedValue = true;
-	//		}
-	//	}
-	//	public void Dispose () {
-	//		Dispose (true);
-	//		GC.SuppressFinalize(this);
-	//	}
-	//	~NativeList2 () { Dispose (false); }
-	//	#endregion
-	//}
-
-
-	public class MarshaledObject<T> : IDisposable where T : struct {
-
-        GCHandle handle;
-
-        public IntPtr Pointer {
-            get {
-                if (!handle.IsAllocated)
-                    throw new InvalidOperationException ("Unalocated MarshaledObject");
-                return handle.AddrOfPinnedObject ();
-            }
-        }
-
-        public MarshaledObject (T mobj) {
-            handle = GCHandle.Alloc (mobj, GCHandleType.Pinned);
-        }
-
-        void freeHandle () {
-            if (!disposed) 
-                handle.Free ();
-        }
-
-        #region IDisposable Support
-        private bool disposed;
-
-        ~MarshaledObject() {
-            freeHandle ();
-        }
-
-        public void Dispose () {
-            freeHandle ();
-            GC.SuppressFinalize(this);
-        }
-        #endregion
-    }
-
 	public class SubPass {
         List<VkAttachmentReference> colorRefs = new List<VkAttachmentReference>();
         List<VkAttachmentReference> inputRefs = new List<VkAttachmentReference>();
@@ -121,7 +40,6 @@ namespace CVKL {
 			for (uint i = 0; i < layouts.Length; i++) 
 				AddColorReference (i, layouts[i]);
 		}
-
 
 		public void AddColorReference (uint attachment, VkImageLayout layout = VkImageLayout.DepthStencilAttachmentOptimal) {
             AddColorReference (new VkAttachmentReference { attachment = attachment, layout = layout });

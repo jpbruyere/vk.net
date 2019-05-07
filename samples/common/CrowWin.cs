@@ -33,7 +33,7 @@ namespace Crow {
 			crowThread.Start ();
 
 			while (crow == null)
-				Thread.Sleep (5);
+				Thread.Sleep (2);
 
 			initUISurface ();
 

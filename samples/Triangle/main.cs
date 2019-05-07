@@ -49,7 +49,7 @@ namespace Triangle {
         };
         ushort[] indices = new ushort[] { 0, 1, 2 };
 
-        Program () : base (true) {
+        Program () : base (false) {
 			vbo = new HostBuffer<Vertex> (dev, VkBufferUsageFlags.VertexBuffer, vertices);
 			ibo = new HostBuffer<ushort> (dev, VkBufferUsageFlags.IndexBuffer, indices);
 			uboMats = new HostBuffer (dev, VkBufferUsageFlags.UniformBuffer, matrices);
@@ -61,10 +61,6 @@ namespace Triangle {
 			GraphicPipelineConfig cfg = GraphicPipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, VkSampleCountFlags.SampleCount1);
 
 			cfg.Layout = new PipelineLayout (dev, dsLayout);
-			cfg.Layout.AddPushConstants (
-				new VkPushConstantRange (VkShaderStageFlags.Vertex, (uint)Marshal.SizeOf<Matrix4x4> ()),
-				new VkPushConstantRange (VkShaderStageFlags.Fragment, (uint)Marshal.SizeOf<PbrModel.PbrMaterial> (), 64)
-			);
 			cfg.RenderPass = new RenderPass (dev, swapChain.ColorFormat, dev.GetSuitableDepthFormat (), cfg.Samples);
 			cfg.AddVertexBinding<Vertex> (0);
 			cfg.SetVertexAttributes (0, VkFormat.R32g32b32Sfloat, VkFormat.R32g32b32Sfloat);

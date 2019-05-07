@@ -28,32 +28,33 @@ using VK;
 using static VK.Vk;
 
 namespace CVKL {
-    public class SwapChain {
-        Device dev;
-        PresentQueue presentQueue;
+    public class SwapChain : Activable {        
         internal VkSwapchainKHR handle;
 
-        public VkSemaphore presentComplete;
+		internal uint currentImageIndex;
+		VkSwapchainCreateInfoKHR createInfos;
+		PresentQueue presentQueue;
 
+		public VkSemaphore presentComplete;
         public Image[] images;
 
-        internal uint currentImageIndex;
+		protected override VkDebugMarkerObjectNameInfoEXT DebugMarkerInfo
+			=> new VkDebugMarkerObjectNameInfoEXT (VkDebugReportObjectTypeEXT.SwapchainKhrEXT, handle.Handle);
 
-        VkSwapchainCreateInfoKHR createInfos;
 
-        public uint ImageCount => (uint)images?.Length;
+		public uint ImageCount => (uint)images?.Length;
         public uint Width => createInfos.imageExtent.width;
         public uint Height => createInfos.imageExtent.height;
         public VkFormat ColorFormat => createInfos.imageFormat;
         public VkImageUsageFlags ImageUsage => createInfos.imageUsage;
 
-        public SwapChain (PresentQueue _presentableQueue, uint width = 800, uint height = 600, VkFormat format = VkFormat.B8g8r8a8Unorm, VkPresentModeKHR presentMode = VkPresentModeKHR.FifoKHR) {
-            presentQueue = _presentableQueue;
-            dev = presentQueue.dev;
+        public SwapChain (PresentQueue _presentableQueue, uint width = 800, uint height = 600, VkFormat format = VkFormat.B8g8r8a8Unorm, VkPresentModeKHR presentMode = VkPresentModeKHR.FifoKHR)
+        : base (_presentableQueue.dev){
 
+            presentQueue = _presentableQueue;            
             createInfos = VkSwapchainCreateInfoKHR.New();
 
-            VkSurfaceFormatKHR[] formats = dev.phy.GetSurfaceFormats (presentQueue.Surface);
+            VkSurfaceFormatKHR[] formats = Dev.phy.GetSurfaceFormats (presentQueue.Surface);
             for (int i = 0; i < formats.Length; i++) {
                 if (formats[i].format == format) {
                     createInfos.imageFormat = format;
@@ -64,7 +65,7 @@ namespace CVKL {
             if (createInfos.imageFormat == VkFormat.Undefined) 
                 throw new Exception ("Invalid format for swapchain: " + format);
 
-            VkPresentModeKHR[] presentModes = dev.phy.GetSurfacePresentModes (presentQueue.Surface);
+            VkPresentModeKHR[] presentModes = Dev.phy.GetSurfacePresentModes (presentQueue.Surface);
             for (int i = 0; i < presentModes.Length; i++) {
                 if (presentModes[i] == presentMode) {
                     createInfos.presentMode = presentMode;
@@ -81,18 +82,23 @@ namespace CVKL {
             createInfos.imageSharingMode = VkSharingMode.Exclusive;
             createInfos.compositeAlpha = VkCompositeAlphaFlagsKHR.OpaqueKHR;
             createInfos.presentMode = presentMode;
-            createInfos.clipped = 1;
-
-            presentComplete = dev.CreateSemaphore ();
-			presentComplete.SetDebugMarkerName (dev, "Semaphore PresentComplete");
-
-            Create ();
+            createInfos.clipped = 1;            
         }
+		public override void Activate () {
+			if (state != ActivableState.Activated) {
+				presentComplete = Dev.CreateSemaphore ();
+				presentComplete.SetDebugMarkerName (Dev, "Semaphore PresentComplete");
+			}
+			base.Activate ();
+		}
 
-        public void Create () {
-            dev.WaitIdle ();
+		public void Create () {
+			if (state != ActivableState.Activated)
+				Activate ();
 
-            VkSurfaceCapabilitiesKHR capabilities = dev.phy.GetSurfaceCapabilities (presentQueue.Surface);
+			Dev.WaitIdle ();
+
+            VkSurfaceCapabilitiesKHR capabilities = Dev.phy.GetSurfaceCapabilities (presentQueue.Surface);
 
             createInfos.minImageCount = capabilities.minImageCount;
             createInfos.preTransform = capabilities.currentTransform;
@@ -111,23 +117,23 @@ namespace CVKL {
             } else 
                 createInfos.imageExtent = capabilities.currentExtent;
 
-            VkSwapchainKHR newSwapChain = dev.CreateSwapChain (createInfos);
+            VkSwapchainKHR newSwapChain = Dev.CreateSwapChain (createInfos);
             if (handle.Handle != 0)
                 _destroy ();
             handle = newSwapChain;
 
-            VkImage[] tmp = dev.GetSwapChainImages (handle);
+            VkImage[] tmp = Dev.GetSwapChainImages (handle);
             images = new Image[tmp.Length];
             for (int i = 0; i < tmp.Length; i++) {
-                images[i] = new Image (dev, tmp[i], ColorFormat, ImageUsage, Width, Height);
+                images[i] = new Image (Dev, tmp[i], ColorFormat, ImageUsage, Width, Height);
                 images[i].CreateView ();
 				images[i].SetName ("SwapChain Img" + i);
-				images[i].Descriptor.imageView.SetDebugMarkerName (dev, "SwapChain Img" + i + " view");
+				images[i].Descriptor.imageView.SetDebugMarkerName (Dev, "SwapChain Img" + i + " view");
             }
         }
 
         public int GetNextImage () {
-            VkResult res = vkAcquireNextImageKHR (dev.VkDev, handle, UInt64.MaxValue, presentComplete, VkFence.Null, out currentImageIndex);
+            VkResult res = vkAcquireNextImageKHR (Dev.VkDev, handle, UInt64.MaxValue, presentComplete, VkFence.Null, out currentImageIndex);
             if (res == VkResult.ErrorOutOfDateKHR || res == VkResult.SuboptimalKHR) {
                 Create ();
                 return -1;
@@ -140,13 +146,28 @@ namespace CVKL {
             for (int i = 0; i < ImageCount; i++) 
                 images[i].Dispose ();
 
-            dev.DestroySwapChain (handle);
+            Dev.DestroySwapChain (handle);
         }
 
-        public void Destroy () {
-            _destroy ();
+		public override string ToString () {
+			return string.Format ($"{base.ToString ()}[0x{handle.Handle.ToString ("x")}]");
+		}
 
-            dev.DestroySemaphore (presentComplete);
-        }
-    }
+		#region IDisposable Support
+		protected override void Dispose (bool disposing) {
+			if (state == ActivableState.Activated) {
+				if (disposing) {
+				} else
+					System.Diagnostics.Debug.WriteLine ("VKE Swapchain disposed by finalizer");
+
+				Dev.DestroySemaphore (presentComplete);
+				_destroy ();
+
+			} else if (disposing)
+				System.Diagnostics.Debug.WriteLine ("Calling dispose on unactive Swapchain");
+
+			base.Dispose (disposing);
+		}
+		#endregion
+	}
 }

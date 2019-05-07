@@ -1,32 +1,32 @@
 ﻿using System;
 using System.Numerics;
-using System.Runtime.InteropServices;
 using Glfw;
 using VK;
 using CVKL;
-using System.Threading;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace deferred {
 	class Program : Crow.CrowWin {
 		static void Main (string[] args) {
+			Instance.DebugUtils = true;
+			Instance.Validation = true;
+			//Instance.RenderDocCapture = true;
+			DeferredPbrRenderer.EnableTextureArray = true;
+			PbrModelTexArray.TEXTURE_DIM = 512;
+
 			using (Program vke = new Program ()) {
 				vke.Run ();
 			}
 		}
 
+		#region crow ui
 		public Crow.Command CMDViewScenes, CMDViewEditor, CMDViewDebug, CMDViewMaterials;
 		void init_crow_commands () {
 			CMDViewScenes = new Crow.Command (new Action (() => loadWindow ("#deferred.main.crow", this))) { Caption = "Lighting", Icon = new Crow.SvgPicture ("#deferred.crow.svg"), CanExecute = true };
 			CMDViewEditor = new Crow.Command (new Action (() => loadWindow ("#deferred.scenes.crow", this))) { Caption = "Scenes", Icon = new Crow.SvgPicture ("#deferred.crow.svg"), CanExecute = true };
 			CMDViewDebug = new Crow.Command (new Action (() => loadWindow ("#deferred.debug.crow", this))) { Caption = "Debug", Icon = new Crow.SvgPicture ("#deferred.crow.svg"), CanExecute = true };
 			CMDViewMaterials = new Crow.Command (new Action (() => loadWindow ("#deferred.materials.crow", this))) { Caption = "Materials", Icon = new Crow.SvgPicture ("#deferred.crow.svg"), CanExecute = true };
-		}
-
-		void onApplyMaterialChanges (object sender, Crow.MouseButtonEventArgs e) {
-			Crow.ListBox lb = ((sender as Crow.Widget).Parent as Crow.Group).Children[0] as Crow.ListBox;
-			renderer.model.materialUBO.Update (renderer.model.materials);
 		}
 
 		public DeferredPbrRenderer.DebugView CurrentDebugView {
@@ -73,8 +73,7 @@ namespace deferred {
 		}
 		public List<DeferredPbrRenderer.Light> Lights => renderer.lights.ToList ();
 		public List<Model.Scene> Scenes => renderer.model.Scenes;
-		public PbrModel.PbrMaterial[] Materials => renderer.model.materials;
-
+		#endregion
 
 		protected override void configureEnabledFeatures (VkPhysicalDeviceFeatures available_features, ref VkPhysicalDeviceFeatures features) {
 			base.configureEnabledFeatures (available_features, ref features);
@@ -82,9 +81,17 @@ namespace deferred {
 			features.samplerAnisotropy = available_features.samplerAnisotropy;
 			features.sampleRateShading = available_features.sampleRateShading;
 			features.geometryShader = available_features.geometryShader;
+			features.pipelineStatisticsQuery = true;
 
-			if (available_features.textureCompressionBC) { 
+			if (available_features.textureCompressionETC2) {
+				features.textureCompressionETC2 = true;
+				Image.DefaultTextureFormat = VkFormat.Etc2R8g8b8a8UnormBlock;
+			}else if (available_features.textureCompressionBC) {
+				//features.textureCompressionBC = true;
+				//Image.DefaultTextureFormat = VkFormat.Bc3UnormBlock;
 			}
+
+
 		}
 
 		protected override void createQueues () {
@@ -100,6 +107,7 @@ namespace deferred {
 			"../../../samples/data/textures/uffizi_cube.ktx",
 		};
 		string[] modelPathes = {
+				"/mnt/devel/gts/vkChess.net/data/models/chess.glb",
 				"../../../samples/data/models/DamagedHelmet/glTF/DamagedHelmet.gltf",
 				"../../../samples/data/models/shadow.glb",
 				"../../../samples/data/models/Hubble.glb",
@@ -112,8 +120,22 @@ namespace deferred {
 
 		Queue transferQ;
 		DeferredPbrRenderer renderer;
+		PipelineStatisticsQueryPool statPool;
+		TimestampQueryPool timestampQPool;
+		ulong[] results;
+
+		DebugReport dbgRepport;
 
 		Program () : base(true) {
+
+			if (Instance.DebugUtils)
+				dbgRepport = new DebugReport (instance,
+					VkDebugReportFlagsEXT.ErrorEXT
+					| VkDebugReportFlagsEXT.DebugEXT
+					| VkDebugReportFlagsEXT.WarningEXT
+					| VkDebugReportFlagsEXT.PerformanceWarningEXT
+				);
+
 			camera = new Camera (Utils.DegreesToRadians (45f), 1f, 0.1f, 16f);
 			camera.SetPosition (0, 0, 2);
 
@@ -121,16 +143,24 @@ namespace deferred {
 			renderer.LoadModel (transferQ, modelPathes[curModelIndex]);
 			camera.Model = Matrix4x4.CreateScale (1f / Math.Max (Math.Max (renderer.modelAABB.Width, renderer.modelAABB.Height), renderer.modelAABB.Depth));
 
+			statPool = new PipelineStatisticsQueryPool (dev,
+				VkQueryPipelineStatisticFlags.InputAssemblyVertices |
+				VkQueryPipelineStatisticFlags.InputAssemblyPrimitives |
+				VkQueryPipelineStatisticFlags.ClippingInvocations |
+				VkQueryPipelineStatisticFlags.ClippingPrimitives |
+				VkQueryPipelineStatisticFlags.FragmentShaderInvocations);
+
+			timestampQPool = new TimestampQueryPool (dev);
+
 			init_crow_commands ();
 
 			crow.Load ("#deferred.menu.crow").DataSource = this;
-			//crow.Load ("#deferred.testImage.crow").DataSource = this;
-
-			//crow.LoadIMLFragment (@"<Image Width='32' Height='32' Margin='2' HorizontalAlignment='Left' VerticalAlignment='Top' Path='/mnt/devel/gts/vkvg/build/data/tiger.svg' Background='Grey' MouseEnter='{Background=Blue}' MouseLeave='{Background=White}'/>");
 		}
 
 		protected override void recordDraw (CommandBuffer cmd, int imageIndex) {
+			statPool.Begin (cmd);
 			renderer.buildCommandBuffers (cmd, imageIndex);
+			statPool.End (cmd);
 		}
 
 		public override void UpdateView () {
@@ -161,6 +191,8 @@ namespace deferred {
 				NotifyValueChanged ("fps", fps);
 				frameCount = 0;
 			}
+
+			results = statPool.GetResults ();
 		}
 		protected override void OnResize () {		
 			renderer.Resize ();
@@ -168,7 +200,6 @@ namespace deferred {
 		}
 
 		#region Mouse and keyboard
-
 		protected override void onMouseMove (double xPos, double yPos) {
 			if (crow.ProcessMouseMove ((int)xPos, (int)yPos))
 				return;
@@ -345,8 +376,12 @@ namespace deferred {
 
 		protected override void Dispose (bool disposing) {
 			if (disposing) {
-				if (!isDisposed) 
+				if (!isDisposed) {
 					renderer.Dispose ();
+					statPool.Dispose ();
+					timestampQPool.Dispose ();
+					dbgRepport?.Dispose ();
+				}
 			}
 
 			base.Dispose (disposing);

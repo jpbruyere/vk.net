@@ -31,6 +31,10 @@ using static VK.Vk;
 
 namespace CVKL {
     public class Instance : IDisposable {
+		public static bool Validation;
+		public static bool DebugUtils;
+		public static bool RenderDocCapture;
+
         VkInstance inst;
 
         static class Strings {
@@ -80,15 +84,16 @@ namespace CVKL {
 				throw new PlatformNotSupportedException ();
 			}
 
-#if DEBUG
-			instanceExtensions.Add (Strings.VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
-			instanceExtensions.Add (Strings.VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-			enabledLayerNames.Add (Strings.LayerMonitor);
-			enabledLayerNames.Add (Strings.LayerValidation);
-#if RENDERDOC
-			enabledLayerNames.Add (Strings.RenderdocCaptureLayerName);
-#endif
-#endif
+			if (Validation)
+				enabledLayerNames.Add (Strings.LayerValidation);
+			if (RenderDocCapture)
+				enabledLayerNames.Add (Strings.RenderdocCaptureLayerName);
+
+			if (DebugUtils) {
+				instanceExtensions.Add (Strings.VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+				instanceExtensions.Add (Strings.VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+			}
+
 			VkApplicationInfo appInfo = new VkApplicationInfo () {
 				sType = VkStructureType.ApplicationInfo,
 				apiVersion = new Vulkan.Version (1, 0, 0),

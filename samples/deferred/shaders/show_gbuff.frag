@@ -2,15 +2,15 @@
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
 
-layout (input_attachment_index = 0, set = 2, binding = 0) uniform subpassInputMS samplerColorRough;
-layout (input_attachment_index = 1, set = 2, binding = 1) uniform subpassInputMS samplerEmitMetal;
-layout (input_attachment_index = 2, set = 2, binding = 2) uniform subpassInputMS samplerN_AO;
-layout (input_attachment_index = 3, set = 2, binding = 3) uniform subpassInputMS samplerPos;
+layout (input_attachment_index = 0, set = 1, binding = 0) uniform subpassInputMS samplerColorRough;
+layout (input_attachment_index = 1, set = 1, binding = 1) uniform subpassInputMS samplerEmitMetal;
+layout (input_attachment_index = 2, set = 1, binding = 2) uniform subpassInputMS samplerN_AO;
+layout (input_attachment_index = 3, set = 1, binding = 3) uniform subpassInputMS samplerPos;
 
 layout (set = 0, binding = 1) uniform samplerCube samplerIrradiance;
 layout (set = 0, binding = 2) uniform samplerCube prefilteredMap;
 layout (set = 0, binding = 3) uniform sampler2D samplerBRDFLUT;
-layout (set = 0, binding = 7) uniform sampler2DArray samplerShadowMap;
+layout (set = 0, binding = 6) uniform sampler2DArray samplerShadowMap;
 
 layout (push_constant) uniform PushCsts {
     layout(offset = 64)
