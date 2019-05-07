@@ -27,12 +27,12 @@ layout (set = 0, binding = 4) uniform UBOLights {
 
 const float M_PI = 3.141592653589793;
 const float c_MinRoughness = 0.04;
-#define SHADOW_FACTOR 0.55
+#define SHADOW_FACTOR 0.15
 
-layout (input_attachment_index = 0, set = 2, binding = 0) uniform subpassInputMS samplerColorRough;
-layout (input_attachment_index = 1, set = 2, binding = 1) uniform subpassInputMS samplerEmitMetal;
-layout (input_attachment_index = 2, set = 2, binding = 2) uniform subpassInputMS samplerN_AO;
-layout (input_attachment_index = 3, set = 2, binding = 3) uniform subpassInputMS samplerPos;
+layout (input_attachment_index = 0, set = 1, binding = 0) uniform subpassInputMS samplerColorRough;
+layout (input_attachment_index = 1, set = 1, binding = 1) uniform subpassInputMS samplerEmitMetal;
+layout (input_attachment_index = 2, set = 1, binding = 2) uniform subpassInputMS samplerN_AO;
+layout (input_attachment_index = 3, set = 1, binding = 3) uniform subpassInputMS samplerPos;
 
 layout (set = 0, binding = 1) uniform samplerCube samplerIrradiance;
 layout (set = 0, binding = 2) uniform samplerCube prefilteredMap;

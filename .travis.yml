@@ -1,0 +1,12 @@
+language: csharp
+dist: xenial
+ 
+dotnet: 2.1.502
+mono: latest
+
+script:
+    - nuget restore 
+    - msbuild 
+    - dotnet restore
+    - dotnet build 
+    

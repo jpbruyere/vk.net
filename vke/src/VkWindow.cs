@@ -35,24 +35,20 @@ namespace CVKL {
 	/// Base class to build vulkan application.
 	/// Provide default swapchain with its command pool and buffers per image and the main present queue
 	/// </summary>
-    public abstract class VkWindow : IDisposable {
+	public abstract class VkWindow : IDisposable {
 		static VkWindow currentWindow;
 
 		IntPtr hWin;
 
-#if DEBUG
-		DebugReport dbgRepport;
-#endif
-
-        protected VkSurfaceKHR hSurf;
-        protected Instance instance;
-        protected PhysicalDevice phy;
-        protected Device dev;
-        protected PresentQueue presentQueue;
-        protected SwapChain swapChain;
-        protected CommandPool cmdPool;
-        protected CommandBuffer[] cmds;
-        protected VkSemaphore[] drawComplete;
+		protected VkSurfaceKHR hSurf;
+		protected Instance instance;
+		protected PhysicalDevice phy;
+		protected Device dev;
+		protected PresentQueue presentQueue;
+		protected SwapChain swapChain;
+		protected CommandPool cmdPool;
+		protected CommandBuffer[] cmds;
+		protected VkSemaphore[] drawComplete;
 
 		protected uint fps;
 		protected bool updateViewRequested = true, rebuildBuffers = false;
@@ -64,7 +60,7 @@ namespace CVKL {
 		/// </summary>
 		protected Camera camera = new Camera (Utils.DegreesToRadians (45f), 1f);
 
-        uint width, height;
+		uint width, height;
 		bool[] buttons = new bool[10];
 		public Modifier KeyModifiers = 0;
 
@@ -76,132 +72,122 @@ namespace CVKL {
 		/// </summary>
 		public virtual string[] EnabledExtensions {
 			get {
-				return new string[] {Ext.D.VK_KHR_swapchain};
-			} 
+				return new string[] { Ext.D.VK_KHR_swapchain };
+			}
 		}
 		/// <summary>
 		/// Frequency in millisecond of the call to the Update method
 		/// </summary>
 		public long UpdateFrequency = 200;
 
-        public uint Width => width;
-        public uint Height => height;
+		public uint Width => width;
+		public uint Height => height;
 
-        public VkWindow (bool debugMarkers = false, string name = "VkWindow", uint _width = 1024, uint _height=768, bool vSync = false)
-        {
-            currentWindow = this;
+		public VkWindow (bool debugMarkers = false, string name = "VkWindow", uint _width = 1024, uint _height = 768, bool vSync = false) {
+			currentWindow = this;
 
-            width = _width;
-            height = _height;
+			width = _width;
+			height = _height;
 
-            Glfw3.Init ();
+			Glfw3.Init ();
 
-            Glfw3.WindowHint (WindowAttribute.ClientApi, 0);
-            Glfw3.WindowHint (WindowAttribute.Resizable, 1);
+			Glfw3.WindowHint (WindowAttribute.ClientApi, 0);
+			Glfw3.WindowHint (WindowAttribute.Resizable, 1);
 
 			hWin = Glfw3.CreateWindow ((int)width, (int)height, name, MonitorHandle.Zero, IntPtr.Zero);
 
-            Glfw3.SetKeyCallback (hWin, HandleKeyDelegate);
-            Glfw3.SetMouseButtonPosCallback (hWin, HandleMouseButtonDelegate);
-            Glfw3.SetCursorPosCallback (hWin, HandleCursorPosDelegate);
-            Glfw3.SetWindowSizeCallback (hWin, HandleWindowSizeDelegate);
+			Glfw3.SetKeyCallback (hWin, HandleKeyDelegate);
+			Glfw3.SetMouseButtonPosCallback (hWin, HandleMouseButtonDelegate);
+			Glfw3.SetCursorPosCallback (hWin, HandleCursorPosDelegate);
+			Glfw3.SetWindowSizeCallback (hWin, HandleWindowSizeDelegate);
 			Glfw3.SetScrollCallback (hWin, HandleScrollDelegate);
 			Glfw3.SetCharCallback (hWin, HandleCharDelegate);
 
-            initVulkan (vSync, debugMarkers);
+			initVulkan (vSync, debugMarkers);
 		}
 
 		void initVulkan (bool vSync, bool debugMarkers) {
-            instance = new Instance ();
-
-#if DEBUG
-			dbgRepport = new DebugReport (instance,
-				VkDebugReportFlagsEXT.ErrorEXT 
-				| VkDebugReportFlagsEXT.DebugEXT 
-				| VkDebugReportFlagsEXT.WarningEXT 
-				| VkDebugReportFlagsEXT.PerformanceWarningEXT 
-				//| VkDebugReportFlagsEXT.InformationEXT
-			);
-#endif
+			instance = new Instance ();
 
 			hSurf = instance.CreateSurface (hWin);
 
-            phy = instance.GetAvailablePhysicalDevice ().Where (p => p.HasSwapChainSupport).FirstOrDefault ();
+			phy = instance.GetAvailablePhysicalDevice ().Where (p => p.HasSwapChainSupport).FirstOrDefault ();
 
-            VkPhysicalDeviceFeatures enabledFeatures = default(VkPhysicalDeviceFeatures);
-            configureEnabledFeatures (phy.Features, ref enabledFeatures);
+			VkPhysicalDeviceFeatures enabledFeatures = default (VkPhysicalDeviceFeatures);
+			configureEnabledFeatures (phy.Features, ref enabledFeatures);
 
 			if (debugMarkers)
 				debugMarkers = phy.GetDeviceExtensionSupported (Ext.D.VK_EXT_debug_marker);
 			//First create the c# device class
 			dev = new Device (phy, debugMarkers);
-            //create queue class
-            createQueues ();
+			//create queue class
+			createQueues ();
 
-            //activate the device to have effective queues created accordingly to what's available
-            dev.Activate (enabledFeatures, EnabledExtensions);
+			//activate the device to have effective queues created accordingly to what's available
+			dev.Activate (enabledFeatures, EnabledExtensions);
 
-            swapChain = new SwapChain (presentQueue as PresentQueue, width, height, VkFormat.B8g8r8a8Srgb,
-                vSync ? VkPresentModeKHR.FifoKHR : VkPresentModeKHR.MailboxKHR );
+			swapChain = new SwapChain (presentQueue as PresentQueue, width, height, VkFormat.B8g8r8a8Srgb,
+				vSync ? VkPresentModeKHR.FifoKHR : VkPresentModeKHR.MailboxKHR);
+			swapChain.Create ();
 
-            cmdPool = new CommandPool(dev, presentQueue.qFamIndex);
+			cmdPool = new CommandPool (dev, presentQueue.qFamIndex);
 
-            cmds = new CommandBuffer[swapChain.ImageCount];
-            drawComplete = new VkSemaphore[swapChain.ImageCount];
+			cmds = new CommandBuffer[swapChain.ImageCount];
+			drawComplete = new VkSemaphore[swapChain.ImageCount];
 
-            for (int i = 0; i < swapChain.ImageCount; i++)
-                drawComplete[i] = dev.CreateSemaphore ();
+			for (int i = 0; i < swapChain.ImageCount; i++)
+				drawComplete[i] = dev.CreateSemaphore ();
 
 			cmdPool.SetName ("main CmdPool");
 			for (int i = 0; i < swapChain.ImageCount; i++)
 				drawComplete[i].SetDebugMarkerName (dev, "Semaphore DrawComplete" + i);
-        }
+		}
 		/// <summary>
 		/// override this method to modify enabled features before device creation
 		/// </summary>
 		/// <param name="enabled_features">Features.</param>
 		protected virtual void configureEnabledFeatures (VkPhysicalDeviceFeatures available_features, ref VkPhysicalDeviceFeatures enabled_features) {
-        }
+		}
 		/// <summary>
 		/// override this method to create additional queue. Dedicated queue of the requested type will be selected first, created queues may excess
 		/// available physical queues.
 		/// </summary>
-        protected virtual void createQueues () {
-            presentQueue = new PresentQueue (dev, VkQueueFlags.Graphics, hSurf);
-        }
+		protected virtual void createQueues () {
+			presentQueue = new PresentQueue (dev, VkQueueFlags.Graphics, hSurf);
+		}
 
 		/// <summary>
 		/// Main render method called each frame. get next swapchain image, process resize if needed, submit and present to the presentQueue.
 		/// Wait QueueIdle after presenting.
 		/// </summary>
-        protected virtual void render () {
-            int idx = swapChain.GetNextImage();
-            if (idx < 0) {
-                OnResize ();
-                return;
-            }
+		protected virtual void render () {
+			int idx = swapChain.GetNextImage ();
+			if (idx < 0) {
+				OnResize ();
+				return;
+			}
 
-            presentQueue.Submit (cmds[idx], swapChain.presentComplete, drawComplete[idx]);
-            presentQueue.Present (swapChain, drawComplete[idx]);
+			presentQueue.Submit (cmds[idx], swapChain.presentComplete, drawComplete[idx]);
+			presentQueue.Present (swapChain, drawComplete[idx]);
 
-            presentQueue.WaitIdle ();
-        }
+			presentQueue.WaitIdle ();
+		}
 
-		protected virtual void onScroll (double xOffset, double yOffset) {}
-		protected virtual void onMouseMove (double xPos, double yPos) { 
+		protected virtual void onScroll (double xOffset, double yOffset) { }
+		protected virtual void onMouseMove (double xPos, double yPos) {
 			double diffX = lastMouseX - xPos;
 			double diffY = lastMouseY - yPos;
 			if (MouseButton[0]) {
-				camera.Rotate ((float)-diffX,(float)-diffY);
+				camera.Rotate ((float)-diffX, (float)-diffY);
 			} else if (MouseButton[1]) {
-				camera.Move (0,0,(float)diffY);
+				camera.Move (0, 0, (float)diffY);
 			}
 
 			updateViewRequested = true;
-        }
-        protected virtual void onMouseButtonDown (Glfw.MouseButton button) { }
-        protected virtual void onMouseButtonUp (Glfw.MouseButton button) { }
-		protected virtual void onKeyDown (Key key, int scanCode, Modifier modifiers) { 
+		}
+		protected virtual void onMouseButtonDown (Glfw.MouseButton button) { }
+		protected virtual void onMouseButtonUp (Glfw.MouseButton button) { }
+		protected virtual void onKeyDown (Key key, int scanCode, Modifier modifiers) {
 			switch (key) {
 				case Key.F4:
 					if (modifiers == Modifier.Alt)
@@ -241,21 +227,21 @@ namespace CVKL {
 		protected virtual void onChar (CodePoint cp) { }
 
 		#region events delegates
-		static void HandleWindowSizeDelegate (IntPtr window, int width, int height) {}
-        static void HandleCursorPosDelegate (IntPtr window, double xPosition, double yPosition) {
-            currentWindow.onMouseMove (xPosition, yPosition);
+		static void HandleWindowSizeDelegate (IntPtr window, int width, int height) { }
+		static void HandleCursorPosDelegate (IntPtr window, double xPosition, double yPosition) {
+			currentWindow.onMouseMove (xPosition, yPosition);
 			currentWindow.lastMouseX = xPosition;
 			currentWindow.lastMouseY = yPosition;
-        }
-        static void HandleMouseButtonDelegate (IntPtr window, Glfw.MouseButton button, InputAction action, Modifier mods) {
-            if (action == InputAction.Press) {
-                currentWindow.buttons[(int)button] = true;
-                currentWindow.onMouseButtonDown (button);
-            } else {
-                currentWindow.buttons[(int)button] = false;
-                currentWindow.onMouseButtonUp (button);
-            }
-        }
+		}
+		static void HandleMouseButtonDelegate (IntPtr window, Glfw.MouseButton button, InputAction action, Modifier mods) {
+			if (action == InputAction.Press) {
+				currentWindow.buttons[(int)button] = true;
+				currentWindow.onMouseButtonDown (button);
+			} else {
+				currentWindow.buttons[(int)button] = false;
+				currentWindow.onMouseButtonUp (button);
+			}
+		}
 		static void HandleScrollDelegate (IntPtr window, double xOffset, double yOffset) {
 			currentWindow.onScroll (xOffset, yOffset);
 		}
@@ -263,10 +249,10 @@ namespace CVKL {
 			currentWindow.KeyModifiers = modifiers;
 			if (action == InputAction.Press || action == InputAction.Repeat) {
 				currentWindow.onKeyDown (key, scanCode, modifiers);
-			} else { 
+			} else {
 				currentWindow.onKeyUp (key, scanCode, modifiers);
 			}
-        }
+		}
 		static void HandleCharDelegate (IntPtr window, CodePoint codepoint) {
 			currentWindow.onChar (codepoint);
 		}
@@ -276,46 +262,46 @@ namespace CVKL {
 		/// main window loop, exits on GLFW3 exit event
 		/// </summary>
 		public virtual void Run () {
-            OnResize ();
-            UpdateView ();
+			OnResize ();
+			UpdateView ();
 
-            frameChrono = Stopwatch.StartNew ();
+			frameChrono = Stopwatch.StartNew ();
 			long totTime = 0;
 
-            while (!Glfw3.WindowShouldClose (hWin)) {
-                render ();
+			while (!Glfw3.WindowShouldClose (hWin)) {
+				render ();
 
-                if(updateViewRequested)
-                    UpdateView ();
+				if (updateViewRequested)
+					UpdateView ();
 
-                frameCount++;
+				frameCount++;
 
-                if (frameChrono.ElapsedMilliseconds > UpdateFrequency) {
+				if (frameChrono.ElapsedMilliseconds > UpdateFrequency) {
 					Update ();
 
 					frameChrono.Stop ();
 					totTime += frameChrono.ElapsedMilliseconds;
-                    fps = (uint)((double)frameCount  / (double)totTime * 1000.0);
-					//Glfw3.SetWindowTitle (hWin, "FPS: " + fps.ToString ());                    
+					fps = (uint)((double)frameCount / (double)totTime * 1000.0);
+					Glfw3.SetWindowTitle (hWin, "FPS: " + fps.ToString ());                    
 					if (totTime > 2000) {
 						frameCount = 0;
 						totTime = 0;
 					}
 					frameChrono.Restart ();
-                }
-                Glfw3.PollEvents ();
-            }
-        }
-        public virtual void UpdateView () {}
+				}
+				Glfw3.PollEvents ();
+			}
+		}
+		public virtual void UpdateView () { }
 		/// <summary>
 		/// custom update method called at UpdateFrequency
 		/// </summary>
-		public virtual void Update () {}
+		public virtual void Update () { }
 
 		/// <summary>
 		/// called when swapchain has been resized, override this method to resize your framebuffers coupled to the swapchain
 		/// </summary>
-		protected virtual void OnResize () {}
+		protected virtual void OnResize () { }
 
 
 		#region IDisposable Support
@@ -330,7 +316,7 @@ namespace CVKL {
 					cmds[i].Free ();
 				}
 
-				swapChain.Destroy ();
+				swapChain.Dispose ();
 
 				vkDestroySurfaceKHR (instance.Handle, hSurf, IntPtr.Zero);
 
@@ -338,9 +324,6 @@ namespace CVKL {
 
 				if (disposing) {
 					dev.Dispose ();
-#if DEBUG
-					dbgRepport.Dispose ();
-#endif
 					instance.Dispose ();
 				} else
 					Debug.WriteLine ("a VkWindow has not been correctly disposed");

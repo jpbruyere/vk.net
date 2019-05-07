@@ -10,7 +10,8 @@ namespace deferred {
 		SwapChain swapChain;
 		public PresentQueue presentQueue;
 
-		public static VkSampleCountFlags NUM_SAMPLES = VkSampleCountFlags.SampleCount4;
+		public static int MAX_MATERIAL_COUNT = 8;
+		public static VkSampleCountFlags NUM_SAMPLES = VkSampleCountFlags.SampleCount1;
 		public static VkFormat HDR_FORMAT = VkFormat.R32g32b32a32Sfloat;
 		public static VkFormat MRT_FORMAT = VkFormat.R32g32b32a32Sfloat;
 
@@ -28,6 +29,8 @@ namespace deferred {
 			irradiance,
 			shadowMap
 		}
+
+		public static bool EnableTextureArray = false;
 
 		public DebugView currentDebugView = DebugView.none;
 		public int lightNumDebug = 0;
@@ -57,11 +60,11 @@ namespace deferred {
 		};
 		public Light[] lights = {
 			new Light {
-				position = new Vector4(2.5f,3.5f,2,0f),
+				position = new Vector4(2.5f,5.5f,2,0f),
 				color = new Vector4(1,0.8f,0.8f,1)
 			},
 			new Light {
-				position = new Vector4(-2.5f,2.5f,2,0f),
+				position = new Vector4(-2.5f,5.5f,2,0f),
 				color = new Vector4(0.8f,0.8f,1,1)
 			}
 		};
@@ -106,8 +109,8 @@ namespace deferred {
 			descriptorPool = new DescriptorPool (dev, 3,
 				new VkDescriptorPoolSize (VkDescriptorType.UniformBuffer, 3),
 				new VkDescriptorPoolSize (VkDescriptorType.CombinedImageSampler, 5),
-				new VkDescriptorPoolSize (VkDescriptorType.InputAttachment, 6)
-			);
+				new VkDescriptorPoolSize (VkDescriptorType.InputAttachment, 5)
+			);				
 
 			uboMatrices = new HostBuffer (dev, VkBufferUsageFlags.UniformBuffer, matrices, true);
 			uboLights = new HostBuffer<Light> (dev, VkBufferUsageFlags.UniformBuffer, lights, true);
@@ -119,12 +122,11 @@ namespace deferred {
 			init (nearPlane, farPlane);
 		}
 
-		void init (float nearPlane, float farPlane) {
-
+		void init_renderpass () {
 			renderPass = new RenderPass (dev, NUM_SAMPLES);
 
 			renderPass.AddAttachment (swapChain.ColorFormat, VkImageLayout.PresentSrcKHR, VkSampleCountFlags.SampleCount1);//swapchain image
-			renderPass.AddAttachment (dev.GetSuitableDepthFormat(), VkImageLayout.DepthStencilAttachmentOptimal, NUM_SAMPLES);
+			renderPass.AddAttachment (dev.GetSuitableDepthFormat (), VkImageLayout.DepthStencilAttachmentOptimal, NUM_SAMPLES);
 			renderPass.AddAttachment (swapChain.ColorFormat, VkImageLayout.ColorAttachmentOptimal, NUM_SAMPLES, VkAttachmentLoadOp.Clear, VkAttachmentStoreOp.DontCare);//GBuff0 (color + roughness) and final color before resolve
 			renderPass.AddAttachment (VkFormat.R8g8b8a8Unorm, VkImageLayout.ColorAttachmentOptimal, NUM_SAMPLES, VkAttachmentLoadOp.Clear, VkAttachmentStoreOp.DontCare);//GBuff1 (emit + metal)
 			renderPass.AddAttachment (MRT_FORMAT, VkImageLayout.ColorAttachmentOptimal, NUM_SAMPLES, VkAttachmentLoadOp.Clear, VkAttachmentStoreOp.DontCare);//GBuff2 (normals + AO)
@@ -139,7 +141,7 @@ namespace deferred {
 			renderPass.ClearValues.Add (new VkClearValue { color = new VkClearColorValue (0.0f, 0.0f, 0.0f) });
 			renderPass.ClearValues.Add (new VkClearValue { color = new VkClearColorValue (0.0f, 0.0f, 0.0f) });
 
-			SubPass[] subpass = { new SubPass (), new SubPass (), new SubPass(), new SubPass() };
+			SubPass[] subpass = { new SubPass (), new SubPass (), new SubPass (), new SubPass () };
 			//skybox
 			subpass[SP_SKYBOX].AddColorReference (6, VkImageLayout.ColorAttachmentOptimal);
 			//models
@@ -156,17 +158,17 @@ namespace deferred {
 									new VkAttachmentReference (3, VkImageLayout.ShaderReadOnlyOptimal),
 									new VkAttachmentReference (4, VkImageLayout.ShaderReadOnlyOptimal),
 									new VkAttachmentReference (5, VkImageLayout.ShaderReadOnlyOptimal));
-	         	//tone mapping
+			//tone mapping
 			subpass[SP_TONE_MAPPING].AddColorReference ((NUM_SAMPLES == VkSampleCountFlags.SampleCount1) ? 0u : 2u, VkImageLayout.ColorAttachmentOptimal);
 			subpass[SP_TONE_MAPPING].AddInputReference (new VkAttachmentReference (6, VkImageLayout.ShaderReadOnlyOptimal));
-			if (NUM_SAMPLES != VkSampleCountFlags.SampleCount1) 
+			if (NUM_SAMPLES != VkSampleCountFlags.SampleCount1)
 				subpass[SP_TONE_MAPPING].AddResolveReference (0, VkImageLayout.ColorAttachmentOptimal);
-			
+
 			renderPass.AddSubpass (subpass);
 
 			renderPass.AddDependency (Vk.SubpassExternal, SP_SKYBOX,
-                VkPipelineStageFlags.BottomOfPipe, VkPipelineStageFlags.ColorAttachmentOutput,
-                VkAccessFlags.MemoryRead, VkAccessFlags.ColorAttachmentRead | VkAccessFlags.ColorAttachmentWrite);
+				VkPipelineStageFlags.BottomOfPipe, VkPipelineStageFlags.ColorAttachmentOutput,
+				VkAccessFlags.MemoryRead, VkAccessFlags.ColorAttachmentRead | VkAccessFlags.ColorAttachmentWrite);
 			renderPass.AddDependency (SP_SKYBOX, SP_MODELS,
 				VkPipelineStageFlags.ColorAttachmentOutput, VkPipelineStageFlags.FragmentShader,
 				VkAccessFlags.ColorAttachmentWrite, VkAccessFlags.ShaderRead);
@@ -177,9 +179,12 @@ namespace deferred {
 				VkPipelineStageFlags.ColorAttachmentOutput, VkPipelineStageFlags.FragmentShader,
 				VkAccessFlags.ColorAttachmentWrite, VkAccessFlags.ShaderRead);
 			renderPass.AddDependency (SP_TONE_MAPPING, Vk.SubpassExternal,
-	                VkPipelineStageFlags.ColorAttachmentOutput, VkPipelineStageFlags.BottomOfPipe,
-	                VkAccessFlags.ColorAttachmentRead | VkAccessFlags.ColorAttachmentWrite, VkAccessFlags.MemoryRead);
+					VkPipelineStageFlags.ColorAttachmentOutput, VkPipelineStageFlags.BottomOfPipe,
+					VkAccessFlags.ColorAttachmentRead | VkAccessFlags.ColorAttachmentWrite, VkAccessFlags.MemoryRead);
+		}
 
+		void init (float nearPlane, float farPlane) {
+			init_renderpass ();
 
 			descLayoutMain = new DescriptorSetLayout (dev,
 				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment, VkDescriptorType.UniformBuffer),//matrices and params
@@ -192,13 +197,17 @@ namespace deferred {
 			descLayoutMain.Bindings.Add (new VkDescriptorSetLayoutBinding (6, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler));
 #endif
 
-			descLayoutTextures = new DescriptorSetLayout (dev,
-				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
-				new VkDescriptorSetLayoutBinding (1, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
-				new VkDescriptorSetLayoutBinding (2, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
-				new VkDescriptorSetLayoutBinding (3, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
-				new VkDescriptorSetLayoutBinding (4, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler)
-			);
+			if (EnableTextureArray) {
+				descLayoutMain.Bindings.Add (new VkDescriptorSetLayoutBinding (7, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler));//texture array
+			} else { 
+				descLayoutTextures = new DescriptorSetLayout (dev,
+					new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
+					new VkDescriptorSetLayoutBinding (1, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
+					new VkDescriptorSetLayoutBinding (2, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
+					new VkDescriptorSetLayoutBinding (3, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
+					new VkDescriptorSetLayoutBinding (4, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler)
+				); 
+			}
 
 			descLayoutGBuff = new DescriptorSetLayout (dev,
 				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Fragment, VkDescriptorType.InputAttachment),//color + roughness
@@ -215,7 +224,11 @@ namespace deferred {
 				cfg.multisampleState.minSampleShading = 0.5f;
 			}
 			cfg.Cache = pipelineCache;
-			cfg.Layout = new PipelineLayout (dev, descLayoutMain, descLayoutTextures, descLayoutGBuff);
+			if (EnableTextureArray) 
+				cfg.Layout = new PipelineLayout (dev, descLayoutMain, descLayoutGBuff);
+			 else 
+				cfg.Layout = new PipelineLayout (dev, descLayoutMain, descLayoutGBuff, descLayoutTextures);
+
 			cfg.Layout.AddPushConstants (
 				new VkPushConstantRange (VkShaderStageFlags.Vertex, (uint)Marshal.SizeOf<Matrix4x4> ()),
 				new VkPushConstantRange (VkShaderStageFlags.Fragment, sizeof (int), 64)
@@ -232,10 +245,14 @@ namespace deferred {
 
 			using (SpecializationInfo constants = new SpecializationInfo (
 						new SpecializationConstant<float> (0, nearPlane),
-						new SpecializationConstant<float> (1, farPlane))) {
+						new SpecializationConstant<float> (1, farPlane),
+						new SpecializationConstant<float> (2, MAX_MATERIAL_COUNT))) {
 
 				cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/GBuffPbr.vert.spv");
-				cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/GBuffPbr.frag.spv", constants);
+				if (EnableTextureArray) 
+					cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/GBuffPbrTexArray.frag.spv", constants);
+				else
+					cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/GBuffPbr.frag.spv", constants);
 
 				gBuffPipeline = new GraphicPipeline (cfg);
 			}
@@ -291,16 +308,26 @@ namespace deferred {
 		public void LoadModel (Queue transferQ, string path) {
 			dev.WaitIdle ();
 			model?.Dispose ();
-			model = new PbrModel (transferQ, path,
-				descLayoutTextures,
-				AttachmentType.Color,
-				AttachmentType.PhysicalProps,
-				AttachmentType.Normal,
-				AttachmentType.AmbientOcclusion,
-				AttachmentType.Emissive);
 
-			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (dsMain, descLayoutMain.Bindings[5]);
-			uboUpdate.Write (dev, model.materialUBO.Descriptor);
+			if (EnableTextureArray) {
+				model = new PbrModelTexArray (transferQ, path);
+
+				DescriptorSetWrites uboUpdate = new DescriptorSetWrites (dsMain, descLayoutMain.Bindings[5], descLayoutMain.Bindings[7]);
+				uboUpdate.Write (dev, model.materialUBO.Descriptor, (model as PbrModelTexArray).texArray.Descriptor);
+
+			} else {
+				model = new PbrModelSeparatedTextures (transferQ, path,
+					descLayoutTextures,
+					AttachmentType.Color,
+					AttachmentType.PhysicalProps,
+					AttachmentType.Normal,
+					AttachmentType.AmbientOcclusion,
+					AttachmentType.Emissive);
+
+				DescriptorSetWrites uboUpdate = new DescriptorSetWrites (dsMain, descLayoutMain.Bindings[5]);
+				uboUpdate.Write (dev, model.materialUBO.Descriptor);
+			}
+
 
 			modelAABB = model.DefaultScene.AABB;
 		}
@@ -327,7 +354,7 @@ namespace deferred {
 			}
 			renderPass.BeginSubPass (cmd);
 
-			cmd.BindDescriptorSet (composePipeline.Layout, dsGBuff, 2);
+			cmd.BindDescriptorSet (composePipeline.Layout, dsGBuff, 1);
 
 			if (currentDebugView == DebugView.none)
 				composePipeline.Bind (cmd);
@@ -451,7 +478,7 @@ namespace deferred {
 			debugPipeline.Dispose ();
 
 			descLayoutMain.Dispose ();
-			descLayoutTextures.Dispose ();
+			descLayoutTextures?.Dispose ();
 			descLayoutGBuff.Dispose ();
 
 			uboMatrices.Dispose ();

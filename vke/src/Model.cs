@@ -24,20 +24,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 using System;
-using System.Diagnostics;
-using System.Numerics;
-using System.Runtime.InteropServices;
-using glTFLoader;
-using GL = glTFLoader.Schema;
-
-using VK;
 using System.Collections.Generic;
-using System.IO;
+using System.Numerics;
+using VK;
 
 
 
 namespace CVKL {
-    using static VK.Utils;
 	public struct BoundingBox {
 		public Vector3 min;
 		public Vector3 max;
@@ -141,18 +134,34 @@ namespace CVKL {
 		public class Scene {
 			public string Name;
 			public Node Root;
-			public List<Node> GetNodes () => Root.Children;
+			public List<Node> GetNodes () => Root?.Children;
+            public Node FindNode(string name) => Root == null ? null : Root.FindNode (name);
 
-			public BoundingBox AABB => Root.GetAABB (Matrix4x4.Identity);
+            public BoundingBox AABB => Root.GetAABB (Matrix4x4.Identity);
 		}
 
 		public class Node {
+            public string Name;
 			public Node Parent;
 			public List<Node> Children;
 			public Matrix4x4 localMatrix;
 			public Mesh Mesh;
 
-			public Matrix4x4 Matrix {
+            public Node FindNode(string name)
+            {
+                if (Name == name)
+                    return this;
+                if (Children == null)
+                    return null;
+                foreach (Node child in Children) {
+                    Node n = child.FindNode(name);
+                    if (n != null)
+                        return n;
+                }
+                return null;
+            }
+
+            public Matrix4x4 Matrix {
 				get { return Parent == null ? localMatrix : Parent.Matrix * localMatrix; }
 			}
 
@@ -180,8 +189,17 @@ namespace CVKL {
 		public List<Mesh> Meshes;
 		public List<Scene> Scenes;
 
+        public Node FindNode(string name) {
+            foreach (Scene scene in Scenes)
+            {
+                Node n = scene.FindNode(name);
+                if (n != null)
+                    return n;
+            }
+            return null;
+        }
 
-		public Dimensions dimensions = new Dimensions (new Vector3 (float.MaxValue), new Vector3 (float.MinValue));
+        public Dimensions dimensions = new Dimensions (new Vector3 (float.MaxValue), new Vector3 (float.MinValue));
 		//public struct MaterialStruct {
 		//	public UInt32 baseColorTexture;
 		//	public UInt32 metallicRoughnessTexture;
@@ -198,11 +216,11 @@ namespace CVKL {
 			public enum Workflow { PhysicalyBaseRendering = 1, SpecularGlossinnes };
 			public string Name;
 			public Workflow workflow;
-			public UInt32 baseColorTexture;
-            public UInt32 metallicRoughnessTexture;
-            public UInt32 normalTexture;
-            public UInt32 occlusionTexture;
-            public UInt32 emissiveTexture;
+			public Int32 baseColorTexture;
+            public Int32 metallicRoughnessTexture;
+            public Int32 normalTexture;
+            public Int32 occlusionTexture;
+            public Int32 emissiveTexture;
 
 			public Vector4 baseColorFactor;
 			public Vector4 emissiveFactor;
@@ -224,15 +242,16 @@ namespace CVKL {
 			//}
 			//extension;
 
-			public Material (UInt32 _baseColorTexture = 0, UInt32 _metallicRoughnessTexture = 0,
-            	UInt32 _normalTexture = 0, UInt32 _occlusionTexture = 0)
+			public Material (Int32 _baseColorTexture = -1, Int32 _metallicRoughnessTexture = -1,
+            	Int32 _normalTexture = -1, Int32 _occlusionTexture = -1)
 			{
 				workflow = Workflow.PhysicalyBaseRendering;
                 baseColorTexture = _baseColorTexture;
                 metallicRoughnessTexture = _metallicRoughnessTexture;
                 normalTexture = _normalTexture;
                 occlusionTexture = _occlusionTexture;
-                emissiveTexture = 0;
+                emissiveTexture = -1;
+
 				alphaMode = AlphaMode.Opaque;
 				alphaCutoff = 1f;
 				metallicFactor = 1f;

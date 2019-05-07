@@ -36,6 +36,8 @@ namespace CVKL {
 	/// such imported image will not be disposed with the sampler and the view.
 	/// </summary>
     public class Image : Resource {
+		public static VkFormat DefaultTextureFormat = VkFormat.R8g8b8a8Unorm;
+
 		internal VkImage handle; 
         VkImageCreateInfo info = VkImageCreateInfo.New();
 
@@ -102,16 +104,21 @@ namespace CVKL {
 		}
 		#endregion
 
+		public static uint ComputeMipLevels(uint size) => (uint)Math.Floor (Math.Log (size)) + 1;
+
 		#region bitmap loading
 		/// <summary>
 		/// Load image from data pointed by IntPtr pointer containing full image file (jpg, png,...)
 		/// </summary>
 		public static Image Load (Device dev, Queue staggingQ, CommandPool staggingCmdPool,
-			IntPtr bitmap, ulong bitmapByteCount, VkFormat format = VkFormat.R8g8b8a8Unorm,
+			IntPtr bitmap, ulong bitmapByteCount, VkFormat format = VkFormat.Undefined,
 			VkMemoryPropertyFlags memoryProps = VkMemoryPropertyFlags.DeviceLocal,
 			VkImageTiling tiling = VkImageTiling.Optimal, bool generateMipmaps = true,
 			VkImageType imageType = VkImageType.Image2D,
-			VkImageUsageFlags usage = VkImageUsageFlags.Sampled | VkImageUsageFlags.TransferSrc | VkImageUsageFlags.TransferDst) { 
+			VkImageUsageFlags usage = VkImageUsageFlags.Sampled | VkImageUsageFlags.TransferSrc | VkImageUsageFlags.TransferDst) {
+
+			if (format == VkFormat.Undefined)
+				format = DefaultTextureFormat;
 
 			int width, height, channels;
 			IntPtr imgPtr = Stb.Load (bitmap, (int)bitmapByteCount, out width, out height, out channels, 4);
@@ -135,14 +142,116 @@ namespace CVKL {
 			return img;
 		}
 		/// <summary>
-		/// Load image from data pointed by IntPtr pointer containing full image file (jpg, png,...)
+		/// Load image from byte array containing full image file (jpg, png,...)
 		/// </summary>
-		public static Image Load (Device dev, 
-			IntPtr bitmap, ulong bitmapByteCount, VkImageUsageFlags usage = VkImageUsageFlags.TransferSrc,
-			VkFormat format = VkFormat.R8g8b8a8Unorm,
+		public static Image Load (Device dev, Queue staggingQ, CommandPool staggingCmdPool,
+			byte[] bitmap, VkFormat format = VkFormat.Undefined,
+			VkMemoryPropertyFlags memoryProps = VkMemoryPropertyFlags.DeviceLocal,
+			VkImageTiling tiling = VkImageTiling.Optimal, bool generateMipmaps = true,
+			VkImageType imageType = VkImageType.Image2D,
+			VkImageUsageFlags usage = VkImageUsageFlags.Sampled | VkImageUsageFlags.TransferSrc | VkImageUsageFlags.TransferDst) {
+
+			Image img = Load (dev, staggingQ, staggingCmdPool, bitmap.Pin (), (ulong)bitmap.Length, format, memoryProps, tiling, generateMipmaps,
+				imageType, usage);
+			bitmap.Unpin ();
+			return img;
+		}
+
+		/// <summary>
+		/// Load bitmap into Image with stagging and mipmap generation if necessary
+		/// and usage.
+		/// </summary>
+		public static Image Load (Device dev, Queue staggingQ, CommandPool staggingCmdPool,
+			string path, VkFormat format = VkFormat.Undefined,
+			VkMemoryPropertyFlags memoryProps = VkMemoryPropertyFlags.DeviceLocal,
+			VkImageTiling tiling = VkImageTiling.Optimal, bool generateMipmaps = true,
+			VkImageType imageType = VkImageType.Image2D,
+			VkImageUsageFlags usage = VkImageUsageFlags.Sampled | VkImageUsageFlags.TransferSrc | VkImageUsageFlags.TransferDst) {
+
+			if (format == VkFormat.Undefined)
+				format = DefaultTextureFormat;
+
+			int width, height, channels;
+			IntPtr imgPtr = Stb.Load (path, out width, out height, out channels, 4);
+			if (imgPtr == IntPtr.Zero)
+				throw new Exception ($"File not found: {path}.");
+
+			uint mipLevels = generateMipmaps ? (uint)Math.Floor (Math.Log (Math.Max (width, height))) + 1 : 1;
+
+			if (tiling == VkImageTiling.Optimal)
+				usage |= VkImageUsageFlags.TransferDst;
+			if (generateMipmaps)
+				usage |= (VkImageUsageFlags.TransferSrc | VkImageUsageFlags.TransferDst);
+
+			Image img = new Image (dev, format, usage, memoryProps, (uint)width, (uint)height, imageType, VkSampleCountFlags.SampleCount1, tiling, mipLevels);
+
+			img.load (staggingQ, staggingCmdPool, imgPtr, generateMipmaps);
+
+			Stb.FreeImage (imgPtr);
+
+			return img;
+		}
+
+		/// <summary>
+		/// create host visible linear image without command from path
+		/// </summary>
+		public static Image Load (Device dev,
+			string path, VkFormat format = VkFormat.Undefined, bool reserveSpaceForMipmaps = true,
+			VkMemoryPropertyFlags memoryProps = VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent,
+			VkImageTiling tiling = VkImageTiling.Linear, 
+			VkImageType imageType = VkImageType.Image2D, 
+			VkImageUsageFlags usage = VkImageUsageFlags.Sampled) {
+
+			if (format == VkFormat.Undefined)
+				format = DefaultTextureFormat;
+
+			int width, height, channels;
+            IntPtr imgPtr = Stb.Load (path, out width, out height, out channels, 4);
+ 			if (imgPtr == IntPtr.Zero)
+				throw new Exception ($"File not found: {path}.");
+
+			long size = width * height * 4;
+			uint mipLevels = reserveSpaceForMipmaps ? (uint)Math.Floor (Math.Log (Math.Max (width, height))) + 1 : 1;
+
+			Image img = new Image(dev, format, usage, memoryProps, (uint)width, (uint)height, imageType, VkSampleCountFlags.SampleCount1, tiling, mipLevels);
+
+            img.Map ();
+            unsafe {
+                System.Buffer.MemoryCopy (imgPtr.ToPointer (), img.MappedData.ToPointer (), size, size);
+            }
+            img.Unmap ();
+
+			Stb.FreeImage (imgPtr);
+
+            return img;
+        }
+		/// <summary>
+		/// create host visible linear image without command from byte array
+		/// </summary>
+		public static Image Load (Device dev,
+			byte[] bitmap, VkImageUsageFlags usage = VkImageUsageFlags.TransferSrc,
+			VkFormat format = VkFormat.Undefined,
 			VkMemoryPropertyFlags memoryProps = VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent,
 			VkImageTiling tiling = VkImageTiling.Linear, bool generateMipmaps = false,
 			VkImageType imageType = VkImageType.Image2D) {
+
+			Image img = Load (dev, bitmap.Pin (), (ulong)bitmap.Length, usage, format, memoryProps, tiling, generateMipmaps,
+				imageType);
+			bitmap.Unpin ();
+			return img;
+		}
+		/// <summary>
+		/// create host visible linear image without command from data pointed by IntPtr pointer containing full image file (jpg, png,...)
+		/// </summary>
+		public static Image Load (Device dev,
+			IntPtr bitmap, ulong bitmapByteCount, VkImageUsageFlags usage = VkImageUsageFlags.TransferSrc,
+			VkFormat format = VkFormat.Undefined,
+			VkMemoryPropertyFlags memoryProps = VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent,
+			VkImageTiling tiling = VkImageTiling.Linear, bool generateMipmaps = false,
+			VkImageType imageType = VkImageType.Image2D) {
+
+			if (format == VkFormat.Undefined)
+				format = DefaultTextureFormat;
 
 			int width, height, channels;
 			IntPtr imgPtr = Stb.Load (bitmap, (int)bitmapByteCount, out width, out height, out channels, 4);
@@ -168,47 +277,11 @@ namespace CVKL {
 
 			return img;
 		}
-		/// <summary>
-		/// Load image from byte array containing full image file (jpg, png,...)
-		/// </summary>
-		public static Image Load (Device dev, Queue staggingQ, CommandPool staggingCmdPool,
-			byte[] bitmap, VkFormat format = VkFormat.R8g8b8a8Unorm,
-			VkMemoryPropertyFlags memoryProps = VkMemoryPropertyFlags.DeviceLocal,
-			VkImageTiling tiling = VkImageTiling.Optimal, bool generateMipmaps = true,
-			VkImageType imageType = VkImageType.Image2D,
-			VkImageUsageFlags usage = VkImageUsageFlags.Sampled | VkImageUsageFlags.TransferSrc | VkImageUsageFlags.TransferDst) {
-
-			Image img = Load (dev, staggingQ, staggingCmdPool, bitmap.Pin (), (ulong)bitmap.Length, format, memoryProps, tiling, generateMipmaps,
-				imageType, usage);
-			bitmap.Unpin ();
-
-			//int width, height, channels;
-			//IntPtr imgPtr = Stb.Load (, bitmap.Length, out width, out height, out channels, 4);
-
-			//if (imgPtr == IntPtr.Zero)
-			//	throw new Exception ($"STBI image loading error.");
-
-			//uint mipLevels = generateMipmaps ? (uint)Math.Floor (Math.Log (Math.Max (width, height))) + 1 : 1;
-
-			//if (tiling == VkImageTiling.Optimal)
-			//	usage |= VkImageUsageFlags.TransferDst;
-			//if (generateMipmaps)
-			//	usage |= (VkImageUsageFlags.TransferSrc | VkImageUsageFlags.TransferDst);
-
-			//Image img = new Image (dev, format, usage, memoryProps, (uint)width, (uint)height, imageType, VkSampleCountFlags.SampleCount1, tiling, mipLevels);
-
-			//img.load (staggingQ, staggingCmdPool, imgPtr, generateMipmaps);
-
-			//Stb.FreeImage (imgPtr);
-
-			return img;
-		}
 
 		/// <summary>
 		/// load bitmap from pointer
 		/// </summary>
-		void load (Queue staggingQ, CommandPool staggingCmdPool, IntPtr bitmap, bool generateMipmaps = true) 
-		{
+		void load (Queue staggingQ, CommandPool staggingCmdPool, IntPtr bitmap, bool generateMipmaps = true) {
 			long size = info.extent.width * info.extent.height * 4 * info.extent.depth;
 
 			if (MemoryFlags.HasFlag (VkMemoryPropertyFlags.HostVisible)) {
@@ -221,7 +294,7 @@ namespace CVKL {
 				if (generateMipmaps)
 					BuildMipmaps (staggingQ, staggingCmdPool);
 			} else {
-				using (HostBuffer stagging = new HostBuffer (Dev, VkBufferUsageFlags.TransferSrc, (UInt64)size, bitmap)) {				
+				using (HostBuffer stagging = new HostBuffer (Dev, VkBufferUsageFlags.TransferSrc, (UInt64)size, bitmap)) {
 
 					CommandBuffer cmd = staggingCmdPool.AllocateCommandBuffer ();
 
@@ -239,71 +312,9 @@ namespace CVKL {
 			}
 		}
 
-		/// <summary>
-		/// Load bitmap into Image with stagging and mipmap generation if necessary
-		/// and usage.
-		/// </summary>
-		public static Image Load (Device dev, Queue staggingQ, CommandPool staggingCmdPool,
-			string path, VkFormat format = VkFormat.R8g8b8a8Unorm,
-			VkMemoryPropertyFlags memoryProps = VkMemoryPropertyFlags.DeviceLocal,
-			VkImageTiling tiling = VkImageTiling.Optimal, bool generateMipmaps = true,
-			VkImageType imageType = VkImageType.Image2D,
-			VkImageUsageFlags usage = VkImageUsageFlags.Sampled | VkImageUsageFlags.TransferSrc | VkImageUsageFlags.TransferDst) {
+		#endregion
 
-			int width, height, channels;
-			IntPtr imgPtr = Stb.Load (path, out width, out height, out channels, 4);
-			if (imgPtr == IntPtr.Zero)
-				throw new Exception ($"File not found: {path}.");
-
-			uint mipLevels = generateMipmaps ? (uint)Math.Floor (Math.Log (Math.Max (width, height))) + 1 : 1;
-
-			if (tiling == VkImageTiling.Optimal)
-				usage |= VkImageUsageFlags.TransferDst;
-			if (generateMipmaps)
-				usage |= (VkImageUsageFlags.TransferSrc | VkImageUsageFlags.TransferDst);
-
-			Image img = new Image (dev, format, usage, memoryProps, (uint)width, (uint)height, imageType, VkSampleCountFlags.SampleCount1, tiling, mipLevels);
-
-			img.load (staggingQ, staggingCmdPool, imgPtr, generateMipmaps);
-
-			Stb.FreeImage (imgPtr);
-
-			return img;
-		}
-
-		/// <summary>
-		/// create host visible linear image without command
-		/// </summary>
-		public static Image Load (Device dev,
-			string path, VkFormat format = VkFormat.R8g8b8a8Unorm, bool reserveSpaceForMipmaps = true,
-			VkMemoryPropertyFlags memoryProps = VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent,
-			VkImageTiling tiling = VkImageTiling.Linear, 
-			VkImageType imageType = VkImageType.Image2D, 
-			VkImageUsageFlags usage = VkImageUsageFlags.Sampled) {
-
-			int width, height, channels;
-            IntPtr imgPtr = Stb.Load (path, out width, out height, out channels, 4);
- 			if (imgPtr == IntPtr.Zero)
-				throw new Exception ($"File not found: {path}.");
-
-			long size = width * height * 4;
-			uint mipLevels = reserveSpaceForMipmaps ? (uint)Math.Floor (Math.Log (Math.Max (width, height))) + 1 : 1;
-
-			Image img = new Image(dev, format, usage, memoryProps, (uint)width, (uint)height, imageType, VkSampleCountFlags.SampleCount1, tiling, mipLevels);
-
-            img.Map ();
-            unsafe {
-                System.Buffer.MemoryCopy (imgPtr.ToPointer (), img.MappedData.ToPointer (), size, size);
-            }
-            img.Unmap ();
-
-			Stb.FreeImage (imgPtr);
-
-            return img;
-        }
-#endregion
-
-        internal override void updateMemoryRequirements () {            
+		internal override void updateMemoryRequirements () {            
             vkGetImageMemoryRequirements (Dev.VkDev, handle, out memReqs);            
         }
 		internal override void bindMemory () {

@@ -109,6 +109,9 @@ namespace CVKL {
 			}
 		}
 
+		public uint ImageCount => gltf.Images == null ? 0 : (uint)gltf.Images.Length;
+		
+
 		//TODO: some buffer data are reused between primitives, and I duplicate the datas
 		//buffers must be constructed without duplications
 		public Mesh[] LoadMeshes<TVertex> (VkIndexType indexType, Buffer vbo, ulong vboOffset, Buffer ibo, ulong iboOffset) {
@@ -361,7 +364,8 @@ namespace CVKL {
 
 			Node node = new Node {
 				localMatrix = localTransform,
-				Parent = parentNode
+				Parent = parentNode,
+                Name = gltfNode.Name
 			};
 			parentNode.Children.Add (node);
 
@@ -380,69 +384,90 @@ namespace CVKL {
 		///// </summary>
 		///// <returns>The images.</returns>
 		///// <param name="textureSize">Texture size.</param>
-		//public Image LoadImages (uint textureSize) {
-		//	Image imgs = new Image (dev, VkFormat.R8g8b8a8Unorm, VkImageUsageFlags.Sampled | VkImageUsageFlags.TransferDst, VkMemoryPropertyFlags.DeviceLocal, textureSize, textureSize,
-		//		VkImageType.Image2D, VkSampleCountFlags.SampleCount1, VkImageTiling.Optimal);
+		public void BuildTexArray (ref Image texArray, uint firstImg = 0) {
+			int texDim = (int)texArray.CreateInfo.extent.width;
 
-		//	CommandBuffer cmd = cmdPool.AllocateAndStart (VkCommandBufferUsageFlags.OneTimeSubmit);
+			CommandBuffer cmd = cmdPool.AllocateAndStart (VkCommandBufferUsageFlags.OneTimeSubmit);
+			texArray.SetLayout (cmd, VkImageAspectFlags.Color, VkImageLayout.Undefined, VkImageLayout.TransferDstOptimal, 
+						VkPipelineStageFlags.BottomOfPipe, VkPipelineStageFlags.Transfer);
+			cmd.End ();
+			transferQ.Submit (cmd);
+			transferQ.WaitIdle ();
+			cmd.Free ();
 
-		//	foreach (GL.Image img in gltf.Images) {
-		//		Image vkimg = null;
+			VkImageBlit imageBlit = new VkImageBlit {
+				srcSubresource = new VkImageSubresourceLayers (VkImageAspectFlags.Color, 1, 0),
+				dstOffsets_1 = new VkOffset3D (texDim, texDim, 1)
+			};
 
-		//		string imgName = img.Name;
+			for (int l = 0; l < gltf.Images.Length; l++) {
+				GL.Image img = gltf.Images[l];
+				Image vkimg = null;
 
-		//		if (img.BufferView != null) {//load image from gltf buffer view
-		//			GL.BufferView bv = gltf.BufferViews[(int)img.BufferView];
-		//			EnsureBufferIsLoaded (bv.Buffer);
-		//			vkimg = Image.Load (dev, bufferHandles[bv.Buffer].AddrOfPinnedObject () + bv.ByteOffset, (ulong)bv.ByteLength);
-		//		} else if (img.Uri.StartsWith ("data:", StringComparison.Ordinal)) {//load base64 encoded image
-		//			Debug.WriteLine ("loading embedded image {0} : {1}", img.Name, img.MimeType);
-		//			vkimg = Image.Load (dev, transferQ, cmdPool, glTFLoader.loadDataUri (img));
-		//		} else {
-		//			Debug.WriteLine ("loading image {0} : {1} : {2}", img.Name, img.MimeType, img.Uri);//load image from file path in uri
-		//			vkimg = Image.Load (dev, transferQ, cmdPool, Path.Combine (baseDirectory, img.Uri));
-		//			imgName += ";" + img.Uri;
-		//		}
+				if (img.BufferView != null) {//load image from gltf buffer view
+					GL.BufferView bv = gltf.BufferViews[(int)img.BufferView];
+					EnsureBufferIsLoaded (bv.Buffer);
+					vkimg = Image.Load (dev, bufferHandles[bv.Buffer].AddrOfPinnedObject () + bv.ByteOffset, (ulong)bv.ByteLength);
+				} else if (img.Uri.StartsWith ("data:", StringComparison.Ordinal)) {//load base64 encoded image
+					Debug.WriteLine ("loading embedded image {0} : {1}", img.Name, img.MimeType);
+					vkimg = Image.Load (dev, glTFLoader.loadDataUri (img));
+				} else {
+					Debug.WriteLine ("loading image {0} : {1} : {2}", img.Name, img.MimeType, img.Uri);//load image from file path in uri
+					vkimg = Image.Load (dev, Path.Combine (baseDirectory, img.Uri));
+				}
 
+				imageBlit.srcOffsets_1 = new VkOffset3D ((int)vkimg.CreateInfo.extent.width, (int)vkimg.CreateInfo.extent.height, 1);
+				imageBlit.dstSubresource = new VkImageSubresourceLayers (VkImageAspectFlags.Color, 1, 0, (uint)l + firstImg);
 
-		//		VkImageSubresourceRange mipSubRange = new VkImageSubresourceRange (VkImageAspectFlags.Color, 0, 1, 0, info.arrayLayers);
+				cmd = cmdPool.AllocateAndStart (VkCommandBufferUsageFlags.OneTimeSubmit);
 
-		//		SetLayout (cmd, VkImageLayout.Undefined, VkImageLayout.TransferSrcOptimal, mipSubRange,
-		//				VkPipelineStageFlags.Transfer, VkPipelineStageFlags.Transfer);
+				vkimg.SetLayout (cmd, VkImageAspectFlags.Color, VkImageLayout.Undefined, VkImageLayout.TransferSrcOptimal,
+						VkPipelineStageFlags.Transfer, VkPipelineStageFlags.Transfer);
 
-		//		for (int i = 1; i < info.mipLevels; i++) {
-		//			VkImageBlit imageBlit = new VkImageBlit {
-		//				srcSubresource = new VkImageSubresourceLayers (VkImageAspectFlags.Color, info.arrayLayers, (uint)i - 1),
-		//				srcOffsets_1 = new VkOffset3D ((int)info.extent.width >> (i - 1), (int)info.extent.height >> (i - 1), 1),
-		//				dstSubresource = new VkImageSubresourceLayers (VkImageAspectFlags.Color, info.arrayLayers, (uint)i),
-		//				dstOffsets_1 = new VkOffset3D ((int)info.extent.width >> i, (int)info.extent.height >> i, 1)
-		//			};
+				Vk.vkCmdBlitImage (cmd.Handle, vkimg.handle, VkImageLayout.TransferSrcOptimal,
+					texArray.handle, VkImageLayout.TransferDstOptimal, 1, ref imageBlit, VkFilter.Linear);
 
-		//			mipSubRange.baseMipLevel = (uint)i;
+				cmd.End ();
+				transferQ.Submit (cmd);
+				transferQ.WaitIdle ();
+				cmd.Free ();
 
-		//			SetLayout (cmd, VkImageLayout.Undefined, VkImageLayout.TransferDstOptimal, mipSubRange,
-		//				VkPipelineStageFlags.Transfer, VkPipelineStageFlags.Transfer);
-		//			vkCmdBlitImage (cmd.Handle, handle, VkImageLayout.TransferSrcOptimal, handle, VkImageLayout.TransferDstOptimal, 1, ref imageBlit, VkFilter.Linear);
-		//			SetLayout (cmd, VkImageLayout.TransferDstOptimal, VkImageLayout.TransferSrcOptimal, mipSubRange,
-		//				VkPipelineStageFlags.Transfer, VkPipelineStageFlags.Transfer);
-		//		}
-		//		SetLayout (cmd, VkImageAspectFlags.Color, VkImageLayout.TransferSrcOptimal, VkImageLayout.ShaderReadOnlyOptimal,
-		//				VkPipelineStageFlags.Transfer, VkPipelineStageFlags.FragmentShader);
+				vkimg.Dispose ();
+			}
 
+			uint imgCount = (uint)gltf.Images.Length;
 
-		//		vkimg.CreateView ();
-		//		vkimg.CreateSampler ();
-		//		vkimg.Descriptor.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
+			VkImageSubresourceRange mipSubRange = new VkImageSubresourceRange (VkImageAspectFlags.Color, 0, 1, firstImg, imgCount);
 
-		//		vkimg.SetName (imgName);
-		//		vkimg.Descriptor.imageView.SetDebugMarkerName (dev, "imgView " + imgName);
-		//		vkimg.Descriptor.sampler.SetDebugMarkerName (dev, "sampler " + imgName);
+			cmd = cmdPool.AllocateAndStart (VkCommandBufferUsageFlags.OneTimeSubmit);
+			texArray.SetLayout (cmd, VkImageLayout.Undefined, VkImageLayout.TransferSrcOptimal, mipSubRange,
+					VkPipelineStageFlags.Transfer, VkPipelineStageFlags.Transfer);
+				
+			for (int i = 1; i < texArray.CreateInfo.mipLevels; i++) {
+				imageBlit = new VkImageBlit {
+					srcSubresource = new VkImageSubresourceLayers (VkImageAspectFlags.Color, imgCount, (uint)i - 1, firstImg),
+					srcOffsets_1 = new VkOffset3D ((int)texDim >> (i - 1), (int)texDim >> (i - 1), 1),
+					dstSubresource = new VkImageSubresourceLayers (VkImageAspectFlags.Color, imgCount, (uint)i, firstImg),
+					dstOffsets_1 = new VkOffset3D ((int)texDim >> i, (int)texDim >> i, 1)
+				};
+				mipSubRange.baseMipLevel = (uint)i;
 
-		//		textures.Add (vkimg);
-		//	}
+				texArray.SetLayout (cmd, VkImageLayout.Undefined, VkImageLayout.TransferDstOptimal, mipSubRange,
+					VkPipelineStageFlags.Transfer, VkPipelineStageFlags.Transfer);
+				Vk.vkCmdBlitImage (cmd.Handle, texArray.handle, VkImageLayout.TransferSrcOptimal,
+					texArray.handle, VkImageLayout.TransferDstOptimal, 1, ref imageBlit, VkFilter.Linear);
+				texArray.SetLayout (cmd, VkImageLayout.TransferDstOptimal, VkImageLayout.TransferSrcOptimal, mipSubRange,
+					VkPipelineStageFlags.Transfer, VkPipelineStageFlags.Transfer);
+			}
 
-		//	return imgs;
-		//}
+			texArray.SetLayout (cmd, VkImageAspectFlags.Color, VkImageLayout.TransferSrcOptimal, VkImageLayout.ShaderReadOnlyOptimal,
+					VkPipelineStageFlags.Transfer, VkPipelineStageFlags.FragmentShader);
+
+			cmd.End ();
+			transferQ.Submit (cmd);
+			transferQ.WaitIdle ();
+			cmd.Free ();
+		}
 
 		public Image[] LoadImages () {
 			if (gltf.Images == null)
@@ -498,21 +523,21 @@ namespace CVKL {
 				FromFloatArray (ref pbr.emissiveFactor, mat.EmissiveFactor);
 
 				if (mat.EmissiveTexture != null) {
-					pbr.emissiveTexture = (uint)mat.EmissiveTexture.Index;
+					pbr.emissiveTexture = mat.EmissiveTexture.Index;
 					if (mat.EmissiveTexture.TexCoord == 1)
 						pbr.availableAttachments1 |= AttachmentType.Emissive;
 					else
 						pbr.availableAttachments |= AttachmentType.Emissive;
 				}
 				if (mat.NormalTexture != null) {
-					pbr.normalTexture = (uint)mat.NormalTexture.Index;
+					pbr.normalTexture = mat.NormalTexture.Index;
 					if (mat.NormalTexture.TexCoord == 1)
 						pbr.availableAttachments1 |= AttachmentType.Normal;
 					else
 						pbr.availableAttachments |= AttachmentType.Normal;
 				}
 				if (mat.OcclusionTexture != null) {
-					pbr.occlusionTexture = (uint)mat.OcclusionTexture.Index;
+					pbr.occlusionTexture = mat.OcclusionTexture.Index;
 					if (mat.OcclusionTexture.TexCoord == 1)
 						pbr.availableAttachments1 |= AttachmentType.AmbientOcclusion;
 					else
@@ -521,7 +546,7 @@ namespace CVKL {
 
 				if (mat.PbrMetallicRoughness != null) {
 					if (mat.PbrMetallicRoughness.BaseColorTexture != null) {
-						pbr.baseColorTexture = (uint)mat.PbrMetallicRoughness.BaseColorTexture.Index;
+						pbr.baseColorTexture = mat.PbrMetallicRoughness.BaseColorTexture.Index;
 						if (mat.PbrMetallicRoughness.BaseColorTexture.TexCoord == 1)
 							pbr.availableAttachments1 |= AttachmentType.Color;
 						else
@@ -531,7 +556,7 @@ namespace CVKL {
 					FromFloatArray (ref pbr.baseColorFactor, mat.PbrMetallicRoughness.BaseColorFactor);
 
 					if (mat.PbrMetallicRoughness.MetallicRoughnessTexture != null) {
-						pbr.metallicRoughnessTexture = (uint)mat.PbrMetallicRoughness.MetallicRoughnessTexture.Index;
+						pbr.metallicRoughnessTexture = mat.PbrMetallicRoughness.MetallicRoughnessTexture.Index;
 						if (mat.PbrMetallicRoughness.MetallicRoughnessTexture.TexCoord == 1)
 							pbr.availableAttachments1 |= AttachmentType.PhysicalProps;
 						else

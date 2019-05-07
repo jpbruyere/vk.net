@@ -5,9 +5,16 @@ using Glfw;
 using VK;
 
 namespace deferred {
-	class Program : VkWindow {
+	class Deferred : VkWindow {
 		static void Main (string[] args) {
-			using (Program vke = new Program ()) {
+
+			Instance.Validation = true;
+			//Instance.DebugUtils = true;
+			//Instance.RenderDocCapture = true;
+			DeferredPbrRenderer.EnableTextureArray = true;
+			PbrModelTexArray.TEXTURE_DIM = 512;
+
+			using (Deferred vke = new Deferred ()) {
 				vke.Run ();
 			}
 		}
@@ -34,6 +41,7 @@ namespace deferred {
 			"../../../samples/data/textures/uffizi_cube.ktx",
 		};
 		string[] modelPathes = {
+				"/mnt/devel/gts/vkChess.net/data/models/chess.glb",
 				"../../../samples/data/models/DamagedHelmet/glTF/DamagedHelmet.gltf",
 				"../../../samples/data/models/shadow.glb",
 				"../../../samples/data/models/Hubble.glb",
@@ -47,11 +55,22 @@ namespace deferred {
 		Queue transferQ;
 		DeferredPbrRenderer renderer;
 
-		Program () : base(true) {
+		DebugReport dbgRepport;
+
+		Deferred () : base(true) {
+
+			if (Instance.DebugUtils)
+				dbgRepport = new DebugReport (instance,
+					VkDebugReportFlagsEXT.ErrorEXT
+					| VkDebugReportFlagsEXT.DebugEXT
+					| VkDebugReportFlagsEXT.WarningEXT
+					| VkDebugReportFlagsEXT.PerformanceWarningEXT
+				);
+
 			camera = new Camera (Utils.DegreesToRadians (45f), 1f, 0.1f, 16f);
 			camera.SetPosition (0, 0, 2);
 
-			renderer = new DeferredPbrRenderer (dev, swapChain, presentQueue, cubemapPathes[0], camera.NearPlane, camera.FarPlane);
+			renderer = new DeferredPbrRenderer (dev, swapChain, presentQueue, cubemapPathes[2], camera.NearPlane, camera.FarPlane);
 			renderer.LoadModel (transferQ, modelPathes[curModelIndex]);
 			camera.Model = Matrix4x4.CreateScale (1f / Math.Max (Math.Max (renderer.modelAABB.Width, renderer.modelAABB.Height), renderer.modelAABB.Depth));
 
@@ -255,8 +274,10 @@ namespace deferred {
 
 		protected override void Dispose (bool disposing) {
 			if (disposing) {
-				if (!isDisposed) 
+				if (!isDisposed) {
 					renderer.Dispose ();
+					dbgRepport?.Dispose ();
+				}
 			}
 			base.Dispose (disposing);
 		}
