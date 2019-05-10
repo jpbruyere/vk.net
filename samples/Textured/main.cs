@@ -52,9 +52,9 @@ namespace TextureSample {
 		ushort[] indices = { 0, 1, 2, 2, 0, 3 };
 		int currentImgIndex = 0;
 		string[] imgPathes = {
-			"../../../samples/data/textures/texture.jpg",
-			"../../../samples/data/textures/rgba-reference.ktx",
-			"../../../samples/data/textures/texturearray_rocks_bc3_unorm.ktx",
+			"data/textures/texture.jpg",
+			"data/textures/rgba-reference.ktx",
+			"data/textures/texturearray_rocks_bc3_unorm.ktx",
 		};
 			
 		Program () : base () {
@@ -76,7 +76,7 @@ namespace TextureSample {
 			cfg.RenderPass = new RenderPass (dev, swapChain.ColorFormat, dev.GetSuitableDepthFormat (), cfg.Samples);
 
 			cfg.AddVertexBinding (0, 5 * sizeof(float));
-			cfg.SetVertexAttributes (0, VkFormat.R32g32b32Sfloat, VkFormat.R32g32Sfloat);
+			cfg.AddVertexAttributes (0, VkFormat.R32g32b32Sfloat, VkFormat.R32g32Sfloat);
 
 			cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/main.vert.spv");
 			cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/main.frag.spv");

@@ -10,8 +10,8 @@ namespace CVKL {
 			new Matrix4x4 (
 				1,  0,    0,    0,
 				0, -1,    0,    0,
-				0,  0, 1f/2, 1f/2,
-				0,  0,    0,    1
+				0,  0, 1f/2, 	0,
+				0,  0, 1f/2,    1
 			);
 
 		public enum CamType {LookAt, FirstPerson};

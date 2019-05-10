@@ -36,7 +36,7 @@ namespace CVKL {
 				cfg.RenderPass = renderPass;
 				cfg.Layout = plLayout;
 				cfg.AddVertexBinding (0, 3 * sizeof (float));
-				cfg.SetVertexAttributes (0, VkFormat.R32g32b32Sfloat);
+				cfg.AddVertexAttributes (0, VkFormat.R32g32b32Sfloat);
 				cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/skybox.vert.spv");
 				cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/skybox.frag.spv");
 				cfg.multisampleState.rasterizationSamples = Samples;
@@ -64,11 +64,11 @@ namespace CVKL {
 
 		#region skybox
 		public List<string> cubemapPathes = new List<string>() {
-			"../../../samples/data/textures/papermill.ktx",
-			"../../../samples/data/textures/cubemap_yokohama_bc3_unorm.ktx",
-			"../../../samples/data/textures/gcanyon_cube.ktx",
-			"../../../samples/data/textures/pisa_cube.ktx",
-			"../../../samples/data/textures/uffizi_cube.ktx",
+			"data/textures/papermill.ktx",
+			"data/textures/cubemap_yokohama_bc3_unorm.ktx",
+			"data/textures/gcanyon_cube.ktx",
+			"data/textures/pisa_cube.ktx",
+			"data/textures/uffizi_cube.ktx",
 		};
 		static float[] box_vertices = {			
 			 1.0f, 1.0f,-1.0f,  // +X side
@@ -207,7 +207,7 @@ namespace CVKL {
 			cfg.RenderPass.AddSubpass (new SubPass (VkImageLayout.ColorAttachmentOptimal));
 
 			cfg.AddVertexBinding (0, 3 * sizeof (float));
-			cfg.SetVertexAttributes (0, VkFormat.R32g32b32Sfloat);
+			cfg.AddVertexAttributes (0, VkFormat.R32g32b32Sfloat);
 
 			cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/filtercube.vert.spv");
 			if (target == CBTarget.PREFILTEREDENV)

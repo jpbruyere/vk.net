@@ -51,6 +51,10 @@
     <PackageReference Include="Vulkan" Version="0.1.2.8-beta" />        
   </ItemGroup>
   <ItemGroup>        
+    <None Remove="shaders\**\*.frag;shaders\**\*.vert;shaders\**\*.comp;shaders\**\*.geom" />
+    <GLSLShader Include="shaders\**\*.frag;shaders\**\*.vert;shaders\**\*.comp;shaders\**\*.geom" />  
     <Compile Remove="Properties\AssemblyInfo.cs;src\Renderer.cs;src\QueueFamily.cs" />
-  </ItemGroup>  
+  </ItemGroup>
+    
+  <Import Project="$(SolutionDir)spirv.targets" /> 
 </Project>

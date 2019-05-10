@@ -8,10 +8,12 @@ namespace deferred {
 	class Deferred : VkWindow {
 		static void Main (string[] args) {
 
-			Instance.Validation = true;
+			//Instance.Validation = true;
 			//Instance.DebugUtils = true;
 			//Instance.RenderDocCapture = true;
 			DeferredPbrRenderer.EnableTextureArray = true;
+			DeferredPbrRenderer.NUM_SAMPLES = VkSampleCountFlags.SampleCount4;
+
 			PbrModelTexArray.TEXTURE_DIM = 512;
 
 			using (Deferred vke = new Deferred ()) {
@@ -34,19 +36,19 @@ namespace deferred {
 			transferQ = new Queue (dev, VkQueueFlags.Transfer);
 		}
 		string[] cubemapPathes = {
-			"../../../samples/data/textures/papermill.ktx",
-			"../../../samples/data/textures/cubemap_yokohama_bc3_unorm.ktx",
-			"../../../samples/data/textures/gcanyon_cube.ktx",
-			"../../../samples/data/textures/pisa_cube.ktx",
-			"../../../samples/data/textures/uffizi_cube.ktx",
+			"data/textures/papermill.ktx",
+			"data/textures/cubemap_yokohama_bc3_unorm.ktx",
+			"data/textures/gcanyon_cube.ktx",
+			"data/textures/pisa_cube.ktx",
+			"data/textures/uffizi_cube.ktx",
 		};
 		string[] modelPathes = {
 				//"/mnt/devel/gts/vkChess.net/data/models/chess.glb",
-				"../../../samples/data/models/DamagedHelmet/glTF/DamagedHelmet.gltf",
-				"../../../samples/data/models/shadow.glb",
-				"../../../samples/data/models/Hubble.glb",
-				"../../../samples/data/models/MER_static.glb",
-				"../../../samples/data/models/ISS_stationary.glb",
+				"data/models/DamagedHelmet/glTF/DamagedHelmet.gltf",
+				"data/models/shadow.glb",
+				"data/models/Hubble.glb",
+				"data/models/MER_static.glb",
+				"data/models/ISS_stationary.glb",
 			};
 
 		int curModelIndex = 0;

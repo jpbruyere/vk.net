@@ -82,7 +82,7 @@ namespace deferred {
 			);
 
 			cfg.AddVertexBinding<PbrModel.Vertex> (0);
-			cfg.SetVertexAttributes (0, VkFormat.R32g32b32Sfloat);
+			cfg.AddVertexAttributes (0, VkFormat.R32g32b32Sfloat);
 
 			cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/shadow.vert.spv");
 			cfg.AddShader (VkShaderStageFlags.Geometry, "shaders/shadow.geom.spv");
