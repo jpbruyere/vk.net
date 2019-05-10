@@ -87,16 +87,18 @@ namespace CVKL {
 
 					Meshes = new List<Mesh> (ctx.LoadMeshes<Vertex> (IndexBufferType, vbo, 0, ibo, 0));
 
-					texArray = new Image (dev, Image.DefaultTextureFormat, VkImageUsageFlags.Sampled | VkImageUsageFlags.TransferDst | VkImageUsageFlags.TransferSrc,
-						VkMemoryPropertyFlags.DeviceLocal, TEXTURE_DIM, TEXTURE_DIM, VkImageType.Image2D,
-						VkSampleCountFlags.SampleCount1, VkImageTiling.Optimal, Image.ComputeMipLevels(TEXTURE_DIM), ctx.ImageCount);
-						
-					ctx.BuildTexArray (ref texArray, 0);
+					if (ctx.ImageCount > 0) {
+						texArray = new Image (dev, Image.DefaultTextureFormat, VkImageUsageFlags.Sampled | VkImageUsageFlags.TransferDst | VkImageUsageFlags.TransferSrc,
+							VkMemoryPropertyFlags.DeviceLocal, TEXTURE_DIM, TEXTURE_DIM, VkImageType.Image2D,
+							VkSampleCountFlags.SampleCount1, VkImageTiling.Optimal, Image.ComputeMipLevels (TEXTURE_DIM), ctx.ImageCount);
 
-					texArray.CreateView (VkImageViewType.ImageView2DArray, VkImageAspectFlags.Color, texArray.CreateInfo.arrayLayers);
-					texArray.CreateSampler ();
-					texArray.Descriptor.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
-					texArray.SetName ("model texArray");
+						ctx.BuildTexArray (ref texArray, 0);
+
+						texArray.CreateView (VkImageViewType.ImageView2DArray, VkImageAspectFlags.Color, texArray.CreateInfo.arrayLayers);
+						texArray.CreateSampler ();
+						texArray.Descriptor.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
+						texArray.SetName ("model texArray");
+					}
 
 					loadMaterials (ctx);
 

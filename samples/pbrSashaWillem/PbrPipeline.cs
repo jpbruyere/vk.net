@@ -72,7 +72,7 @@ namespace CVKL {
 			);
 			cfg.RenderPass = renderPass;
 			cfg.AddVertexBinding<PbrModel2.Vertex> (0);
-			cfg.SetVertexAttributes (0, VkFormat.R32g32b32Sfloat, VkFormat.R32g32b32Sfloat, VkFormat.R32g32Sfloat, VkFormat.R32g32Sfloat);
+			cfg.AddVertexAttributes (0, VkFormat.R32g32b32Sfloat, VkFormat.R32g32b32Sfloat, VkFormat.R32g32Sfloat, VkFormat.R32g32Sfloat);
 
 			cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/pbr.vert.spv");
 			cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/pbr_khr.frag.spv");
@@ -89,7 +89,7 @@ namespace CVKL {
 			uboMats = new HostBuffer (Dev, VkBufferUsageFlags.UniformBuffer, matrices, true);
 
 			string[] modelPathes = {
-				"../../../samples/data/models/DamagedHelmet/glTF/DamagedHelmet.gltf",
+				"data/models/DamagedHelmet/glTF/DamagedHelmet.gltf",
 				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/Avocado/glTF/Avocado.gltf",
 				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/BarramundiFish/glTF/BarramundiFish.gltf",
 				"/mnt/devel/vulkan/glTF-Sample-Models-master/2.0/BoomBoxWithAxes/glTF/BoomBoxWithAxes.gltf",

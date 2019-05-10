@@ -50,7 +50,6 @@ namespace CVKL {
             GCHandle ptr = GCHandle.Alloc (data, GCHandleType.Pinned);
             unsafe {
                 System.Buffer.MemoryCopy (ptr.AddrOfPinnedObject ().ToPointer (), (mappedData + (int)offset).ToPointer (), size, size);
-                Flush ();//TODO:flush only if not coherent
             }
             ptr.Free ();
         }

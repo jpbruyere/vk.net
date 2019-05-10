@@ -80,11 +80,11 @@ namespace TextureCube {
 		};
 		int currentImgIndex = 0;
 		string[] imgPathes = {
-			"../../../samples/data/textures/papermill.ktx",
-			"../../../data/textures/cubemap_yokohama_bc3_unorm.ktx",
-			"../../../data/textures/gcanyon_cube.ktx",
-			"../../../data/textures/pisa_cube.ktx",
-			"../../../data/textures/uffizi_cube.ktx",
+			"data/textures/papermill.ktx",
+			"data/textures/cubemap_yokohama_bc3_unorm.ktx",
+			"data/textures/gcanyon_cube.ktx",
+			"data/textures/pisa_cube.ktx",
+			"data/textures/uffizi_cube.ktx",
 		};
 
 
@@ -106,7 +106,7 @@ namespace TextureCube {
 			cfg.RenderPass = new RenderPass (dev, swapChain.ColorFormat, dev.GetSuitableDepthFormat (), cfg.Samples);
 
 			cfg.AddVertexBinding (0, 5 * sizeof(float));
-			cfg.SetVertexAttributes (0, VkFormat.R32g32b32Sfloat, VkFormat.R32g32Sfloat);
+			cfg.AddVertexAttributes (0, VkFormat.R32g32b32Sfloat, VkFormat.R32g32Sfloat);
 
 			cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/skybox.vert.spv");
 			cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/skybox.frag.spv");

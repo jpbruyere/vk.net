@@ -32,7 +32,7 @@ namespace CVKL {
 				cfg.RenderPass = renderPass;
 				cfg.Layout = plLayout;
 				cfg.AddVertexBinding (0, 3 * sizeof (float));
-				cfg.SetVertexAttributes (0, VkFormat.R32g32b32Sfloat);
+				cfg.AddVertexAttributes (0, VkFormat.R32g32b32Sfloat);
 				cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/skybox.vert.spv");
 				cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/skybox.frag.spv");
 				cfg.multisampleState.rasterizationSamples = Samples;
@@ -191,7 +191,7 @@ namespace CVKL {
 			cfg.RenderPass.AddSubpass (new SubPass (VkImageLayout.ColorAttachmentOptimal));
 
 			cfg.AddVertexBinding (0, 3 * sizeof (float));
-			cfg.SetVertexAttributes (0, VkFormat.R32g32b32Sfloat);
+			cfg.AddVertexAttributes (0, VkFormat.R32g32b32Sfloat);
 
 			cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/filtercube.vert.spv");
 			if (target == CBTarget.PREFILTEREDENV)

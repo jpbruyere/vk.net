@@ -6,15 +6,24 @@
       <Targets>DXC</Targets>
     </AvailableItemName>
   </ItemGroup>
-  <Target Name="AfterBuild">
-    <Copy SourceFiles="@(Datas)" DestinationFiles="@(Datas->'$(SolutionDir)build\$(Configuration)\samples\data\%(RelativeDir)%(Filename)%(Extension)')"/>
+	
+  <Target Name="DataCopy" AfterTargets="CoreBuild;Build">			
+    <Copy SourceFiles="@(Datas)" DestinationFiles="@(Datas->'$(OutputPath)\data\%(RecursiveDir)%(Filename)%(Extension)')"/>
   </Target>
-  <Target Name="CompileShaders" BeforeTargets="Build">        
-    <Message Importance="High" Text="Compiling shaders to spirv with glslc" />
-    <MakeDir Directories="$(OutputPath)%(GLSLShader.RelativeDir)"/>
-    <Exec Command="glslc %(GLSLShader.Identity) -o $(OutputPath)%(RelativeDir)%(Filename)%(Extension).spv"
-          ConsoleToMSBuild="true" EchoOff="true">
-        <Output TaskParameter="ConsoleOutput" PropertyName="OutputOfExec" />
-    </Exec>
-  </Target>
+	
+	<Target Name="CompileShaders" BeforeTargets="BeforeBuild" Outputs="@(CompiledShaders)">
+		<Message Importance="High" Text="Compiling shaders to spirv with glslc" />
+		<MakeDir Directories="$(OutputPath)%(GLSLShader.RelativeDir)"/>
+		<Exec Command="glslc %(GLSLShader.Identity) -o $(OutputPath)%(RelativeDir)%(Filename)%(Extension).spv"
+		      ConsoleToMSBuild="true" EchoOff="true" Outputs="$(OutputPath)%(RelativeDir)%(Filename)%(Extension).spv">
+		    <Output TaskParameter="ConsoleOutput" PropertyName="OutputOfExec" />
+		</Exec>
+		<CreateItem
+            Include="$(OutputPath)%(GLSLShader.RelativeDir)%(Filename)%(Extension).spv">			
+           	<Output
+               TaskParameter="Include"
+               ItemName="EmbeddedResource"/>
+        </CreateItem>		
+		<Message Importance="High" Text="Embedding $(OutputPath)%(GLSLShader.RelativeDir)%(Filename)%(Extension).spv" />
+	</Target>	
 </Project>

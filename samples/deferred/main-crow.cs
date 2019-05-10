@@ -16,7 +16,7 @@ namespace deferred {
 			PbrModelTexArray.TEXTURE_DIM = 512;
 
 			using (Program vke = new Program ()) {
-				vke.Run ();
+				vke.Run ();			
 			}
 		}
 
@@ -100,19 +100,19 @@ namespace deferred {
 		}
 
 		string[] cubemapPathes = {
-			"../../../samples/data/textures/papermill.ktx",
-			"../../../samples/data/textures/cubemap_yokohama_bc3_unorm.ktx",
-			"../../../samples/data/textures/gcanyon_cube.ktx",
-			"../../../samples/data/textures/pisa_cube.ktx",
-			"../../../samples/data/textures/uffizi_cube.ktx",
+			"data/textures/papermill.ktx",
+			"data/textures/cubemap_yokohama_bc3_unorm.ktx",
+			"data/textures/gcanyon_cube.ktx",
+			"data/textures/pisa_cube.ktx",
+			"data/textures/uffizi_cube.ktx",
 		};
 		string[] modelPathes = {
 				//"/mnt/devel/gts/vkChess.net/data/models/chess.glb",
-				"../../../samples/data/models/DamagedHelmet/glTF/DamagedHelmet.gltf",
-				"../../../samples/data/models/shadow.glb",
-				"../../../samples/data/models/Hubble.glb",
-				"../../../samples/data/models/MER_static.glb",
-				"../../../samples/data/models/ISS_stationary.glb",
+				"data/models/DamagedHelmet/glTF/DamagedHelmet.gltf",
+				"data/models/shadow.glb",
+				"data/models/Hubble.glb",
+				"data/models/MER_static.glb",
+				"data/models/ISS_stationary.glb",
 			};
 
 		int curModelIndex = 0;

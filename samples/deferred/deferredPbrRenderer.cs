@@ -241,7 +241,7 @@ namespace deferred {
 			//cfg.blendAttachments.Add (new VkPipelineColorBlendAttachmentState (false));
 
 			cfg.AddVertexBinding<PbrModel.Vertex> (0);
-			cfg.SetVertexAttributes (0, VkFormat.R32g32b32Sfloat, VkFormat.R32g32b32Sfloat, VkFormat.R32g32Sfloat, VkFormat.R32g32Sfloat);
+			cfg.AddVertexAttributes (0, VkFormat.R32g32b32Sfloat, VkFormat.R32g32b32Sfloat, VkFormat.R32g32Sfloat, VkFormat.R32g32Sfloat);
 
 			using (SpecializationInfo constants = new SpecializationInfo (
 						new SpecializationConstant<float> (0, nearPlane),
@@ -310,11 +310,12 @@ namespace deferred {
 			model?.Dispose ();
 
 			if (EnableTextureArray) {
-				model = new PbrModelTexArray (transferQ, path);
-
-				DescriptorSetWrites uboUpdate = new DescriptorSetWrites (dsMain, descLayoutMain.Bindings[5], descLayoutMain.Bindings[7]);
-				uboUpdate.Write (dev, model.materialUBO.Descriptor, (model as PbrModelTexArray).texArray.Descriptor);
-
+				PbrModelTexArray mod = new PbrModelTexArray (transferQ, path);
+				if (mod.texArray != null) {
+					DescriptorSetWrites uboUpdate = new DescriptorSetWrites (dsMain, descLayoutMain.Bindings[5], descLayoutMain.Bindings[7]);
+					uboUpdate.Write (dev, mod.materialUBO.Descriptor, mod.texArray.Descriptor);
+				}
+				model = mod;
 			} else {
 				model = new PbrModelSeparatedTextures (transferQ, path,
 					descLayoutTextures,

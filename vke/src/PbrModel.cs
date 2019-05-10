@@ -35,8 +35,8 @@ namespace CVKL {
 	using static VK.Utils;
 
 	//TODO:stride in buffer views?
-	public abstract class PbrModel : Model {
-		public struct Vertex {
+	public abstract class PbrModel : Model {        
+		public new struct Vertex {
 			[VertexAttribute (VertexAttributeType.Position, VkFormat.R32g32b32Sfloat)]
 			public Vector3 pos;
 			[VertexAttribute (VertexAttributeType.Normal, VkFormat.R32g32b32Sfloat)]
@@ -55,7 +55,7 @@ namespace CVKL {
 		public GPUBuffer ibo;
 		public HostBuffer materialUBO;
 
-		public PbrModel (Queue transferQ, string path) {
+        public PbrModel (Queue transferQ, string path) {
 			dev = transferQ.Dev;
 			using (CommandPool cmdPool = new CommandPool (dev, transferQ.index)) {
 				using (glTFLoader ctx = new glTFLoader (path, transferQ, cmdPool)) {
@@ -104,8 +104,23 @@ namespace CVKL {
             RenderNode(cmd, pipelineLayout, scene.Root, Matrix4x4.Identity, shadowPass);
         }
 
-		#region IDisposable Support
-		protected bool isDisposed;
+        public void Draw (CommandBuffer cmd, PipelineLayout pipelineLayout, Buffer instanceBuf, bool shadowPass = false, params InstancedCmd[] instances) {
+            cmd.BindVertexBuffer(instanceBuf, 1);
+            uint firstInstance = 0;
+            for (int i = 0; i < instances.Length; i++)
+            {
+                foreach (Primitive p in Meshes[instances[i].meshIdx].Primitives)
+                {
+                    if (!shadowPass)
+                        cmd.PushConstant(pipelineLayout, VkShaderStageFlags.Fragment, (int)p.material, (uint)Marshal.SizeOf<Matrix4x4>());
+                    cmd.DrawIndexed(p.indexCount, instances[i].count, p.indexBase, p.vertexBase, firstInstance);
+                }
+                firstInstance += instances[i].count;
+            }
+        }
+
+        #region IDisposable Support
+        protected bool isDisposed;
 
 		protected virtual void Dispose (bool disposing) {
 			if (!isDisposed) {

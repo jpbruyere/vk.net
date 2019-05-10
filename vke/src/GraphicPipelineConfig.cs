@@ -94,15 +94,16 @@ namespace CVKL {
 			return cfg;
 		}
 
-		public void SetVertexAttributes (uint binding, params VkFormat[] attribsDesc) {
-			uint offset = 0;
-
-			for (uint i = 0; i < attribsDesc.Length; i++) {
-				vertexAttributes.Add (new VkVertexInputAttributeDescription (binding, i, attribsDesc[i], offset));
+        uint currentAttributeIndex = 0;
+        public void AddVertexAttributes (uint binding, params VkFormat[] attribsDesc) {
+            uint currentAttributeoffset = 0;
+            for (uint i = 0; i < attribsDesc.Length; i++) {
+				vertexAttributes.Add (new VkVertexInputAttributeDescription (binding, i + currentAttributeIndex, attribsDesc[i], currentAttributeoffset));
 				VkFormatSize fs;
 				Utils.vkGetFormatSize (attribsDesc[i], out fs);
-				offset += fs.blockSizeInBits/8;
+				currentAttributeoffset += fs.blockSizeInBits/8;
 			}
+            currentAttributeIndex += (uint)attribsDesc.Length;
 		}
 		public void AddVertexBinding (uint binding, uint stride, VkVertexInputRate inputRate = VkVertexInputRate.Vertex) { 
 			vertexBindings.Add (new VkVertexInputBindingDescription (binding, stride, inputRate));
@@ -117,7 +118,8 @@ namespace CVKL {
 		public void ResetShadersAndVerticesInfos () {
 			foreach (ShaderInfo shader in shaders) 
 				shader.Dispose ();
-			vertexBindings.Clear ();
+            currentAttributeIndex = 0;
+            vertexBindings.Clear ();
 			vertexAttributes.Clear ();
 			shaders.Clear ();
 		}

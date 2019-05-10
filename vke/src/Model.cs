@@ -97,8 +97,12 @@ namespace CVKL {
 				max = _max;
 			}
 		}
-
-		public class Primitive {
+        public class InstancedCmd
+        {
+            public int meshIdx;
+            public uint count;
+        }
+        public class Primitive {
 			public string name;
 			public UInt32 indexBase;
 			public Int32 vertexBase;
@@ -107,12 +111,6 @@ namespace CVKL {
 			public UInt32 material;
 			public BoundingBox bb;
 		}
-
-		public struct InstanceData {
-			public UInt32 materialIndex;
-			public Matrix4x4 modelMat;
-			public Vector4 color;
-		};
 
 		public class Mesh {
 			public string Name;

@@ -25,4 +25,6 @@ void main()
 {
 	outColor = inColor;
 	gl_Position = ubo.projectionMatrix * ubo.viewMatrix * ubo.modelMatrix * vec4(inPos.xyz, 1.0);
+	//gl_Position.y = -gl_Position.y;
+	//gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;
 }

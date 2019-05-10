@@ -28,6 +28,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using VK;
 using static VK.Vk;
 
@@ -247,8 +248,37 @@ namespace CVKL {
             }
         }
 
-        #region IDisposable Support
-        private bool disposedValue = false; // Pour détecter les appels redondants
+		public static Stream StaticGetStreamFromPath (string path) {
+			Stream stream = null;
+
+			if (path.StartsWith ("#", StringComparison.Ordinal)) {
+				string resId = path.Substring (1);
+				//first search entry assembly
+				stream = Assembly.GetEntryAssembly ().GetManifestResourceStream (resId);
+				if (stream != null)
+					return stream;
+				//second search CVKL assemlby
+				stream = Assembly.GetExecutingAssembly ().GetManifestResourceStream (resId);
+				if (stream != null)
+					return stream;
+				//if still not found, search assembly named with the 1st element of the resId
+				string assemblyName = resId.Split ('.')[0];
+				Assembly a = AppDomain.CurrentDomain.GetAssemblies ().FirstOrDefault (aa => aa.GetName ().Name == assemblyName);
+				if (a == null)
+					throw new Exception ($"Assembly '{assemblyName}' not found for ressource '{path}'.");
+				stream = a.GetManifestResourceStream (resId);
+				if (stream == null)
+					throw new Exception ("Resource not found: " + path);
+			} else {
+				if (!File.Exists (path))
+					throw new FileNotFoundException ("File not found: ", path);
+				stream = new FileStream (path, FileMode.Open, FileAccess.Read);
+			}
+			return stream;
+		}
+
+		#region IDisposable Support
+		private bool disposedValue = false; // Pour détecter les appels redondants
 
         protected virtual void Dispose (bool disposing) {
             if (!disposedValue) {
