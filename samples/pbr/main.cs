@@ -1,11 +1,18 @@
-﻿using System;
+﻿/* Forward pbr sample inspire from https://github.com/SaschaWillems/Vulkan-glTF-PBR
+ *
+ * Copyright (c) 2019  Jean-Philippe Bruyère <jp_bruyere@hotmail.com>
+ *
+ * This code is licensed under the MIT license (MIT) (http://opensource.org/licenses/MIT)
+ */
+
+using System;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using Glfw;
 using VK;
 using CVKL;
 
-namespace pbrSachaWillem {
+namespace pbrSample {
 	class Program : VkWindow{	
 		static void Main (string[] args) {
 			using (Program vke = new Program ()) {

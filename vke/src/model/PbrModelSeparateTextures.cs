@@ -37,38 +37,34 @@ namespace CVKL {
 	/// <summary>
 	/// Indexed pbr model whith one descriptorSet per material with separate textures attachments
 	/// </summary>
-	public class PbrModelTexArray : PbrModel {
-		public static uint TEXTURE_DIM = 512;
+	public class PbrModelSeparatedTextures : PbrModel {
 		/// <summary>
 		/// Pbr data structure suitable for push constant or ubo, containing
 		/// availablility of attached textures and the coef of pbr inputs
 		/// </summary>
-		public struct Material {
+		public new struct Material {
 			public Vector4 baseColorFactor;
 			public Vector4 emissiveFactor;
 			public Vector4 diffuseFactor;
 			public Vector4 specularFactor;
-
 			public float workflow;
 			public AttachmentType TexCoord0;
 			public AttachmentType TexCoord1;
-			public int baseColorTextureSet;
-
-			public int physicalDescriptorTextureSet;
-			public int normalTextureSet;
-			public int occlusionTextureSet;
-			public int emissiveTextureSet;
-
 			public float metallicFactor;
 			public float roughnessFactor;
 			public float alphaMask;
 			public float alphaMaskCutoff;
+			int pad0;//see std420
 		}
 
-		public Image texArray;
+		Image[] textures;
 		public Material[] materials;
+		/// <summary>
+		/// one descriptor per material containing textures
+		/// </summary>
+		DescriptorSet[] descriptorSets;
 
-		public PbrModelTexArray (Queue transferQ, string path) {
+		public PbrModelSeparatedTextures (Queue transferQ, string path, DescriptorSetLayout layout, params AttachmentType[] attachments) {
 			dev = transferQ.Dev;
 			using (CommandPool cmdPool = new CommandPool (dev, transferQ.index)) {
 				using (glTFLoader ctx = new glTFLoader (path, transferQ, cmdPool)) {
@@ -87,20 +83,9 @@ namespace CVKL {
 
 					Meshes = new List<Mesh> (ctx.LoadMeshes<Vertex> (IndexBufferType, vbo, 0, ibo, 0));
 
-					if (ctx.ImageCount > 0) {
-						texArray = new Image (dev, Image.DefaultTextureFormat, VkImageUsageFlags.Sampled | VkImageUsageFlags.TransferDst | VkImageUsageFlags.TransferSrc,
-							VkMemoryPropertyFlags.DeviceLocal, TEXTURE_DIM, TEXTURE_DIM, VkImageType.Image2D,
-							VkSampleCountFlags.SampleCount1, VkImageTiling.Optimal, Image.ComputeMipLevels (TEXTURE_DIM), ctx.ImageCount);
+					textures = ctx.LoadImages ();
 
-						ctx.BuildTexArray (ref texArray, 0);
-
-						texArray.CreateView (VkImageViewType.ImageView2DArray, VkImageAspectFlags.Color, texArray.CreateInfo.arrayLayers);
-						texArray.CreateSampler ();
-						texArray.Descriptor.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
-						texArray.SetName ("model texArray");
-					}
-
-					loadMaterials (ctx);
+					loadMaterials (ctx, layout, attachments);
 
 					materialUBO = new HostBuffer<Material> (dev, VkBufferUsageFlags.UniformBuffer, materials);
 
@@ -109,9 +94,18 @@ namespace CVKL {
 			}
 		}
 
-		void loadMaterials (glTFLoader ctx) {
+		void loadMaterials (glTFLoader ctx, DescriptorSetLayout layout, params AttachmentType[] attachments) {
 			Model.Material[] mats = ctx.LoadMaterial ();
 			materials = new Material[mats.Length];
+			descriptorSets = new DescriptorSet[mats.Length];
+
+			if (attachments.Length == 0)
+				throw new InvalidOperationException ("At least one attachment is required for Model.WriteMaterialDescriptor");
+
+			descriptorPool = new DescriptorPool (dev, (uint)materials.Length,
+				new VkDescriptorPoolSize (VkDescriptorType.CombinedImageSampler, (uint)(attachments.Length * materials.Length))
+			);
+			descriptorPool.SetName ("descPool gltfTextures");
 
 			for (int i = 0; i < mats.Length; i++) {
 				materials[i] = new Material {
@@ -120,21 +114,54 @@ namespace CVKL {
 					emissiveFactor = mats[i].emissiveFactor,
 					metallicFactor = mats[i].metallicFactor,
 					roughnessFactor = mats[i].roughnessFactor,
-
-					baseColorTextureSet = mats[i].baseColorTexture,
-					physicalDescriptorTextureSet = mats[i].metallicRoughnessTexture,
-					normalTextureSet = mats[i].normalTexture,
-					occlusionTextureSet = mats[i].occlusionTexture,
-					emissiveTextureSet = mats[i].emissiveTexture,
-
 					TexCoord0 = mats[i].availableAttachments,
 					TexCoord1 = mats[i].availableAttachments1,
-
 					alphaMask = 0f,
 					alphaMaskCutoff = 0.0f,
 					diffuseFactor = new Vector4 (0),
 					specularFactor = new Vector4 (0)
 				};
+
+				descriptorSets[i] = descriptorPool.Allocate (layout);
+				descriptorSets[i].Handle.SetDebugMarkerName (dev, "descSet " + mats[i].Name);
+
+				VkDescriptorSetLayoutBinding dslb =
+					new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler);
+
+				using (DescriptorSetWrites2 uboUpdate = new DescriptorSetWrites2 (dev)) {
+					for (uint a = 0; a < attachments.Length; a++) {
+						dslb.binding = a;
+						switch (attachments[a]) {
+							case AttachmentType.None:
+								break;
+							case AttachmentType.Color:
+								if (mats[i].availableAttachments.HasFlag (AttachmentType.Color))
+									uboUpdate.AddWriteInfo (descriptorSets[i], dslb, textures[(int)mats[i].baseColorTexture].Descriptor);
+								break;
+							case AttachmentType.Normal:
+								if (mats[i].availableAttachments.HasFlag (AttachmentType.Normal))
+									uboUpdate.AddWriteInfo (descriptorSets[i], dslb, textures[(int)mats[i].normalTexture].Descriptor);
+								break;
+							case AttachmentType.AmbientOcclusion:
+								if (mats[i].availableAttachments.HasFlag (AttachmentType.AmbientOcclusion))
+									uboUpdate.AddWriteInfo (descriptorSets[i], dslb, textures[(int)mats[i].occlusionTexture].Descriptor);
+								break;
+							case AttachmentType.PhysicalProps:
+								if (mats[i].availableAttachments.HasFlag (AttachmentType.PhysicalProps))
+									uboUpdate.AddWriteInfo (descriptorSets[i], dslb, textures[(int)mats[i].metallicRoughnessTexture].Descriptor);
+								break;
+							case AttachmentType.Metal:
+								break;
+							case AttachmentType.Roughness:
+								break;
+							case AttachmentType.Emissive:
+								if (mats[i].availableAttachments.HasFlag (AttachmentType.Emissive))
+									uboUpdate.AddWriteInfo (descriptorSets[i], dslb, textures[(int)mats[i].emissiveTexture].Descriptor);
+								break;
+						}
+					}
+					uboUpdate.Update ();
+				}
 			}
 		}
 
@@ -147,6 +174,8 @@ namespace CVKL {
 				foreach (Primitive p in node.Mesh.Primitives) {
 					if (!shadowPass) {
 						cmd.PushConstant (pipelineLayout, VkShaderStageFlags.Fragment, (int)p.material, (uint)Marshal.SizeOf<Matrix4x4> ());
+						if (descriptorSets[p.material] != null)
+							cmd.BindDescriptorSet (pipelineLayout, descriptorSets[p.material], 2);
 					}
 					cmd.DrawIndexed (p.indexCount, 1, p.indexBase, p.vertexBase, 0);
 				}
@@ -160,7 +189,8 @@ namespace CVKL {
 		protected override void Dispose (bool disposing) {
 			if (!isDisposed) {
 				if (disposing) {
-					texArray?.Dispose ();						
+					foreach (Image txt in textures) 
+						txt.Dispose ();
 				} else
 					Debug.WriteLine ("model was not disposed");
 			}

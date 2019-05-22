@@ -9,10 +9,10 @@ using System.Linq;
 namespace deferred {
 	class Program : Crow.CrowWin {
 		static void Main (string[] args) {
-			Instance.DebugUtils = true;
-			Instance.Validation = true;
+			Instance.DEBUG_UTILS = true;
+			Instance.VALIDATION = true;
 			//Instance.RenderDocCapture = true;
-			DeferredPbrRenderer.EnableTextureArray = true;
+			DeferredPbrRenderer.TEXTURE_ARRAY = true;
 			PbrModelTexArray.TEXTURE_DIM = 512;
 
 			using (Program vke = new Program ()) {
@@ -128,7 +128,7 @@ namespace deferred {
 
 		Program () : base(true) {
 
-			if (Instance.DebugUtils)
+			if (Instance.DEBUG_UTILS)
 				dbgRepport = new DebugReport (instance,
 					VkDebugReportFlagsEXT.ErrorEXT
 					| VkDebugReportFlagsEXT.DebugEXT

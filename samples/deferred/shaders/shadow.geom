@@ -21,16 +21,13 @@ layout (set = 0, binding = 1) uniform UBOLights {
 
 //layout (location = 0) in int inInstanceIndex[];
 
-layout(push_constant) uniform PushConsts {
-    mat4 model;
-} pc;
 
 void main() 
 {
 	for (int i = 0; i < gl_in.length(); i++)
 	{
 		gl_Layer = gl_InvocationID;        
-		gl_Position = lights[gl_InvocationID].mvp * model * pc.model * gl_in[i].gl_Position;        
+		gl_Position = lights[gl_InvocationID].mvp * model * gl_in[i].gl_Position;        
 		EmitVertex();
 	}
 	EndPrimitive();
