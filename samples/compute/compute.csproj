@@ -1,5 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="$(SolutionDir)netfx.props" />
+  <Import Project="../../netfx.props" />
   <PropertyGroup>
     <TargetFrameworks>net471;netstandard2.0</TargetFrameworks>
     <OutputPath>$(SolutionDir)build\$(Configuration)\</OutputPath>
@@ -21,7 +21,7 @@
   </ItemGroup>    
     
   <ItemGroup>
-    <PackageReference Include="Vulkan" Version="0.1.2.8-beta" />        
+    <PackageReference Include="Vulkan" Version="0.1.3" />        
   </ItemGroup>    
     
   <ItemGroup>
