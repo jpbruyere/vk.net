@@ -49,7 +49,7 @@ namespace delaunay {
 
 
 		public Program () : base () {
-			if (Instance.DebugUtils)
+			if (Instance.DEBUG_UTILS)
 				dbgReport = new DebugReport (instance,
 					VkDebugReportFlagsEXT.ErrorEXT
 					| VkDebugReportFlagsEXT.DebugEXT

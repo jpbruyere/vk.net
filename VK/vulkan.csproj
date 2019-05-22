@@ -1,10 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="$(SolutionDir)netfx.props" />
+  <Import Project="../netfx.props" />
   <PropertyGroup>
     <TargetFrameworks>net471;netstandard2.0</TargetFrameworks>
     
     <Copyright></Copyright>
-    <AssemblyVersion>0.1.2.8</AssemblyVersion>
+    <AssemblyVersion>0.1.3</AssemblyVersion>
     <AssemblyName>VK</AssemblyName>
     <Description>C# vulkan binding</Description>
     <Company></Company>
@@ -12,7 +12,7 @@
         
     <PackageId>Vulkan</PackageId>
     <PackageTags>C# vulkan net binding</PackageTags>    
-    <PackageVersion>$(AssemblyVersion)-beta</PackageVersion>        
+    <PackageVersion>$(AssemblyVersion)</PackageVersion>        
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <PackageProjectUrl>https://github.com/jpbruyere/vk.net/blob/master/README.md</PackageProjectUrl>
@@ -23,15 +23,15 @@
     
     <Authors>Jean-Philippe Bruyère</Authors> 
     <SynchReleaseVersion>false</SynchReleaseVersion>
-    <OutputPath>$(SolutionDir)build\$(TargetFramework)\$(Configuration)\</OutputPath>
+    <OutputPath>$(SolutionDir)build\$(Configuration)\</OutputPath>
   </PropertyGroup>
   <ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">
     <Reference Include="System" />    
   </ItemGroup>
     
   <ItemGroup>
-    <ProjectReference Include="..\vk.generator\vk.generator.csproj" />
-    <ProjectReference Include="..\vk.rewrite\vk.rewrite.csproj" />
+    <ProjectReference Include="..\vk.generator\vk.generator.csproj" PrivateAssets="All" />
+    <ProjectReference Include="..\vk.rewrite\vk.rewrite.csproj" PrivateAssets="All" />
   </ItemGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -41,23 +41,44 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
     
-  <ItemGroup>
-    <Compile Include="$(SolutionDir)vk.generator\bin\$(Configuration)\**\*.cs">
+<!--  <ItemGroup>
+    <Compile Include="../vk.generator/bin/$(Configuration)/$(TargetFramework)/*.cs">
       <Link>generated\%(Filename)%(Extension)</Link>
     </Compile>
-  </ItemGroup> 
+  </ItemGroup> -->
     
-  <Target Name="generate" BeforeTargets="BeforeBuild">
-    <Exec Condition="$(OS) == 'Windows_NT'" Command="$(SolutionDir)build/$(TargetFramework)rewrite/vk.rewrite.exe $(OutputPath)VK.dll" />
-    <Exec Condition="$(OS) != 'Windows_NT'" Command="mono $(SolutionDir)vk.generator/bin/$(Configuration)/$(TargetFramework)/vk.generator.exe" WorkingDirectory="$(SolutionDir)vk.generator/bin/$(Configuration)/$(TargetFramework)/" ConsoleToMSBuild="true" EchoOff="true">
+  <Target Name="generate" BeforeTargets="BeforeCompile">
+    <Exec Condition="$(OS) == 'Windows_NT'" Command="$(SolutionDir)vk.generator/bin/$(Configuration)/net471/vk.generator.exe" WorkingDirectory="$(SolutionDir)vk.generator/bin/$(Configuration)/$(TargetFramework)/" ConsoleToMSBuild="true" EchoOff="true">
         <Output TaskParameter="ConsoleOutput" PropertyName="OutputOfExec" />
-    </Exec>        
+    </Exec>
+        
+    <!--<Exec Condition="$(OS) != 'Windows_NT' and $(TargetFramework.StartsWith('net4'))" Command="mono $(SolutionDir)vk.generator/bin/$(Configuration)/$(TargetFramework)/vk.generator.exe" WorkingDirectory="$(SolutionDir)vk.generator/bin/$(Configuration)/$(TargetFramework)/" ConsoleToMSBuild="true" EchoOff="true">
+        <Output TaskParameter="ConsoleOutput" PropertyName="OutputOfExec" />
+    </Exec>  
+    <Exec Condition="$(OS) != 'Windows_NT' and $(TargetFramework.StartsWith('netcore'))" Command="dotnet $(SolutionDir)vk.generator/bin/$(Configuration)/$(TargetFramework)/vk.generator.dll" WorkingDirectory="$(SolutionDir)vk.generator/bin/$(Configuration)/$(TargetFramework)/" ConsoleToMSBuild="true" EchoOff="true">
+        <Output TaskParameter="ConsoleOutput" PropertyName="OutputOfExec" />
+    </Exec>-->  
+    <Exec Condition="$(OS) != 'Windows_NT'" Command="mono $(SolutionDir)vk.generator/bin/$(Configuration)/net471/vk.generator.exe" WorkingDirectory="$(SolutionDir)vk.generator/bin/$(Configuration)/$(TargetFramework)/" ConsoleToMSBuild="true" EchoOff="true">
+        <Output TaskParameter="ConsoleOutput" PropertyName="OutputOfExec" />
+    </Exec>
+    <CreateItem Include="../vk.generator/bin/$(Configuration)/$(TargetFramework)/*.cs">            
+        <Output TaskParameter="Include" ItemName="Compile" />
+    </CreateItem>        
   </Target>
         
   <Target Name="rewrite" AfterTargets="CoreBuild">
-    <Exec Condition="$(OS) == 'Windows_NT'" Command="$(SolutionDir)build/$(TargetFramework)rewrite/vk.rewrite.exe $(OutputPath)VK.dll" />
-    <Exec Condition="$(OS) != 'Windows_NT'" Command="mono $(SolutionDir)vk.rewrite/bin/$(Configuration)/$(TargetFramework)/vk.rewrite.exe $(OutputPath)VK.dll" ConsoleToMSBuild="true" EchoOff="true">
+    <Exec Condition="$(OS) == 'Windows_NT'" Command="$(SolutionDir)vk.rewrite/bin/$(Configuration)/net471/vk.rewrite.exe $(OutputPath)VK.dll" ConsoleToMSBuild="true" EchoOff="true">
         <Output TaskParameter="ConsoleOutput" PropertyName="OutputOfExec" />
     </Exec>
+        
+    <!--<Exec Condition="$(OS) != 'Windows_NT' and $(TargetFramework.StartsWith('net4'))" Command="mono $(SolutionDir)vk.rewrite/bin/$(Configuration)/$(TargetFramework)/vk.rewrite.exe $(OutputPath)VK.dll" ConsoleToMSBuild="true" EchoOff="true">
+        <Output TaskParameter="ConsoleOutput" PropertyName="OutputOfExec" />
+    </Exec>        
+    <Exec Condition="$(OS) != 'Windows_NT' and $(TargetFramework.StartsWith('netcore'))" Command="dotnet $(SolutionDir)vk.rewrite/bin/$(Configuration)/$(TargetFramework)/vk.rewrite.dll $(OutputPath)VK.dll" ConsoleToMSBuild="true" EchoOff="true">
+        <Output TaskParameter="ConsoleOutput" PropertyName="OutputOfExec" />
+    </Exec>-->     
+    <Exec Condition="$(OS) != 'Windows_NT'" Command="mono $(SolutionDir)vk.rewrite/bin/$(Configuration)/net471/vk.rewrite.exe $(OutputPath)VK.dll" ConsoleToMSBuild="true" EchoOff="true">
+        <Output TaskParameter="ConsoleOutput" PropertyName="OutputOfExec" />
+    </Exec>        
   </Target>
 </Project>

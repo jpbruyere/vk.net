@@ -6,8 +6,8 @@ using VK;
 namespace Triangle {
 	class Program : VkWindow {
 		static void Main (string[] args) {
-			Instance.RenderDocCapture = true;
-			Instance.Validation = true;
+			Instance.RENDER_DOC_CAPTURE = true;
+			Instance.VALIDATION = true;
 
 			using (Program vke = new Program ()) {
 				vke.Run ();
