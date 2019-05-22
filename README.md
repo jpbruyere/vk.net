@@ -17,11 +17,12 @@ The nuget package is available under the name **Vulkan**.
   <a href="https://github.com/jpbruyere/vk.net/blob/master/samples/pbr/screenshot.png">
     <kbd><img src="https://github.com/jpbruyere/vk.net/blob/master/samples/pbr/screenshot.png" height="300"></kbd>
   </a>
-   Port of the gltfPBR from Sacha Willems
+   <br>Port of the gltfPBR from Sacha Willems</br>
 </p>
 
 # CVKL
 <a href="https://www.nuget.org/packages/CVKL"><img src="https://buildstats.info/nuget/CVKL"></a>
+
 The second project included in this repository is a set of classes encapsulating vulkan objects with `IDispose` model and **reference counting**. [GLFW](https://www.glfw.org/)  handles the windowing system.
 Developping exclusively on linux, I would be glad to have some feedback frow windows experiences.
 
