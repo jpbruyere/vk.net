@@ -14,6 +14,7 @@ namespace deferred {
 		public static VkSampleCountFlags NUM_SAMPLES = VkSampleCountFlags.SampleCount1;
 		public static VkFormat HDR_FORMAT = VkFormat.R32g32b32a32Sfloat;
 		public static VkFormat MRT_FORMAT = VkFormat.R32g32b32a32Sfloat;
+		public static bool TEXTURE_ARRAY = false;
 
 		public enum DebugView {
 			none,
@@ -29,13 +30,11 @@ namespace deferred {
 			irradiance,
 			shadowMap
 		}
-
-		public static bool EnableTextureArray = false;
-
 		public DebugView currentDebugView = DebugView.none;
 		public int lightNumDebug = 0;
 		public int debugMip = 0;
 		public int debugFace = 0;
+		const float lightMoveSpeed = 0.1f;
 
 		public struct Matrices {
 			public Matrix4x4 projection;
@@ -68,8 +67,6 @@ namespace deferred {
 				color = new Vector4(0.8f,0.8f,1,1)
 			}
 		};
-
-		const float lightMoveSpeed = 0.1f;
 
 		Framebuffer[] frameBuffers;
 		Image gbColorRough, gbEmitMetal, gbN_AO, gbPos, hdrImg;
@@ -197,7 +194,7 @@ namespace deferred {
 			descLayoutMain.Bindings.Add (new VkDescriptorSetLayoutBinding (6, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler));
 #endif
 
-			if (EnableTextureArray) {
+			if (TEXTURE_ARRAY) {
 				descLayoutMain.Bindings.Add (new VkDescriptorSetLayoutBinding (7, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler));//texture array
 			} else { 
 				descLayoutTextures = new DescriptorSetLayout (dev,
@@ -224,7 +221,7 @@ namespace deferred {
 				cfg.multisampleState.minSampleShading = 0.5f;
 			}
 			cfg.Cache = pipelineCache;
-			if (EnableTextureArray) 
+			if (TEXTURE_ARRAY) 
 				cfg.Layout = new PipelineLayout (dev, descLayoutMain, descLayoutGBuff);
 			 else 
 				cfg.Layout = new PipelineLayout (dev, descLayoutMain, descLayoutGBuff, descLayoutTextures);
@@ -249,7 +246,7 @@ namespace deferred {
 						new SpecializationConstant<float> (2, MAX_MATERIAL_COUNT))) {
 
 				cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/GBuffPbr.vert.spv");
-				if (EnableTextureArray) 
+				if (TEXTURE_ARRAY) 
 					cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/GBuffPbrTexArray.frag.spv", constants);
 				else
 					cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/GBuffPbr.frag.spv", constants);
@@ -309,7 +306,7 @@ namespace deferred {
 			dev.WaitIdle ();
 			model?.Dispose ();
 
-			if (EnableTextureArray) {
+			if (TEXTURE_ARRAY) {
 				PbrModelTexArray mod = new PbrModelTexArray (transferQ, path);
 				if (mod.texArray != null) {
 					DescriptorSetWrites uboUpdate = new DescriptorSetWrites (dsMain, descLayoutMain.Bindings[5], descLayoutMain.Bindings[7]);

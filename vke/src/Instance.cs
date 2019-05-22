@@ -1,5 +1,5 @@
 ﻿//
-// PhysicalDevice.cs
+// Instance.cs
 //
 // Author:
 //       Jean-Philippe Bruyère <jp_bruyere@hotmail.com>
@@ -30,14 +30,23 @@ using VK;
 using static VK.Vk;
 
 namespace CVKL {
+	/// <summary>
+	/// Vulkan Instance disposable class
+	/// </summary>
     public class Instance : IDisposable {
-		public static bool Validation;
-		public static bool DebugUtils;
-		public static bool RenderDocCapture;
+		/// <summary>If true, the VK_LAYER_KHRONOS_validation layer is loaded at startup; </summary>
+		public static bool VALIDATION;
+		/// <summary>If true, the VK_EXT_DEBUG_UTILS_EXTENSION_NAME and VK_EXT_DEBUG_REPORT_EXTENSION_NAME device extensions are enabled</summary>
+		public static bool DEBUG_UTILS;
+		/// <summary>If true, the VK_LAYER_RENDERDOC_Capture layer is loaded at startup; </summary>
+		public static bool RENDER_DOC_CAPTURE;
 
         VkInstance inst;
 
-        static class Strings {
+		public IntPtr Handle => inst.Handle;
+
+
+		static class Strings {
             public static FixedUtf8String Name = "VKENGINE";
             public static FixedUtf8String VK_KHR_SURFACE_EXTENSION_NAME = "VK_KHR_surface";
             public static FixedUtf8String VK_KHR_WIN32_SURFACE_EXTENSION_NAME = "VK_KHR_win32_surface";
@@ -51,25 +60,12 @@ namespace CVKL {
 			public static FixedUtf8String VkTraceLayeName = "VK_LAYER_LUNARG_vktrace";
             public static FixedUtf8String RenderdocCaptureLayerName = "VK_LAYER_RENDERDOC_Capture";
             public static FixedUtf8String main = "main";
-        }
-
-        public PhysicalDeviceCollection GetAvailablePhysicalDevice () {
-            return new PhysicalDeviceCollection (inst);
-        }
-
-        public VkSurfaceKHR CreateSurface (IntPtr hWindow) {
-            ulong surf;
-            Utils.CheckResult ((VkResult)Glfw.Glfw3.CreateWindowSurface (inst.Handle, hWindow, IntPtr.Zero, out surf), "Create Surface Failed.");
-            return surf;
-        }
+        }        
 
         public Instance () {
             init ();
         }
 
-        public IntPtr Handle {
-            get { return inst.Handle; }
-        }
 
 		void init () {
 			List<IntPtr> instanceExtensions = new List<IntPtr> ();
@@ -84,12 +80,12 @@ namespace CVKL {
 				throw new PlatformNotSupportedException ();
 			}
 
-			if (Validation)
+			if (VALIDATION)
 				enabledLayerNames.Add (Strings.LayerValidation);
-			if (RenderDocCapture)
+			if (RENDER_DOC_CAPTURE)
 				enabledLayerNames.Add (Strings.RenderdocCaptureLayerName);
 
-			if (DebugUtils) {
+			if (DEBUG_UTILS) {
 				instanceExtensions.Add (Strings.VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 				instanceExtensions.Add (Strings.VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
 			}
@@ -127,6 +123,15 @@ namespace CVKL {
 				enabledLayerNames.Unpin ();
 		}
 
+		public PhysicalDeviceCollection GetAvailablePhysicalDevice () => new PhysicalDeviceCollection (inst);
+		/// <summary>
+		/// Create a new vulkan surface from native window pointer
+		/// </summary>
+		public VkSurfaceKHR CreateSurface (IntPtr hWindow) {
+			ulong surf;
+			Utils.CheckResult ((VkResult)Glfw.Glfw3.CreateWindowSurface (inst.Handle, hWindow, IntPtr.Zero, out surf), "Create Surface Failed.");
+			return surf;
+		}
 		public void GetDelegate<T> (string name, out T del) {
             using (FixedUtf8String n = new FixedUtf8String (name)) {
                 del = Marshal.GetDelegateForFunctionPointer<T> (vkGetInstanceProcAddr (Handle, (IntPtr)n));
@@ -138,9 +143,10 @@ namespace CVKL {
 
         protected virtual void Dispose (bool disposing) {
             if (!disposedValue) {
-                if (disposing) {
-                    // TODO: supprimer l'état managé (objets managés).
-                }
+				if (disposing) {
+					// TODO: supprimer l'état managé (objets managés).
+				} else
+					System.Diagnostics.Debug.WriteLine ("Instance disposed by Finalizer");
                 
                 vkDestroyInstance (inst, IntPtr.Zero);
 

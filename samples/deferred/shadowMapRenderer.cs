@@ -78,7 +78,7 @@ namespace deferred {
 
 			cfg.Layout = new PipelineLayout (dev, descLayoutShadow);
 			cfg.Layout.AddPushConstants (
-				new VkPushConstantRange (VkShaderStageFlags.Geometry, (uint)Marshal.SizeOf<Matrix4x4> ())
+				new VkPushConstantRange (VkShaderStageFlags.Vertex, (uint)Marshal.SizeOf<Matrix4x4> ())
 			);
 
 			cfg.AddVertexBinding<PbrModel.Vertex> (0);

@@ -1,8 +1,9 @@
 ﻿//
 // Program.cs
 //
-// Author:
+// Authors:
 //       Jean-Philippe Bruyère <jp_bruyere@hotmail.com>
+//       https://github.com/mellinoe
 //
 // Copyright (c) 2019 jp
 //

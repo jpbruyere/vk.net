@@ -8,13 +8,13 @@ namespace deferred {
 	class Deferred : VkWindow {
 		static void Main (string[] args) {
 
-			//Instance.Validation = true;
-			//Instance.DebugUtils = true;
-			//Instance.RenderDocCapture = true;
-			DeferredPbrRenderer.EnableTextureArray = true;
+			Instance.VALIDATION = true;
+			Instance.DEBUG_UTILS = true;
+			//Instance.RENDER_DOC_CAPTURE = true;
+			DeferredPbrRenderer.TEXTURE_ARRAY = true;
 			DeferredPbrRenderer.NUM_SAMPLES = VkSampleCountFlags.SampleCount4;
 
-			PbrModelTexArray.TEXTURE_DIM = 512;
+			PbrModelTexArray.TEXTURE_DIM = 1024;
 
 			using (Deferred vke = new Deferred ()) {
 				vke.Run ();
@@ -61,7 +61,7 @@ namespace deferred {
 
 		Deferred () : base(true) {
 
-			if (Instance.DebugUtils)
+			if (Instance.DEBUG_UTILS)
 				dbgRepport = new DebugReport (instance,
 					VkDebugReportFlagsEXT.ErrorEXT
 					| VkDebugReportFlagsEXT.DebugEXT
