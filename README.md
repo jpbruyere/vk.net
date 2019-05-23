@@ -24,7 +24,20 @@ The nuget package is available under the name **Vulkan**.
 <a href="https://www.nuget.org/packages/CVKL"><img src="https://buildstats.info/nuget/CVKL"></a>
 
 The second project included in this repository is a set of classes encapsulating vulkan objects with `IDispose` model and **reference counting**. [GLFW](https://www.glfw.org/)  handles the windowing system.
-Developping exclusively on linux, I would be glad to have some feedback frow windows experiences.
+
+Developping exclusively on linux, I would be glad to have some feedback from window experiences.
+
+### Requirements
+- [GLFW](https://www.glfw.org/)
+- [libstb](https://github.com/nothings/stb), on debian install **libstb-dev**.
+- [Vulkan Sdk](https://www.lunarg.com/vulkan-sdk/), **glslc** has to be in the path.
+- optionaly for ui, you will need [vkvg](https://github.com/jpbruyere/vkvg).
+
+### Features
+
+- physicaly based rendering, direct and deferred
+- glTF 2.0
+- ktx image loading.
 
 ### VkWindow class
 
@@ -61,7 +74,7 @@ protected override void createQueues () {
 ```
 ### Rendering
 
-The constructor of the VkWIndow will finish the vulkan initialisation, so that you may create pipelines, buffers, and so on in your constructor.
+The constructor of the `VkWIndow` will finish the vulkan initialisation, so that you may create pipelines, buffers, and so on in your constructor.
 
 VkWindow will provide the default swapchain, but it's up to you to create the frame buffers. For the triangle example, create them in the `OnResize` override.
 ```csharp

@@ -40,7 +40,7 @@ namespace KTX {
 	public class KTX {
 		static byte[] ktxSignature = { 0xAB, 0x4B, 0x54, 0x58, 0x20, 0x31, 0x31, 0xBB, 0x0D, 0x0A, 0x1A, 0x0A };
 
-		public unsafe static Image Load (Queue staggingQ, CommandPool staggingCmdPool, string ktxPath, VkImageUsageFlags usage = VkImageUsageFlags.Sampled,
+		public static Image Load (Queue staggingQ, CommandPool staggingCmdPool, string ktxPath, VkImageUsageFlags usage = VkImageUsageFlags.Sampled,
 			VkMemoryPropertyFlags memoryProperty = VkMemoryPropertyFlags.DeviceLocal, bool generateMipmaps = true,
 			VkImageTiling tiling = VkImageTiling.Optimal) {
 			Image img = null;
