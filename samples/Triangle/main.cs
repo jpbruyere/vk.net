@@ -52,7 +52,7 @@ namespace Triangle {
 		};
 		ushort[] indices = new ushort[] { 0, 1, 2 };
 
-		Program () : base (false) {
+		Program () : base () {
 			vbo = new HostBuffer<Vertex> (dev, VkBufferUsageFlags.VertexBuffer, vertices);
 			ibo = new HostBuffer<ushort> (dev, VkBufferUsageFlags.IndexBuffer, indices);
 			uboMats = new HostBuffer (dev, VkBufferUsageFlags.UniformBuffer, matrices);

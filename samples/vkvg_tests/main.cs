@@ -142,7 +142,7 @@ namespace vkvg_test {
 		}
 
 		void uiThreadFunc () {
-			vkvgDev = new vkvg.Device (instance.Handle, phy.Handle, dev.VkDev.Handle, presentQueue.qFamIndex,
+			vkvgDev = new vkvg.Device (instance.Handle, phy.Handle, dev.Handle, presentQueue.qFamIndex,
 				vkvg.SampleCount.Sample_8, presentQueue.index);
 
 			while (true) {

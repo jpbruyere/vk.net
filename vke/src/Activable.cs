@@ -28,7 +28,23 @@ using VK;
 using static VK.Vk;
 
 namespace CVKL {
-	public enum ActivableState { Init, Activated, Disposed };
+	/// <summary>
+	/// Tristate status of activables, reflecting vulkan openrations
+	/// </summary>
+	public enum ActivableState {
+		/// <summary>
+		/// Class has been instanced, but no vulkan handle was created.
+		/// </summary>
+		Init,
+		/// <summary>
+		/// On the first activation, vulkan handle is created and ref count is one. Further activations will increment the reference count by one.
+		/// </summary>
+		Activated,
+		/// <summary>
+		/// Reference count is zero, handles have been destroyed. Such object may be reactivated.
+		/// </summary>
+		Disposed
+	};
 	/// <summary>
 	/// Base class for most of the vulkan device's objects following the IDispose pattern. Each time an activable is used, it's reference count is incremented, and
 	/// each time it is disposed, the count is decremented. When the count reach zero, the handle is destroyed and the finalizizer is unregistered. Once disposed, the
@@ -51,7 +67,7 @@ namespace CVKL {
 		/// <value>The debug marker info.</value>
 		protected abstract VkDebugMarkerObjectNameInfoEXT DebugMarkerInfo { get; }
 		/// <summary>
-		/// Vulkan logical device this activable is bound to
+		/// Vulkan logical device this activable is bound to.
 		/// </summary>
 		public Device Dev { get; private set; }
 
@@ -65,13 +81,14 @@ namespace CVKL {
 			this.name = name;
 		}
 		#endregion
+
 		/// <summary>
 		/// if debug marker extension is activated, this will set the name for debuggers
 		/// </summary>
 		public void SetName (string name) {
 			this.name = name;
 
-			if (!Dev.DebugMarkersEnabled)
+			if (!Dev.debugMarkersEnabled)
 				return;
 
 			VkDebugMarkerObjectNameInfoEXT dmo = DebugMarkerInfo;
@@ -83,10 +100,12 @@ namespace CVKL {
 		/// Activation of the object, the reference count is incremented.
 		/// </summary>
 		public virtual void Activate () {
+			references++;
+			if (state == ActivableState.Activated)
+				return;
 			if (state == ActivableState.Disposed) 
 				GC.ReRegisterForFinalize (this);
 			state = ActivableState.Activated;
-			references++;
 			SetName (name);
 		}
 

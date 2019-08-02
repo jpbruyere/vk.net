@@ -25,8 +25,8 @@ namespace Crow {
 		protected CVKL.Image uiImage;
 		protected bool isRunning;
 
-		protected CrowWin (bool debugMarkers = false, string name = "CrowWin", uint _width = 1024, uint _height = 768, bool vSync = false) :
-			base (debugMarkers, name, _width, _height, vSync) {
+		protected CrowWin (string name = "CrowWin", uint _width = 1024, uint _height = 768, bool vSync = false) :
+			base (name, _width, _height, vSync) {
 
 			Thread crowThread = new Thread (crow_thread_func);
 			crowThread.IsBackground = true;
@@ -87,7 +87,7 @@ namespace Crow {
 		}
 
 		void crow_thread_func () {
-			vkvgDev = new vkvg.Device (instance.Handle, phy.Handle, dev.VkDev.Handle, presentQueue.qFamIndex,
+			vkvgDev = new vkvg.Device (instance.Handle, phy.Handle, dev.Handle, presentQueue.qFamIndex,
 	   			vkvg.SampleCount.Sample_4, presentQueue.index);
 
 			crow = new Interface (vkvgDev, (int)swapChain.Width, (int)swapChain.Height);

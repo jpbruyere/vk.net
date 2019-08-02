@@ -11,6 +11,7 @@ namespace deferred {
 			Instance.VALIDATION = true;
 			Instance.DEBUG_UTILS = true;
 			//Instance.RENDER_DOC_CAPTURE = true;
+
 			DeferredPbrRenderer.TEXTURE_ARRAY = true;
 			DeferredPbrRenderer.NUM_SAMPLES = VkSampleCountFlags.SampleCount4;
 
@@ -59,7 +60,7 @@ namespace deferred {
 
 		DebugReport dbgRepport;
 
-		Deferred () : base(true) {
+		Deferred () : base() {
 
 			if (Instance.DEBUG_UTILS)
 				dbgRepport = new DebugReport (instance,

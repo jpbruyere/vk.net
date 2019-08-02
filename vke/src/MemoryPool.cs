@@ -21,7 +21,7 @@ namespace CVKL {
 		//Resource mappedFrom;
 		//Resource mappedTo;
 
-		ulong freeMemPointer;
+		//ulong freeMemPointer;
 		IntPtr mappedPointer;
 
 		public ulong Size => memInfo.allocationSize;

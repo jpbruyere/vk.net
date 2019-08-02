@@ -46,7 +46,8 @@ namespace CVKL {
         void freeHandle () {
             if (!disposed) 
                 handle.Free ();
-        }
+			disposed = true;
+		}
 
         #region IDisposable Support
         private bool disposed;

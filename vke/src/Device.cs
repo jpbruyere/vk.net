@@ -34,20 +34,25 @@ using static VK.Vk;
 
 
 namespace CVKL {
+	/// <summary>
+	/// Logical device encapsulating vulkan logical device handle. Implements only IDisposable an do not derive from
+	/// Activable, so it may be activated only once and no reference counting on it is handled, and no reactivation is posible
+	/// after being disposed.
+	/// </summary>
 	public class Device : IDisposable {
 		public readonly PhysicalDevice phy;
-		public readonly bool DebugMarkersEnabled;
 
 		VkDevice dev;
 		public VkDevice VkDev => dev;
+		public IntPtr Handle => dev.Handle;
 
 		internal List<Queue> queues = new List<Queue> ();
+		internal bool debugMarkersEnabled;
 
 		public ResourceManager resourceManager;
 
-		public Device (PhysicalDevice _phy, bool enableDebugMarkers = false) {
+		public Device (PhysicalDevice _phy) {
 			phy = _phy;
-			DebugMarkersEnabled = enableDebugMarkers;
 		}
 
 		public void Activate (VkPhysicalDeviceFeatures enabledFeatures, params string[] extensions) {
@@ -79,12 +84,16 @@ namespace CVKL {
 				prioritiesLists.Add (priorities);//add for unpined
 			}
 
+			//enable only supported exceptions
 			List<IntPtr> deviceExtensions = new List<IntPtr> ();
-			if (DebugMarkersEnabled && !extensions.Contains (Ext.D.VK_EXT_debug_marker))
-				deviceExtensions.Add (new FixedUtf8String (Ext.D.VK_EXT_debug_marker));
-
-			for (int i = 0; i < extensions.Length; i++)
-				deviceExtensions.Add (new FixedUtf8String (extensions[i]));
+			for (int i = 0; i < extensions.Length; i++) {
+				if (phy.GetDeviceExtensionSupported (extensions[i])) {
+					deviceExtensions.Add (new FixedUtf8String (extensions[i]));
+					//store in a bool to prevent frequent string test for debug marker ext presence
+					if (extensions[i] == Ext.D.VK_EXT_debug_marker)
+						debugMarkersEnabled = true;
+				}
+			}
 
 			VkDeviceCreateInfo deviceCreateInfo = VkDeviceCreateInfo.New ();
 			deviceCreateInfo.queueCreateInfoCount = (uint)qInfos.Count;

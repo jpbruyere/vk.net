@@ -30,7 +30,7 @@
     </Datas>
     <Compile Include="EnvironmentPipeline.cs;deferredPbrRenderer.cs;shadowMapRenderer.cs" />
   </ItemGroup>     
-    
+
   <ItemGroup Condition="'$(Configuration)' == 'DebugCrow' ">    
     <Compile Include="../common/CrowWin.cs" />
     <Compile Include="main-crow.cs" />

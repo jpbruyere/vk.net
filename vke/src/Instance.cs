@@ -36,7 +36,7 @@ namespace CVKL {
     public class Instance : IDisposable {
 		/// <summary>If true, the VK_LAYER_KHRONOS_validation layer is loaded at startup; </summary>
 		public static bool VALIDATION;
-		/// <summary>If true, the VK_EXT_debug_utils and VK_EXT_debug_report device extensions are enabled</summary>
+		/// <summary>If true, the VK_EXT_debug_utils and VK_EXT_debug_report instance extensions are enabled</summary>
 		public static bool DEBUG_UTILS;
 		/// <summary>If true, the VK_LAYER_RENDERDOC_Capture layer is loaded at startup; </summary>
 		public static bool RENDER_DOC_CAPTURE;

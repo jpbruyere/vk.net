@@ -37,7 +37,7 @@ namespace CVKL {
 
 	//TODO:stride in buffer views?
 	public class PbrModel2 : Model {
-		public struct Vertex {
+		public new struct Vertex {
 			[VertexAttribute (VertexAttributeType.Position, VkFormat.R32g32b32Sfloat)]
 			public Vector3 pos;
 			[VertexAttribute (VertexAttributeType.Normal, VkFormat.R32g32b32Sfloat)]

@@ -28,8 +28,10 @@ using VK;
 using static VK.Vk;
 
 namespace CVKL {
-    public class SwapChain : Activable {        
-        internal VkSwapchainKHR handle;
+    public class SwapChain : Activable {
+		public static VkImageUsageFlags IMAGES_USAGE = VkImageUsageFlags.ColorAttachment;
+
+		internal VkSwapchainKHR handle;
 
 		internal uint currentImageIndex;
 		VkSwapchainCreateInfoKHR createInfos;
@@ -48,7 +50,8 @@ namespace CVKL {
         public VkFormat ColorFormat => createInfos.imageFormat;
         public VkImageUsageFlags ImageUsage => createInfos.imageUsage;
 
-        public SwapChain (PresentQueue _presentableQueue, uint width = 800, uint height = 600, VkFormat format = VkFormat.B8g8r8a8Unorm, VkPresentModeKHR presentMode = VkPresentModeKHR.FifoKHR)
+        public SwapChain (PresentQueue _presentableQueue, uint width = 800, uint height = 600, VkFormat format = VkFormat.B8g8r8a8Unorm,
+        	VkPresentModeKHR presentMode = VkPresentModeKHR.FifoKHR)
         : base (_presentableQueue.dev){
 
             presentQueue = _presentableQueue;            
@@ -78,7 +81,7 @@ namespace CVKL {
             createInfos.surface = presentQueue.Surface;
             createInfos.imageExtent = new VkExtent2D (width, height);
             createInfos.imageArrayLayers = 1;
-            createInfos.imageUsage = VkImageUsageFlags.ColorAttachment;
+            createInfos.imageUsage = IMAGES_USAGE;
             createInfos.imageSharingMode = VkSharingMode.Exclusive;
             createInfos.compositeAlpha = VkCompositeAlphaFlagsKHR.OpaqueKHR;
             createInfos.presentMode = presentMode;
