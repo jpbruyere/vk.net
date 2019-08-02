@@ -44,9 +44,13 @@ namespace CVKL {
 					WriteTo (ptr);
 			}
         }
-        public SpecializationConstant(uint id, T value) : base(id) {            
+
+		#region CTOR
+		public SpecializationConstant (uint id, T value) : base(id) {            
             val = value;
         }
+		#endregion
+
 		public override uint Size => (uint)Marshal.SizeOf<T> ();
 		public unsafe override void WriteTo (IntPtr ptr) {
 			this.ptr = ptr;
@@ -73,7 +77,7 @@ namespace CVKL {
 	}
 
 	/// <summary>
-	/// Specialization constant infos, must be disposed after pipeline creation
+	/// Specialization constant infos, MUST be disposed after pipeline creation
 	/// </summary>
 	public class SpecializationInfo : IDisposable {
 		IntPtr pData;
@@ -83,6 +87,7 @@ namespace CVKL {
 
 		public IntPtr InfosPtr { get; private set; }
 
+		#region CTOR
 		public SpecializationInfo (params SpecializationConstant[] constants) {
 			uint offset = 0;
 			entries = new VkSpecializationMapEntry[constants.Length];
@@ -107,6 +112,7 @@ namespace CVKL {
 			};
 			InfosPtr = infos.Pin ();
 		}
+		#endregion
 
 		public void Dispose () {
 			infos.Unpin ();

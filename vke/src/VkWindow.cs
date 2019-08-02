@@ -81,8 +81,6 @@ namespace CVKL {
 		public uint Width => width;
 		public uint Height => height;
 
-		IntPtr handCursor;
-
 		public VkWindow (string name = "VkWindow", uint _width = 1024, uint _height = 768, bool vSync = false) {
 			currentWindow = this;
 
@@ -107,10 +105,13 @@ namespace CVKL {
 			Glfw3.SetCharCallback (hWin, HandleCharDelegate);
 
 			initVulkan (vSync);
-
-			handCursor = Glfw3.CreateStandardCursor (CursorShape.Hand);
-
-			Glfw3.SetCursor (hWin, handCursor);
+		}
+		IntPtr currentCursor;
+		public void SetCursor (CursorShape cursor) {
+			if (currentCursor != IntPtr.Zero)
+				Glfw3.DestroyCursor (currentCursor);
+			currentCursor = Glfw3.CreateStandardCursor (cursor);
+			Glfw3.SetCursor (hWin, currentCursor);
 		}
 
 		void initVulkan (bool vSync) {
@@ -332,6 +333,9 @@ namespace CVKL {
 					instance.Dispose ();
 				} else
 					Debug.WriteLine ("a VkWindow has not been correctly disposed");
+
+				if (currentCursor != IntPtr.Zero)
+					Glfw3.DestroyCursor (currentCursor);
 
 				Glfw3.DestroyWindow (hWin);
 				Glfw3.Terminate ();

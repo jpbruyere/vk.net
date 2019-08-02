@@ -8,8 +8,8 @@ namespace deferred {
 	class Deferred : VkWindow {
 		static void Main (string[] args) {
 
-			Instance.VALIDATION = true;
-			Instance.DEBUG_UTILS = true;
+			//Instance.VALIDATION = true;
+			//Instance.DEBUG_UTILS = true;
 			//Instance.RENDER_DOC_CAPTURE = true;
 
 			DeferredPbrRenderer.TEXTURE_ARRAY = true;

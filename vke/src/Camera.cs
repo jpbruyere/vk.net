@@ -1,11 +1,11 @@
-﻿using System;
+﻿// Copyright (c) 2019  Jean-Philippe Bruyère <jp_bruyere@hotmail.com>
+//
+// This code is licensed under the MIT license (MIT) (http://opensource.org/licenses/MIT)
 using System.Numerics;
-using System.Runtime.InteropServices;
-using VK;
-
 
 namespace CVKL {
 	public class Camera {
+		/// <summary>Corection matrix for vulkan projection</summary>
 		public static readonly Matrix4x4 VKProjectionCorrection =
 			new Matrix4x4 (
 				1,  0,    0,    0,
