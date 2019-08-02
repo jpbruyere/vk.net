@@ -14,7 +14,7 @@ namespace deferred {
 		public static VkSampleCountFlags NUM_SAMPLES = VkSampleCountFlags.SampleCount1;
 		public static VkFormat HDR_FORMAT = VkFormat.R32g32b32a32Sfloat;
 		public static VkFormat MRT_FORMAT = VkFormat.R32g32b32a32Sfloat;
-		public static bool TEXTURE_ARRAY = false;
+		public static bool TEXTURE_ARRAY;
 
 		public enum DebugView {
 			none,

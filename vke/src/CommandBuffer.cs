@@ -38,11 +38,11 @@ namespace CVKL {
 
         CommandPool pool;
         VkCommandBuffer handle;
-		States state;
+		//States state;
 
         public VkCommandBuffer Handle => handle;
 		public Device Device => pool?.Dev;//this help
-		public States State => state;
+		//public States State => state;
 
         internal CommandBuffer (VkDevice _dev, CommandPool _pool, VkCommandBuffer _buff)
         {
@@ -139,7 +139,7 @@ namespace CVKL {
 		}
 
 		public void BeginRegion (string name, float r = 1f, float g = 0.1f, float b=0.1f, float a = 1f) {
-			if (!Device.DebugMarkersEnabled)
+			if (!Device.debugMarkersEnabled)
 				return;
 			VkDebugMarkerMarkerInfoEXT info = VkDebugMarkerMarkerInfoEXT.New();
 			info.pMarkerName = name.Pin ();
@@ -153,7 +153,7 @@ namespace CVKL {
 			name.Unpin ();
 		}
 		public void InsertDebugMarker (string name, float r = 1f, float g = 0.1f, float b=0.1f, float a = 1f) {
-			if (!Device.DebugMarkersEnabled)
+			if (!Device.debugMarkersEnabled)
 				return;
 			VkDebugMarkerMarkerInfoEXT info = VkDebugMarkerMarkerInfoEXT.New();
 			info.pMarkerName = name.Pin ();
@@ -167,7 +167,7 @@ namespace CVKL {
 			name.Unpin ();
 		}
 		public void EndRegion () {
-			if (Device.DebugMarkersEnabled)
+			if (Device.debugMarkersEnabled)
 				vkCmdDebugMarkerEndEXT (Handle);
 		}
 

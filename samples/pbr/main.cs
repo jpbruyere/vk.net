@@ -196,7 +196,7 @@ namespace pbrSample {
 
 			camera.SetPosition (0, 0, 5);
 
-			vkvgDev = new vkvg.Device (instance.Handle, phy.Handle, dev.VkDev.Handle, presentQueue.qFamIndex,
+			vkvgDev = new vkvg.Device (instance.Handle, phy.Handle, dev.Handle, presentQueue.qFamIndex,
 				vkvg.SampleCount.Sample_4, presentQueue.index);
 
 			initUISurface ();

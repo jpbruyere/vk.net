@@ -4,10 +4,19 @@ using System.Runtime.InteropServices;
 
 namespace Glfw
 {
-    /// <summary>
-    /// Interop functions for the GLFW3 API.
-    /// </summary>
-    public unsafe static class Glfw3
+	public enum CursorShape
+	{
+		Arrow		= 0x00036001,
+		IBeam		= 0x00036002,
+		Crosshair	= 0x00036003,
+		Hand		= 0x00036004,
+		HResize		= 0x00036005,
+		VResize		= 0x00036006
+	}
+	/// <summary>
+	/// Interop functions for the GLFW3 API.
+	/// </summary>
+	public unsafe static class Glfw3
     {
         /// <summary>
         /// The base name for the GLFW3 library.
@@ -512,5 +521,14 @@ namespace Glfw
 
             return new Version(major, minor, revision);
         }
-    }
+
+		[DllImport (GlfwDll, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwCreateStandardCursor")]
+		public static extern IntPtr CreateStandardCursor (CursorShape shape);
+
+		[DllImport (GlfwDll, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwDestroyCursor")]
+		public static extern void DestroyCursor (IntPtr cursor);
+
+		[DllImport (GlfwDll, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwSetCursor")]
+		public static extern void SetCursor (IntPtr window, IntPtr cursor);
+	}
 }

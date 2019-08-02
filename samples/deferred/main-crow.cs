@@ -11,9 +11,9 @@ namespace deferred {
 		static void Main (string[] args) {
 			Instance.DEBUG_UTILS = true;
 			Instance.VALIDATION = true;
-			//Instance.RenderDocCapture = true;
+			Instance.RENDER_DOC_CAPTURE = true;
 			DeferredPbrRenderer.TEXTURE_ARRAY = true;
-			PbrModelTexArray.TEXTURE_DIM = 512;
+			PbrModelTexArray.TEXTURE_DIM = 1024;
 
 			using (Program vke = new Program ()) {
 				vke.Run ();			
@@ -75,6 +75,11 @@ namespace deferred {
 		public List<Model.Scene> Scenes => renderer.model.Scenes;
 		#endregion
 
+		public override string[] EnabledDeviceExtensions => new string[] {
+			Ext.D.VK_KHR_swapchain,
+			Ext.D.VK_EXT_debug_marker
+		};
+
 		protected override void configureEnabledFeatures (VkPhysicalDeviceFeatures available_features, ref VkPhysicalDeviceFeatures features) {
 			base.configureEnabledFeatures (available_features, ref features);
 
@@ -108,6 +113,7 @@ namespace deferred {
 		};
 		string[] modelPathes = {
 				//"/mnt/devel/gts/vkChess.net/data/models/chess.glb",
+				//"/home/jp/gltf/jaguar/scene.gltf",
 				"data/models/DamagedHelmet/glTF/DamagedHelmet.gltf",
 				"data/models/shadow.glb",
 				"data/models/Hubble.glb",
@@ -126,7 +132,7 @@ namespace deferred {
 
 		DebugReport dbgRepport;
 
-		Program () : base(true) {
+		Program () : base() {
 
 			if (Instance.DEBUG_UTILS)
 				dbgRepport = new DebugReport (instance,
@@ -155,6 +161,8 @@ namespace deferred {
 			init_crow_commands ();
 
 			crow.Load ("#deferred.menu.crow").DataSource = this;
+
+
 		}
 
 		protected override void recordDraw (CommandBuffer cmd, int imageIndex) {

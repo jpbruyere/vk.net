@@ -29,6 +29,7 @@ using System.Diagnostics;
 using Glfw;
 using VK;
 using static VK.Vk;
+using System.Collections.Generic;
 
 namespace CVKL {
 	/// <summary>
@@ -51,7 +52,7 @@ namespace CVKL {
 		protected VkSemaphore[] drawComplete;
 
 		protected uint fps;
-		protected bool updateViewRequested = true, rebuildBuffers = false;
+		protected bool updateViewRequested = true, rebuildBuffers;
 		protected double lastMouseX, lastMouseY;
 		protected bool[] MouseButton => buttons;
 
@@ -70,11 +71,8 @@ namespace CVKL {
 		/// <summary>
 		/// Override this property to change the list of enabled extensions
 		/// </summary>
-		public virtual string[] EnabledExtensions {
-			get {
-				return new string[] { Ext.D.VK_KHR_swapchain };
-			}
-		}
+		public virtual string[] EnabledDeviceExtensions => new string[] { Ext.D.VK_KHR_swapchain };
+
 		/// <summary>
 		/// Frequency in millisecond of the call to the Update method
 		/// </summary>
@@ -83,7 +81,9 @@ namespace CVKL {
 		public uint Width => width;
 		public uint Height => height;
 
-		public VkWindow (bool debugMarkers = false, string name = "VkWindow", uint _width = 1024, uint _height = 768, bool vSync = false) {
+		IntPtr handCursor;
+
+		public VkWindow (string name = "VkWindow", uint _width = 1024, uint _height = 768, bool vSync = false) {
 			currentWindow = this;
 
 			width = _width;
@@ -96,6 +96,9 @@ namespace CVKL {
 
 			hWin = Glfw3.CreateWindow ((int)width, (int)height, name, MonitorHandle.Zero, IntPtr.Zero);
 
+			if (hWin == IntPtr.Zero)
+				throw new Exception ("[GLFW3] Unable to create vulkan Window");
+
 			Glfw3.SetKeyCallback (hWin, HandleKeyDelegate);
 			Glfw3.SetMouseButtonPosCallback (hWin, HandleMouseButtonDelegate);
 			Glfw3.SetCursorPosCallback (hWin, HandleCursorPosDelegate);
@@ -103,10 +106,14 @@ namespace CVKL {
 			Glfw3.SetScrollCallback (hWin, HandleScrollDelegate);
 			Glfw3.SetCharCallback (hWin, HandleCharDelegate);
 
-			initVulkan (vSync, debugMarkers);
+			initVulkan (vSync);
+
+			handCursor = Glfw3.CreateStandardCursor (CursorShape.Hand);
+
+			Glfw3.SetCursor (hWin, handCursor);
 		}
 
-		void initVulkan (bool vSync, bool debugMarkers) {
+		void initVulkan (bool vSync) {
 			instance = new Instance ();
 
 			hSurf = instance.CreateSurface (hWin);
@@ -116,15 +123,13 @@ namespace CVKL {
 			VkPhysicalDeviceFeatures enabledFeatures = default (VkPhysicalDeviceFeatures);
 			configureEnabledFeatures (phy.Features, ref enabledFeatures);
 
-			if (debugMarkers)
-				debugMarkers = phy.GetDeviceExtensionSupported (Ext.D.VK_EXT_debug_marker);
 			//First create the c# device class
-			dev = new Device (phy, debugMarkers);
+			dev = new Device (phy);
 			//create queue class
 			createQueues ();
 
 			//activate the device to have effective queues created accordingly to what's available
-			dev.Activate (enabledFeatures, EnabledExtensions);
+			dev.Activate (enabledFeatures, EnabledDeviceExtensions);
 
 			swapChain = new SwapChain (presentQueue as PresentQueue, width, height, VkFormat.B8g8r8a8Srgb,
 				vSync ? VkPresentModeKHR.FifoKHR : VkPresentModeKHR.MailboxKHR);

@@ -383,7 +383,7 @@ namespace CVKL {
 		///// build texture array
 		///// </summary>
 		///// <returns>The images.</returns>
-		///// <param name="textureSize">Texture size.</param>
+		///// <param name="textureSize">Uniformized Texture size for all images</param>
 		public void BuildTexArray (ref Image texArray, uint firstImg = 0) {
 			int texDim = (int)texArray.CreateInfo.extent.width;
 
@@ -468,7 +468,10 @@ namespace CVKL {
 			transferQ.WaitIdle ();
 			cmd.Free ();
 		}
-
+		/// <summary>
+		/// Load model images as separate texture in a c# array
+		/// </summary>
+		/// <returns>The images.</returns>
 		public Image[] LoadImages () {
 			if (gltf.Images == null)
 				return new Image[] {};
