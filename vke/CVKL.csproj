@@ -56,5 +56,8 @@
     <Compile Remove="Properties\AssemblyInfo.cs;src\Renderer.cs;src\QueueFamily.cs" />
   </ItemGroup>
     
+  <ItemGroup>
+    <Folder Include="src\base\" />
+  </ItemGroup>
   <Import Project="$(SolutionDir)spirv.targets" /> 
 </Project>

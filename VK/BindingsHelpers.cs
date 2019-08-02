@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 
 namespace VK {
-	public static class BindingsHelpers
+	/*public static class BindingsHelpers
     {
         public static unsafe StringHandle StringToHGlobalUtf8(string s)
         {
@@ -28,7 +28,7 @@ namespace VK {
     public struct StringHandle
     {
         public IntPtr Handle;
-    }
+    }*/
     //public partial struct VkQueue
     //{
     //    unsafe public VkResult submit (VkCommandBuffer cmd, VkSemaphore waitSemaphore, VkSemaphore signalSemaphore, VkFence waitFence)

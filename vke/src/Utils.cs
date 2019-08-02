@@ -1,43 +1,24 @@
-﻿//
-// Utils.cs
+﻿// Copyright (c) 2019  Jean-Philippe Bruyère <jp_bruyere@hotmail.com>
 //
-// Author:
-//       Jean-Philippe Bruyère <jp_bruyere@hotmail.com>
-//
-// Copyright (c) 2019 jp
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-// THE SOFTWARE.
+// This code is licensed under the MIT license (MIT) (http://opensource.org/licenses/MIT)
 using System;
-using System.IO;
 using System.Numerics;
 
 namespace VK {
-    public static partial class Utils {
-        public static void CheckResult (VkResult result, string errorString = "Call failed") {
+	public static partial class Utils {
+		/// <summary>Throw an erro if VkResult != Success.</summary>
+		public static void CheckResult (VkResult result, string errorString = "Call failed") {
             if (result != VkResult.Success)
                 throw new InvalidOperationException (errorString + ": " + result.ToString ());
         }
-        public static float DegreesToRadians (float degrees) {
+		/// <summary>Convert angle from degree to radian.</summary>
+		public static float DegreesToRadians (float degrees) {
             return degrees * (float)Math.PI / 180f;
         }
 
-
+		/// <summary>
+		/// Populate a Vector3 with values from a float array
+		/// </summary>
 		public static void FromFloatArray (ref Vector3 v, float[] floats) {
 			if (floats.Length > 0)
 				v.X = floats[0];
@@ -46,6 +27,9 @@ namespace VK {
 			if (floats.Length > 2)
 				v.Z = floats[2];
 		}
+		/// <summary>
+		/// Populate a Vector4 with values from a float array
+		/// </summary>
 		public static void FromFloatArray (ref Vector4 v, float[] floats) {
 			if (floats.Length > 0)
 				v.X = floats[0];
@@ -56,7 +40,10 @@ namespace VK {
 			if (floats.Length > 3)
 				v.W = floats[3];            
         }
-        public static void FromFloatArray (ref Quaternion v, float[] floats) {
+		/// <summary>
+		/// Populate a Quaternion with values from a float array
+		/// </summary>
+		public static void FromFloatArray (ref Quaternion v, float[] floats) {
 			if (floats.Length > 0)
 				v.X = floats[0];
 			if (floats.Length > 1)
@@ -66,27 +53,40 @@ namespace VK {
 			if (floats.Length > 3)
 				v.W = floats[3];
 		}
+		/// <summary>
+		/// Populate a Vector2 with values from a byte array starting at offset
+		/// </summary>
 		public static void FromByteArray (ref Vector2 v, byte[] byteArray, int offset) {
             v.X = BitConverter.ToSingle (byteArray, offset);
             v.Y = BitConverter.ToSingle (byteArray, offset + 4);
         }
-        public static void FromByteArray (ref Vector3 v, byte[] byteArray, int offset) {
+		/// <summary>
+		/// Populate a Vector3 with values from a byte array starting at offset
+		/// </summary>
+		public static void FromByteArray (ref Vector3 v, byte[] byteArray, int offset) {
             v.X = BitConverter.ToSingle (byteArray, offset);
             v.Y = BitConverter.ToSingle (byteArray, offset + 4);
             v.Z = BitConverter.ToSingle (byteArray, offset + 8);
         }
-        public static void FromByteArray (ref Vector4 v, byte[] byteArray, int offset) {
+		/// <summary>
+		/// Populate a Vector4 with values from a byte array starting at offset
+		/// </summary>
+		public static void FromByteArray (ref Vector4 v, byte[] byteArray, int offset) {
             v.X = BitConverter.ToSingle (byteArray, offset);
             v.Y = BitConverter.ToSingle (byteArray, offset + 4);
             v.Z = BitConverter.ToSingle (byteArray, offset + 8);
             v.W = BitConverter.ToSingle (byteArray, offset + 12);
         }
-        public static void FromByteArray (ref Quaternion v, byte[] byteArray, int offset) {
+		/// <summary>
+		/// Populate a Quaternion with values from a byte array starting at offset
+		/// </summary>
+		public static void FromByteArray (ref Quaternion v, byte[] byteArray, int offset) {
             v.X = BitConverter.ToSingle (byteArray, offset);
             v.Y = BitConverter.ToSingle (byteArray, offset + 4);
             v.Z = BitConverter.ToSingle (byteArray, offset + 8);
             v.W = BitConverter.ToSingle (byteArray, offset + 12);
         }
+
 		#region Extensions methods
 		public static void ImportFloatArray (this ref Vector3 v, float[] floats) {
 			if (floats.Length > 0)
@@ -95,6 +95,13 @@ namespace VK {
 				v.Y = floats[1];
 			if (floats.Length > 2)
 				v.Z = floats[2];
+		}
+		public static Vector3 Transform (this Vector3 v, ref Matrix4x4 mat, bool translate = false) {
+			Vector4 v4 = Vector4.Transform (new Vector4 (v, translate ? 1f : 0f), mat);
+			return new Vector3 (v4.X, v4.Y, v4.Z);
+		}
+		public static Vector3 ToVector3 (this Vector4 v) {
+			return new Vector3 (v.X, v.Y, v.Z);
 		}
 		#endregion
 
@@ -236,6 +243,9 @@ namespace VK {
                 0, IntPtr.Zero,
                 1, ref imageMemoryBarrier);
         }
+		/// <summary>
+		/// Find usage flags and aspect flag from image layout
+		/// </summary>
 		public static void QueryLayoutRequirements (VkImageLayout layout, ref VkImageUsageFlags usage, ref VkImageAspectFlags aspectFlags) {
 			switch (layout) {
 				case VkImageLayout.ColorAttachmentOptimal:
@@ -274,6 +284,5 @@ namespace VK {
 					break;
 			}
 		}
-
     }
 }

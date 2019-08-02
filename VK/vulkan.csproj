@@ -14,10 +14,8 @@
     <PackageTags>C# vulkan net binding</PackageTags>    
     <PackageVersion>$(AssemblyVersion)</PackageVersion>        
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <PackageProjectUrl>https://github.com/jpbruyere/vk.net/blob/master/README.md</PackageProjectUrl>
     <PackageLicense>https://opensource.org/licenses/MIT</PackageLicense>
-    <PackageReleaseNotes></PackageReleaseNotes>
     <RepositoryUrl>https://github.com/jpbruyere/vk.net</RepositoryUrl>
     <!--<PackageIconUrl>https://github.com/KhronosGroup/glTF/blob/master/specification/figures/gltf.png</PackageIconUrl>-->
     
@@ -35,7 +33,7 @@
   </ItemGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <DefineConstants>TRACE;DEBUG;NETSTANDARD;NETSTANDARD2_0</DefineConstants>    
+    <DefineConstants>TRACE;NETSTANDARD;NETSTANDARD2_0;DEBUG;NETFRAMEWORK;NET471</DefineConstants>    
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
