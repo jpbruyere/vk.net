@@ -14,8 +14,8 @@
     <DefineConstants>TRACE;DEBUG;NETSTANDARD;NETSTANDARD2_0</DefineConstants>    
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <AllowUnsafeBlocks></AllowUnsafeBlocks>
-    <DefineConstants></DefineConstants>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <DefineConstants>TRACE;RELEASE;NETFRAMEWORK;NET471</DefineConstants>
     <DefineConstants>TRACE;RELEASE;NETFRAMEWORK;NET471</DefineConstants>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>

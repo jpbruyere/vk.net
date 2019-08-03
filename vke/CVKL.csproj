@@ -4,13 +4,13 @@
     <TargetFrameworks>net471;netstandard2.0</TargetFrameworks>
     
     <Copyright></Copyright>
-    <AssemblyVersion>0.1.4</AssemblyVersion>
+    <AssemblyVersion>0.1.5</AssemblyVersion>
     <Description>C# vulkan library with IDispose model and references counting</Description>
     <Company></Company>
     <Product>CVKL</Product>
     <PackageId>CVKL</PackageId>
     <PackageTags>C# vulkan game library compute glfw</PackageTags>    
-    <PackageVersion>$(AssemblyVersion)</PackageVersion>
+    <PackageVersion>$(AssemblyVersion)-beta</PackageVersion>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <PackageRequireLicenseAcceptance>False</PackageRequireLicenseAcceptance>
     <PackageProjectUrl>https://github.com/jpbruyere/vk.net/blob/master/README.md</PackageProjectUrl>
