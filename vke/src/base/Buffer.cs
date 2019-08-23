@@ -70,7 +70,7 @@ namespace CVKL {
 
             img.SetLayout (cmd, VkImageAspectFlags.Color,
                 VkImageLayout.TransferDstOptimal, finalLayout,
-                VkPipelineStageFlags.Transfer, VkPipelineStageFlags.AllGraphics);
+                VkPipelineStageFlags.Transfer, VkPipelineStageFlags.Transfer);
         }
         public void CopyTo (CommandBuffer cmd, Buffer buff, ulong size = 0, ulong srcOffset = 0, ulong dstOffset = 0) {
             VkBufferCopy bufferCopy = new VkBufferCopy {

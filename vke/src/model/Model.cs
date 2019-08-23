@@ -28,8 +28,6 @@ using System.Collections.Generic;
 using System.Numerics;
 using VK;
 
-
-
 namespace CVKL {
 
 	public enum AlphaMode : UInt32 {
@@ -37,8 +35,11 @@ namespace CVKL {
 		Mask,
 		Blend
 	};
-	//TODO:stride in buffer views?
+	/// <summary>
+	/// Model base class, does not implement Vulkan objects (vbo, ibo, descSets,...)
+	/// </summary>
 	public class Model {
+		#region nested structs and classes
 		public struct Vertex {
 			[VertexAttribute (VertexAttributeType.Position, VkFormat.R32g32b32Sfloat)]
 			public Vector3 pos;
@@ -142,61 +143,20 @@ namespace CVKL {
 				return aabb;
 			}
 		}
+		#endregion
 
-		public class Material {
-			public enum Workflow { PhysicalyBaseRendering = 1, SpecularGlossinnes };
-			public string Name;
-			public Workflow workflow;
-			public Int32 baseColorTexture;
-			public Int32 metallicRoughnessTexture;
-			public Int32 normalTexture;
-			public Int32 occlusionTexture;
-			public Int32 emissiveTexture;
-
-			public Vector4 baseColorFactor;
-			public Vector4 emissiveFactor;
-			public AttachmentType availableAttachments;
-			public AttachmentType availableAttachments1;
-
-			public AlphaMode alphaMode;
-			public float alphaCutoff;
-			public float metallicFactor;
-			public float roughnessFactor;
-
-			public bool metallicRoughness = true;
-			public bool specularGlossiness = false;
-
-			public Material (Int32 _baseColorTexture = -1, Int32 _metallicRoughnessTexture = -1,
-				Int32 _normalTexture = -1, Int32 _occlusionTexture = -1) {
-				workflow = Workflow.PhysicalyBaseRendering;
-				baseColorTexture = _baseColorTexture;
-				metallicRoughnessTexture = _metallicRoughnessTexture;
-				normalTexture = _normalTexture;
-				occlusionTexture = _occlusionTexture;
-				emissiveTexture = -1;
-
-				alphaMode = AlphaMode.Opaque;
-				alphaCutoff = 1f;
-				metallicFactor = 1f;
-				roughnessFactor = 1;
-				baseColorFactor = new Vector4 (1);
-				emissiveFactor = new Vector4 (1);
-
-				metallicRoughness = true;
-				specularGlossiness = false;
-
-			}
-		}
 		protected Device dev;
+		protected int defaultSceneIndex;
 
 		public VkIndexType IndexBufferType;
 
-		protected int defaultSceneIndex;
 		public Scene DefaultScene => Scenes[defaultSceneIndex];
 		public List<Mesh> Meshes;
 		public List<Scene> Scenes;
+		public Dimensions dimensions = new Dimensions (new Vector3 (float.MaxValue), new Vector3 (float.MinValue));
 
-        public Node FindNode(string name) {
+
+		public Node FindNode(string name) {
             foreach (Scene scene in Scenes)
             {
                 Node n = scene.FindNode(name);
@@ -206,6 +166,6 @@ namespace CVKL {
             return null;
         }
 
-        public Dimensions dimensions = new Dimensions (new Vector3 (float.MaxValue), new Vector3 (float.MinValue));
+        
 	}
 }

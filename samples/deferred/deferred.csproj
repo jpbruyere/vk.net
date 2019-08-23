@@ -1,11 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="../../netfx.props" />
-  <PropertyGroup>
-    <TargetFrameworks>net471;netstandard2.0</TargetFrameworks>
+  <Import Project="$(RootDirectory)netfx.props" />
+  <PropertyGroup>    
     <OutputPath>$(SolutionDir)build\$(Configuration)\</OutputPath>
     <OutputType>Exe</OutputType>        
-    <RepositoryUrl>https://github.com/jpbruyere/vk.net</RepositoryUrl>
-    <License>https://opensource.org/licenses/MIT</License>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>        
     <EnableDefaultNoneItems>false</EnableDefaultNoneItems>     

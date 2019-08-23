@@ -13,9 +13,9 @@ namespace deferred {
 			//Instance.RENDER_DOC_CAPTURE = true;
 
 			DeferredPbrRenderer.TEXTURE_ARRAY = true;
-			DeferredPbrRenderer.NUM_SAMPLES = VkSampleCountFlags.SampleCount4;
+			DeferredPbrRenderer.NUM_SAMPLES = VkSampleCountFlags.SampleCount1;
 
-			PbrModelTexArray.TEXTURE_DIM = 1024;
+			PbrModelTexArray.TEXTURE_DIM = 512;
 
 			using (Deferred vke = new Deferred ()) {
 				vke.Run ();

@@ -42,7 +42,7 @@ namespace CVKL {
 		/// Pbr data structure suitable for push constant or ubo, containing
 		/// availablility of attached textures and the coef of pbr inputs
 		/// </summary>
-		public new struct Material {
+		public struct Material {
 			public Vector4 baseColorFactor;
 			public Vector4 emissiveFactor;
 			public Vector4 diffuseFactor;
@@ -54,7 +54,9 @@ namespace CVKL {
 			public float roughnessFactor;
 			public float alphaMask;
 			public float alphaMaskCutoff;
-			int pad0;//see std420
+#pragma warning disable 169
+			readonly int pad0;//see std420
+#pragma warning restore 169
 		}
 
 		Image[] textures;
@@ -95,7 +97,7 @@ namespace CVKL {
 		}
 
 		void loadMaterials (glTFLoader ctx, DescriptorSetLayout layout, params AttachmentType[] attachments) {
-			Model.Material[] mats = ctx.LoadMaterial ();
+			glTFLoader.Material[] mats = ctx.LoadMaterial ();
 			materials = new Material[mats.Length];
 			descriptorSets = new DescriptorSet[mats.Length];
 

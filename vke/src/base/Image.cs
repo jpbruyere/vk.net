@@ -542,7 +542,7 @@ namespace CVKL {
 			VkImageSubresourceRange mipSubRange = new VkImageSubresourceRange (VkImageAspectFlags.Color, 0, 1, 0, info.arrayLayers);
 
 			SetLayout (cmd, VkImageLayout.Undefined, VkImageLayout.TransferSrcOptimal, mipSubRange,
-					VkPipelineStageFlags.Transfer, VkPipelineStageFlags.Transfer);
+					VkPipelineStageFlags.BottomOfPipe, VkPipelineStageFlags.Transfer);
 
 			for (int i = 1; i < info.mipLevels; i++) {
 				VkImageBlit imageBlit = new VkImageBlit {
