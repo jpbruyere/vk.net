@@ -1,0 +1,17 @@
+<Project>
+    <PropertyGroup>
+        <RootDirectory>$(MSBuildThisFileDirectory)</RootDirectory>
+        <Deterministic>true</Deterministic>
+        
+        <TargetFrameworks>net471;netstandard2.0</TargetFrameworks>
+        
+		<RepositoryUrl>https://github.com/jpbruyere/vk.net</RepositoryUrl>
+		<License>MIT</License>
+	    <Authors>Jean-Philippe Bruyère</Authors>
+	    
+	    <LangVersion>7.2</LangVersion>
+
+        <!--<GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>-->
+    </PropertyGroup>
+    <!--<Import Project="netfx.props" />-->
+</Project>

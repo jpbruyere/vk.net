@@ -1,4 +1,7 @@
-﻿using System.Numerics;
+﻿// Copyright (c) 2019  Jean-Philippe Bruyère <jp_bruyere@hotmail.com>
+//
+// This code is licensed under the MIT license (MIT) (http://opensource.org/licenses/MIT)
+using System.Numerics;
 using System.Runtime.InteropServices;
 using CVKL;
 using VK;
@@ -6,7 +9,7 @@ using VK;
 namespace Triangle {
 	class Program : VkWindow {
 		static void Main (string[] args) {
-			Instance.RENDER_DOC_CAPTURE = true;
+			//Instance.RENDER_DOC_CAPTURE = true;
 			Instance.VALIDATION = true;
 
 			using (Program vke = new Program ()) {
@@ -73,6 +76,8 @@ namespace Triangle {
 
 			pipeline = new GraphicPipeline (cfg);
 
+			//note that descriptor set is allocated after the pipeline creation that use this layout, layout is activated
+			//automaticaly on pipeline creation.
 			descriptorSet = descriptorPool.Allocate (dsLayout);
 			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (descriptorSet, dsLayout);
 			uboUpdate.Write (dev, uboMats.Descriptor);

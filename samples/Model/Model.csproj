@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <Import Project="$(RootDirectory)netfx.props" />
-  <PropertyGroup>    
+  <PropertyGroup>
     <OutputPath>$(SolutionDir)build\$(Configuration)\</OutputPath>
     <OutputType>Exe</OutputType>        
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -22,17 +22,12 @@
   </ItemGroup>    
     
   <ItemGroup>
-    <ProjectReference Include="..\..\vke\CVKL.csproj">
-    </ProjectReference>
+    <ProjectReference Include="..\..\vke\CVKL.csproj" />
   </ItemGroup>    
   
   <ItemGroup>    
     <GLSLShader Include="shaders\**\*.frag;shaders\**\*.vert" />            
     <None Remove="shaders\**\*.frag;shaders\**\*.vert" /> 
-    <Datas Include="..\data\**\*.*">      
-      <Link>data\%(RecursiveDir)%(Filename)%(Extension)</Link>
-    </Datas>
-    <None Remove="mono_crash.1adb363697.0.json" />
   </ItemGroup>     
     
   <Import Project="$(SolutionDir)spirv.targets" />    

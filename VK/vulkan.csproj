@@ -1,8 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="../netfx.props" />
-  <PropertyGroup>
-    <TargetFrameworks>net471;netstandard2.0</TargetFrameworks>
-    
+  <Import Project="$(RootDirectory)netfx.props" />
+  <PropertyGroup>   
     <Copyright></Copyright>
     <AssemblyVersion>0.1.4</AssemblyVersion>
     <AssemblyName>VK</AssemblyName>
@@ -16,10 +14,7 @@
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <PackageProjectUrl>https://github.com/jpbruyere/vk.net/blob/master/README.md</PackageProjectUrl>
     <PackageLicense>https://opensource.org/licenses/MIT</PackageLicense>
-    <RepositoryUrl>https://github.com/jpbruyere/vk.net</RepositoryUrl>
     <!--<PackageIconUrl>https://github.com/KhronosGroup/glTF/blob/master/specification/figures/gltf.png</PackageIconUrl>-->
-    
-    <Authors>Jean-Philippe Bruyère</Authors> 
     <SynchReleaseVersion>false</SynchReleaseVersion>
     <OutputPath>$(SolutionDir)build\$(Configuration)\</OutputPath>
   </PropertyGroup>

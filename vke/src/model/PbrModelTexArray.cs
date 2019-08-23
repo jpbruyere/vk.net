@@ -43,7 +43,7 @@ namespace CVKL {
 		/// <summary>
 		/// Material structure for ubo containing texture indices in tex array
 		/// </summary>
-		public new struct Material {
+		public struct Material {
 			public Vector4 baseColorFactor;
 			public Vector4 emissiveFactor;
 			public Vector4 diffuseFactor;
@@ -110,7 +110,7 @@ namespace CVKL {
 		}
 
 		void loadMaterials (glTFLoader ctx) {
-			Model.Material[] mats = ctx.LoadMaterial ();
+			glTFLoader.Material[] mats = ctx.LoadMaterial ();
 			materials = new Material[mats.Length];
 
 			for (int i = 0; i < mats.Length; i++) {
