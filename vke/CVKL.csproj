@@ -1,8 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="../netfx.props" />
-  <PropertyGroup>
-    <TargetFrameworks>net471;netstandard2.0</TargetFrameworks>
-    
+  <Import Project="$(RootDirectory)netfx.props" />
+  <PropertyGroup>        
     <Copyright></Copyright>
     <AssemblyVersion>0.1.5</AssemblyVersion>
     <Description>C# vulkan library with IDispose model and references counting</Description>
@@ -16,13 +14,10 @@
     <PackageProjectUrl>https://github.com/jpbruyere/vk.net/blob/master/README.md</PackageProjectUrl>
     <PackageLicense>https://opensource.org/licenses/MIT</PackageLicense>
     <PackageReleaseNotes></PackageReleaseNotes>
-    <RepositoryUrl>https://github.com/jpbruyere/vk.net</RepositoryUrl>
     <!--<PackageIconUrl>https://github.com/KhronosGroup/glTF/blob/master/specification/figures/gltf.png</PackageIconUrl>-->    
-    <Authors>Jean-Philippe Bruyère</Authors>
     <SynchReleaseVersion>false</SynchReleaseVersion>
     <AssemblyName>CVKL</AssemblyName>
-    <OutputPath>$(SolutionDir)build\$(Configuration)\</OutputPath>          
-    <LangVersion>7.2</LangVersion>
+    <OutputPath>$(SolutionDir)build\$(Configuration)\</OutputPath>              
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>        
   </PropertyGroup>
     

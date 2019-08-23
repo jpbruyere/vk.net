@@ -157,7 +157,7 @@ namespace TextureCube {
 				nextTexture = KTX.KTX.Load (presentQueue, cmdPool, path,
 					VkImageUsageFlags.Sampled, VkMemoryPropertyFlags.DeviceLocal, true);
 			else
-				nextTexture = Image.Load (dev, path);
+				nextTexture = Image.StbLoad (dev, path);
 			updateViewRequested = true;
 		}
 

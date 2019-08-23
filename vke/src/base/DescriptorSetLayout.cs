@@ -7,6 +7,10 @@ using VK;
 using static VK.Vk;
 
 namespace CVKL {
+	/// <summary>
+	/// Descriptor set layout, automatically activated when used in pipeline creation, so don't allocate descriptor sets using
+	/// this layout unless it has been activated.
+	/// </summary>
     public sealed class DescriptorSetLayout : Activable {
         internal VkDescriptorSetLayout handle;
         

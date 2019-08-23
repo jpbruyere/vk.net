@@ -5,17 +5,21 @@ using Glfw;
 using CVKL;
 using VK;
 using Buffer = CVKL.Buffer;
+using System.IO;
 
 namespace TextureSample {
 	class Program : VkWindow {
 		static void Main (string[] args) {
+			Instance.VALIDATION = true;
+			Instance.DEBUG_UTILS = true;
 			using (Program vke = new Program ()) {
 				vke.Run ();
 			}
 		}
 		protected override void configureEnabledFeatures (VkPhysicalDeviceFeatures available_features, ref VkPhysicalDeviceFeatures features) {
 			base.configureEnabledFeatures (available_features, ref features);
-			features.textureCompressionBC = available_features.textureCompressionBC;
+			//features.textureCompressionBC = available_features.textureCompressionBC;
+			features.textureCompressionASTC_LDR = available_features.textureCompressionASTC_LDR;
 		}
 
 		float rotSpeed = 0.01f, zoomSpeed = 0.01f;
@@ -52,12 +56,24 @@ namespace TextureSample {
 		ushort[] indices = { 0, 1, 2, 2, 0, 3 };
 		int currentImgIndex = 0;
 		string[] imgPathes = {
+			"/mnt/devel/vulkan/vulkanExUpstream/data/textures/trail_astc_8x8_unorm.ktx",
+			//"data/textures/tex.astc",
+			"data/textures/tex256.jpg",
 			"data/textures/texture.jpg",
 			"data/textures/rgba-reference.ktx",
 			"data/textures/texturearray_rocks_bc3_unorm.ktx",
 		};
-			
+
+		DebugReport dbgReport;
+
 		Program () : base () {
+			dbgReport = new DebugReport (instance,
+				VkDebugReportFlagsEXT.DebugEXT|
+				VkDebugReportFlagsEXT.ErrorEXT |
+				VkDebugReportFlagsEXT.WarningEXT |
+				VkDebugReportFlagsEXT.PerformanceWarningEXT |
+				VkDebugReportFlagsEXT.InformationEXT);
+
 			vbo = new GPUBuffer<float> (presentQueue, cmdPool, VkBufferUsageFlags.VertexBuffer, vertices);
 			ibo = new GPUBuffer<ushort> (presentQueue, cmdPool, VkBufferUsageFlags.IndexBuffer, indices);
 
@@ -88,10 +104,8 @@ namespace TextureSample {
 
 			descriptorSet = descriptorPool.Allocate (dsLayout);
 
-			using (DescriptorSetWrites2 uboUpdate = new DescriptorSetWrites2 (dev)) {
-				uboUpdate.AddWriteInfo (descriptorSet, dsLayout.Bindings[0], uboMats.Descriptor);
-				uboUpdate.Update ();
-			}
+			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (descriptorSet, dsLayout.Bindings[0]);
+			uboUpdate.Write (dev, uboMats.Descriptor);
 
 			loadTexture (imgPathes[currentImgIndex]);
 			updateTextureSet ();
@@ -129,11 +143,17 @@ namespace TextureSample {
 			
 		//in the thread of the keyboard
 		void loadTexture (string path) {
-			if (path.EndsWith("ktx", StringComparison.OrdinalIgnoreCase))
+			if (path.EndsWith ("ktx", StringComparison.OrdinalIgnoreCase))
 				nextTexture = KTX.KTX.Load (presentQueue, cmdPool, path,
-					VkImageUsageFlags.Sampled, VkMemoryPropertyFlags.DeviceLocal, true);
+					VkImageUsageFlags.Sampled, VkMemoryPropertyFlags.DeviceLocal, true, VkImageTiling.Optimal);
+			/*else if (path.EndsWith ("astc", StringComparison.OrdinalIgnoreCase)) {
+				using (Stream str = File.OpenRead (path)) {
+					 str.Length
+					nextTexture = Image.Load (dev, presentQueue, cmdPool, str, VkFormat.Astc6x6UnormBlock, VkMemoryPropertyFlags.DeviceLocal, VkImageTiling.Optimal, false);
+				}
+			} */
 			else
-				nextTexture = Image.Load (dev, path);
+				nextTexture = Image.Load (dev, presentQueue, cmdPool, path, VkFormat.R8g8b8a8Unorm, VkMemoryPropertyFlags.DeviceLocal, VkImageTiling.Optimal, false);
 			updateViewRequested = true;
 		}
 
@@ -143,10 +163,9 @@ namespace TextureSample {
 			nextTexture.CreateSampler ();
 
 			nextTexture.Descriptor.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
-			using (DescriptorSetWrites2 uboUpdate = new DescriptorSetWrites2 (dev)) {
-				uboUpdate.AddWriteInfo (descriptorSet, dsLayout.Bindings[1], nextTexture.Descriptor);
-				uboUpdate.Update ();
-			}
+
+			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (descriptorSet, dsLayout.Bindings[1]);
+			uboUpdate.Write (dev, nextTexture.Descriptor);
 
 			texture?.Dispose ();
 			texture = nextTexture;
@@ -240,6 +259,7 @@ namespace TextureSample {
 					vbo.Dispose ();
 					ibo.Dispose ();
 					uboMats.Dispose ();
+					dbgReport.Dispose ();
 				}
 			}
 

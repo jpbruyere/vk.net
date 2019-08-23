@@ -13,8 +13,10 @@ using VK;
 using CVKL;
 
 namespace pbrSample {
-	class Program : VkWindow{	
+	class Program : VkWindow{
+
 		static void Main (string[] args) {
+			Instance.VALIDATION = true;
 			using (Program vke = new Program ()) {
 				vke.Run ();
 			}
@@ -24,10 +26,10 @@ namespace pbrSample {
 #if PIPELINE_STATS
 			features.pipelineStatisticsQuery = true;
 #endif
-			features.samplerAnisotropy = true;
+			features.samplerAnisotropy = available_features.samplerAnisotropy;
 		}
 
-		VkSampleCountFlags samples = VkSampleCountFlags.SampleCount4;
+		VkSampleCountFlags samples = VkSampleCountFlags.SampleCount1;
 
 		Framebuffer[] frameBuffers;
 		PBRPipeline pbrPipeline;

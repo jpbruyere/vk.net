@@ -70,10 +70,10 @@ namespace KTX {
 						if (vkFormat == VkFormat.Undefined)
 							throw new KtxException ("Undefined format: " + ktxPath);
 					}
-
+					VkFormatProperties formatProperties = staggingQ.Dev.phy.GetFormatProperties (vkFormat);
 					VkFormatFeatureFlags phyFormatSupport = (tiling == VkImageTiling.Linear) ?
-						staggingQ.Dev.phy.GetFormatProperties (vkFormat).linearTilingFeatures :
-						staggingQ.Dev.phy.GetFormatProperties (vkFormat).optimalTilingFeatures;
+						formatProperties.linearTilingFeatures :
+						formatProperties.optimalTilingFeatures;
 
 					uint requestedMipsLevels = numberOfMipmapLevels;
 					if (numberOfMipmapLevels == 1)
@@ -119,7 +119,6 @@ namespace KTX {
 					if (memoryProperty.HasFlag (VkMemoryPropertyFlags.DeviceLocal)) {
 						ulong staggingSize = img.AllocatedDeviceMemorySize;
 
-
 						using (HostBuffer stagging = new HostBuffer (staggingQ.Dev, VkBufferUsageFlags.TransferSrc, staggingSize)) {
 							stagging.Map ();
 
@@ -144,7 +143,7 @@ namespace KTX {
 								UInt32 imgSize = br.ReadUInt32 ();
 
 								bufferCopyRegion.bufferImageHeight = imgWidth;
-								bufferCopyRegion.bufferRowLength = imgHeight;
+								bufferCopyRegion.bufferRowLength = 0; //imgHeight;
 								bufferCopyRegion.bufferOffset = bufferOffset;
 
 								if (createFlags.HasFlag (VkImageCreateFlags.CubeCompatible)) {
@@ -189,28 +188,29 @@ namespace KTX {
 						}
 
 						//for (int mips = 0; mips < numberOfMipmapLevels; mips++) {
-							//UInt32 imgSize = br.ReadUInt32 ();
-							/*VkImageBlit imageBlit = new VkImageBlit {
-								srcSubresource = new VkImageSubresourceLayers(VkImageAspectFlags.Color, numberOfArrayElements, (uint)mips - 1),
-								srcOffsets_1 = new VkOffset3D((int)pixelWidth >> (mips - 1), (int)pixelHeight >> (mips - 1),1),
-								dstSubresource = new VkImageSubresourceLayers (VkImageAspectFlags.Color, numberOfArrayElements, (uint)mips),
-								dstOffsets_1 = new VkOffset3D ((int)pixelWidth >> mips, (int)pixelHeight >> mips, 1),
-							};*/
-							//for (int layer = 0; layer < numberOfArrayElements; layer++) {
-								//for (int face = 0; face < numberOfFaces; face++) {
-									//for (int slice = 0; slice < pixelDepth; slice++) {
-										/*for (int y = 0; y < pixelHeight; y++) {
-											for (int x = 0; x < pixelWidth; x++) {
-												//Uncompressed texture data matches a GL_UNPACK_ALIGNMENT of 4.
-											}
-										}*/
-									//}
-									//Byte cubePadding[0-3]
-								//}
-							//}
-							//Byte mipPadding[0-3]
+						//UInt32 imgSize = br.ReadUInt32 ();
+						/*VkImageBlit imageBlit = new VkImageBlit {
+							srcSubresource = new VkImageSubresourceLayers(VkImageAspectFlags.Color, numberOfArrayElements, (uint)mips - 1),
+							srcOffsets_1 = new VkOffset3D((int)pixelWidth >> (mips - 1), (int)pixelHeight >> (mips - 1),1),
+							dstSubresource = new VkImageSubresourceLayers (VkImageAspectFlags.Color, numberOfArrayElements, (uint)mips),
+							dstOffsets_1 = new VkOffset3D ((int)pixelWidth >> mips, (int)pixelHeight >> mips, 1),
+						};*/
+						//for (int layer = 0; layer < numberOfArrayElements; layer++) {
+						//for (int face = 0; face < numberOfFaces; face++) {
+						//for (int slice = 0; slice < pixelDepth; slice++) {
+						/*for (int y = 0; y < pixelHeight; y++) {
+							for (int x = 0; x < pixelWidth; x++) {
+								//Uncompressed texture data matches a GL_UNPACK_ALIGNMENT of 4.
+							}
+						}*/
+						//}
+						//Byte cubePadding[0-3]
+						//}
+						//}
+						//Byte mipPadding[0-3]
 						//}
 
+					} else { 
 					}
 				}
 			}
