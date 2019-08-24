@@ -1,30 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <Import Project="$(RootDirectory)netfx.props" />
   <PropertyGroup>    
-    <OutputPath>$(SolutionDir)build\$(Configuration)\</OutputPath>
-    <OutputType>Exe</OutputType>        
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>        
     <EnableDefaultNoneItems>false</EnableDefaultNoneItems>     
   </PropertyGroup>
         
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">    
-    <DefineConstants>WITH_SHADOWS;_WITH_VKVG;TRACE;DEBUG;NETSTANDARD;NETSTANDARD2_0</DefineConstants>        
-  </PropertyGroup>
-    
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-        <DefineConstants>WITH_SHADOWS;_WITH_VKVG</DefineConstants>
-  </PropertyGroup>
-    
-  <PropertyGroup Condition="$(Configuration) == 'DebugCrow' ">
-    <DefineConstants>WITH_SHADOWS;_WITH_VKVG;TRACE;DEBUG;NETSTANDARD;NETSTANDARD2_0</DefineConstants>        
-  </PropertyGroup>
+    <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">    
+        <DefineConstants>TRACE;DEBUG;NETSTANDARD;NETSTANDARD2_0;MEMORY_POOLS;WITH_SHADOWS;_WITH_VKVG</DefineConstants>    
+    </PropertyGroup>
     
   <ItemGroup>    
-    <GLSLShader Include="shaders\**\*.frag;shaders\**\*.vert;shaders\**\*.comp;shaders\**\*.geom" />
-    <Datas Include="..\data\**\*.*">      
-      <Link>data\%(RecursiveDir)%(Filename)%(Extension)</Link>
-    </Datas>
     <Compile Include="EnvironmentPipeline.cs;deferredPbrRenderer.cs;shadowMapRenderer.cs" />
   </ItemGroup>     
 
@@ -40,15 +25,9 @@
     <Compile Include="main.cs" />
   </ItemGroup>    
     
-  <ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">
-    <Reference Include="System" />
-  </ItemGroup>    
     
   <ItemGroup>
-    <PackageReference Include="Vulkan" Version="0.1.3" />            
-    <ProjectReference Include="..\..\vke\CVKL.csproj" />    
     <PackageReference Include="Crow.VK" Version="0.9.0-beta" />
   </ItemGroup> 
     
-  <Import Project="$(SolutionDir)spirv.targets" />    
 </Project>

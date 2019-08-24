@@ -27,7 +27,7 @@ namespace CVKL {
 
 				cubemap = KTX.KTX.Load (staggingQ, cmdPool, cubemapPathes[2],
 					VkImageUsageFlags.Sampled, VkMemoryPropertyFlags.DeviceLocal, true);
-				cubemap.CreateView (VkImageViewType.Cube, VkImageAspectFlags.Color, 6, 0, cubemap.CreateInfo.mipLevels);
+				cubemap.CreateView (VkImageViewType.Cube, VkImageAspectFlags.Color, 6);
 				cubemap.CreateSampler (VkSamplerAddressMode.ClampToEdge);
 				cubemap.SetName ("skybox Texture");
 				cubemap.Descriptor.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
@@ -186,7 +186,7 @@ namespace CVKL {
 				cmap.SetName ("prefilterenvmap");
 			else
 				cmap.SetName ("irradianceCube");
-			cmap.CreateView (VkImageViewType.Cube, VkImageAspectFlags.Color, 6, 0, numMips);
+			cmap.CreateView (VkImageViewType.Cube, VkImageAspectFlags.Color, 6);
 			cmap.CreateSampler (VkSamplerAddressMode.ClampToEdge);
 
 			DescriptorPool dsPool = new DescriptorPool (Dev, 2,	new VkDescriptorPoolSize (VkDescriptorType.CombinedImageSampler));

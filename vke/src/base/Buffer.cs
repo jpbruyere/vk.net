@@ -36,7 +36,13 @@ namespace CVKL {
         public override void Activate () {
 			if (state != ActivableState.Activated) {
 				Utils.CheckResult (vkCreateBuffer (Dev.VkDev, ref createInfo, IntPtr.Zero, out handle));
+#if MEMORY_POOLS
 				Dev.resourceManager.Add (this);
+#else
+				updateMemoryRequirements ();
+				allocateMemory ();
+				bindMemory ();
+#endif
 				SetupDescriptor ();
 			}
 			base.Activate ();
@@ -47,7 +53,11 @@ namespace CVKL {
 		}
 
 		internal override void bindMemory () {
+#if MEMORY_POOLS
 			Utils.CheckResult (vkBindBufferMemory (Dev.VkDev, handle, memoryPool.vkMemory, poolOffset));
+#else
+			Utils.CheckResult (vkBindBufferMemory (Dev.VkDev, handle, vkMemory, 0));
+#endif
 		}
 
 		public void SetupDescriptor (ulong size = WholeSize, ulong offset = 0) {
@@ -88,7 +98,7 @@ namespace CVKL {
 			return string.Format ($"{base.ToString ()}[0x{handle.Handle.ToString("x")}]");
 		}
 
-		#region IDisposable Support
+#region IDisposable Support
 		protected override void Dispose (bool disposing) {
 			if (state == ActivableState.Activated) {
 				base.Dispose (disposing);
@@ -96,6 +106,6 @@ namespace CVKL {
 			}
 			state = ActivableState.Disposed;
         }
-		#endregion
+#endregion
 	}
 }

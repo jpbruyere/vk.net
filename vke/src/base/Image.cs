@@ -105,42 +105,8 @@ namespace CVKL {
 		#endregion
 
 		public static uint ComputeMipLevels(uint size) => (uint)Math.Floor (Math.Log (size)) + 1;
+		public static uint ComputeMipLevels (int width, int height) =>	(uint)Math.Floor (Math.Log (Math.Max (width, height))) + 1;
 
-		#region bitmap loading
-		/// <summary>
-		/// Load image from data pointed by IntPtr pointer containing full image file (jpg, png,...)
-		/// </summary>
-		public static Image Load (Device dev, Queue staggingQ, CommandPool staggingCmdPool,
-			IntPtr bitmap, ulong bitmapByteCount, VkFormat format = VkFormat.Undefined,
-			VkMemoryPropertyFlags memoryProps = VkMemoryPropertyFlags.DeviceLocal,
-			VkImageTiling tiling = VkImageTiling.Optimal, bool generateMipmaps = true,
-			VkImageType imageType = VkImageType.Image2D,
-			VkImageUsageFlags usage = VkImageUsageFlags.Sampled | VkImageUsageFlags.TransferSrc | VkImageUsageFlags.TransferDst) {
-
-			if (format == VkFormat.Undefined)
-				format = DefaultTextureFormat;
-
-			int width, height, channels;
-			IntPtr imgPtr = Stb.Load (bitmap, (int)bitmapByteCount, out width, out height, out channels, 4);
-
-			if (imgPtr == IntPtr.Zero)
-				throw new Exception ($"STBI image loading error.");
-
-			uint mipLevels = generateMipmaps ? (uint)Math.Floor (Math.Log (Math.Max (width, height))) + 1 : 1;
-
-			if (tiling == VkImageTiling.Optimal)
-				usage |= VkImageUsageFlags.TransferDst;
-			if (generateMipmaps)
-				usage |= (VkImageUsageFlags.TransferSrc | VkImageUsageFlags.TransferDst);
-
-			Image img = new Image (dev, format, usage, memoryProps, (uint)width, (uint)height, imageType, VkSampleCountFlags.SampleCount1, tiling, mipLevels);
-
-			img.load (staggingQ, staggingCmdPool, imgPtr, generateMipmaps);
-
-			Stb.FreeImage (imgPtr);
-
-			return img;
-		}
 		/// <summary>
 		/// Load image from byte array containing full image file (jpg, png,...)
 		/// </summary>
@@ -157,6 +123,36 @@ namespace CVKL {
 			return img;
 		}
 
+		#region bitmap loading
+		/// <summary>
+		/// Load image from data pointed by IntPtr pointer containing full image file (jpg, png,...)
+		/// </summary>
+		public static Image Load (Device dev, Queue staggingQ, CommandPool staggingCmdPool,
+			IntPtr bitmap, ulong bitmapByteCount, VkFormat format = VkFormat.Undefined,
+			VkMemoryPropertyFlags memoryProps = VkMemoryPropertyFlags.DeviceLocal,
+			VkImageTiling tiling = VkImageTiling.Optimal, bool generateMipmaps = true,
+			VkImageType imageType = VkImageType.Image2D,
+			VkImageUsageFlags usage = VkImageUsageFlags.Sampled | VkImageUsageFlags.TransferSrc | VkImageUsageFlags.TransferDst) {
+
+			if (format == VkFormat.Undefined)
+				format = DefaultTextureFormat;
+			if (tiling == VkImageTiling.Optimal)
+				usage |= VkImageUsageFlags.TransferDst;
+			if (generateMipmaps)
+				usage |= (VkImageUsageFlags.TransferSrc | VkImageUsageFlags.TransferDst);
+
+			using (StbImage stbi = new StbImage (bitmap, bitmapByteCount)) {
+				uint mipLevels = generateMipmaps ? ComputeMipLevels (stbi.Width, stbi.Height) : 1;
+
+				Image img = new Image (dev, format, usage, memoryProps, (uint)stbi.Width, (uint)stbi.Height, imageType,
+					VkSampleCountFlags.SampleCount1, tiling, mipLevels);
+
+				img.load (staggingQ, staggingCmdPool, stbi.Handle, generateMipmaps);
+
+				return img;
+			}
+		}
+
 		/// <summary>
 		/// Load bitmap into Image with stagging and mipmap generation if necessary
 		/// and usage.
@@ -170,26 +166,21 @@ namespace CVKL {
 
 			if (format == VkFormat.Undefined)
 				format = DefaultTextureFormat;
-
-			int width, height, channels;
-			IntPtr imgPtr = Stb.Load (path, out width, out height, out channels, 4);
-			if (imgPtr == IntPtr.Zero)
-				throw new Exception ($"File not found: {path}.");
-
-			uint mipLevels = generateMipmaps ? (uint)Math.Floor (Math.Log (Math.Max (width, height))) + 1 : 1;
-
 			if (tiling == VkImageTiling.Optimal)
 				usage |= VkImageUsageFlags.TransferDst;
 			if (generateMipmaps)
 				usage |= (VkImageUsageFlags.TransferSrc | VkImageUsageFlags.TransferDst);
 
-			Image img = new Image (dev, format, usage, memoryProps, (uint)width, (uint)height, imageType, VkSampleCountFlags.SampleCount1, tiling, mipLevels);
+			using (StbImage stbi = new StbImage (path)) {
+				uint mipLevels = generateMipmaps ? ComputeMipLevels (stbi.Width, stbi.Height) : 1;
 
-			img.load (staggingQ, staggingCmdPool, imgPtr, generateMipmaps);
+				Image img = new Image (dev, format, usage, memoryProps, (uint)stbi.Width, (uint)stbi.Height, imageType,
+					VkSampleCountFlags.SampleCount1, tiling, mipLevels);
 
-			Stb.FreeImage (imgPtr);
+				img.load (staggingQ, staggingCmdPool, stbi.Handle, generateMipmaps);
 
-			return img;
+				return img;
+			}
 		}
 
 		/// <summary>
@@ -205,25 +196,18 @@ namespace CVKL {
 			if (format == VkFormat.Undefined)
 				format = DefaultTextureFormat;
 
-			int width, height, channels;
-            IntPtr imgPtr = Stb.Load (path, out width, out height, out channels, 4);
- 			if (imgPtr == IntPtr.Zero)
-				throw new Exception ($"File not found: {path}.");
+			using (StbImage stbi = new StbImage (path)) {
+				uint mipLevels = reserveSpaceForMipmaps ? ComputeMipLevels (stbi.Width, stbi.Height) : 1;
 
-			long size = width * height * 4;
-			uint mipLevels = reserveSpaceForMipmaps ? (uint)Math.Floor (Math.Log (Math.Max (width, height))) + 1 : 1;
+				Image img = new Image (dev, format, usage, memoryProps, (uint)stbi.Width, (uint)stbi.Height, imageType,
+					VkSampleCountFlags.SampleCount1, tiling, mipLevels);
 
-			Image img = new Image(dev, format, usage, memoryProps, (uint)width, (uint)height, imageType, VkSampleCountFlags.SampleCount1, tiling, mipLevels);
+				img.Map ();
+				stbi.CoptyTo (img.MappedData);
+				img.Unmap ();
 
-            img.Map ();
-            unsafe {
-                System.Buffer.MemoryCopy (imgPtr.ToPointer (), img.MappedData.ToPointer (), size, size);
-            }
-            img.Unmap ();
-
-			Stb.FreeImage (imgPtr);
-
-            return img;
+				return img;
+			}
         }
 		/// <summary>
 		/// create host visible linear image without command from byte array
@@ -252,30 +236,21 @@ namespace CVKL {
 
 			if (format == VkFormat.Undefined)
 				format = DefaultTextureFormat;
-
-			int width, height, channels;
-			IntPtr imgPtr = Stb.Load (bitmap, (int)bitmapByteCount, out width, out height, out channels, 4);
-
-			if (imgPtr == IntPtr.Zero)
-				throw new Exception ($"STBI image loading error.");
-
-			uint mipLevels = generateMipmaps ? (uint)Math.Floor (Math.Log (Math.Max (width, height))) + 1 : 1;
-
 			if (generateMipmaps)
 				usage |= (VkImageUsageFlags.TransferSrc | VkImageUsageFlags.TransferDst);
 
-			long size = width * height * 4;
-			Image img = new Image (dev, format, usage, memoryProps, (uint)width, (uint)height, imageType, VkSampleCountFlags.SampleCount1, tiling, mipLevels);
+			using (StbImage stbi = new StbImage (bitmap, bitmapByteCount)) {
+				uint mipLevels = generateMipmaps ? ComputeMipLevels (stbi.Width, stbi.Height) : 1;
 
-			img.Map ();
-			unsafe {
-				System.Buffer.MemoryCopy (imgPtr.ToPointer (), img.MappedData.ToPointer (), size, size);
+				Image img = new Image (dev, format, usage, memoryProps, (uint)stbi.Width, (uint)stbi.Height, imageType,
+					VkSampleCountFlags.SampleCount1, tiling, mipLevels);
+
+				img.Map ();
+				stbi.CoptyTo (img.MappedData);
+				img.Unmap ();
+
+				return img;
 			}
-			img.Unmap ();
-
-			Stb.FreeImage (imgPtr);
-
-			return img;
 		}
 
 		/// <summary>
@@ -296,9 +271,7 @@ namespace CVKL {
 			} else {
 				using (HostBuffer stagging = new HostBuffer (Dev, VkBufferUsageFlags.TransferSrc, (UInt64)size, bitmap)) {
 
-					CommandBuffer cmd = staggingCmdPool.AllocateCommandBuffer ();
-
-					cmd.Start (VkCommandBufferUsageFlags.OneTimeSubmit);
+					CommandBuffer cmd = staggingCmdPool.AllocateAndStart (VkCommandBufferUsageFlags.OneTimeSubmit);
 
 					stagging.CopyTo (cmd, this);
 					if (generateMipmaps)
@@ -318,19 +291,30 @@ namespace CVKL {
             vkGetImageMemoryRequirements (Dev.VkDev, handle, out memReqs);            
         }
 		internal override void bindMemory () {
+#if MEMORY_POOLS
 			Utils.CheckResult (vkBindImageMemory (Dev.VkDev, handle, memoryPool.vkMemory, poolOffset));
+#else
+			Utils.CheckResult (vkBindImageMemory (Dev.VkDev, handle, vkMemory, 0));
+#endif
 		}
         public override void Activate () {
 			if (state != ActivableState.Activated) {
 				Utils.CheckResult (vkCreateImage (Dev.VkDev, ref info, IntPtr.Zero, out handle));
+#if MEMORY_POOLS
 				Dev.resourceManager.Add (this);
+#else
+				updateMemoryRequirements ();
+				allocateMemory ();
+				bindMemory ();
+#endif
+
 			}
             base.Activate ();
         }
 
 		public void CreateView (VkImageViewType type = VkImageViewType.ImageView2D, VkImageAspectFlags aspectFlags = VkImageAspectFlags.Color,
 			uint layerCount = 1,
-            uint baseMipLevel = 0, uint levelCount = 1, uint baseArrayLayer = 0,
+            uint baseMipLevel = 0, int levelCount = -1, uint baseArrayLayer = 0,
 			VkComponentSwizzle r = VkComponentSwizzle.R,
 			VkComponentSwizzle g = VkComponentSwizzle.G,
 			VkComponentSwizzle b = VkComponentSwizzle.B,
@@ -346,10 +330,10 @@ namespace CVKL {
             viewInfo.components.b = b;
             viewInfo.components.a = a;
             viewInfo.subresourceRange.aspectMask = aspectFlags;
-            viewInfo.subresourceRange.baseMipLevel = baseMipLevel;
-            viewInfo.subresourceRange.levelCount = levelCount;
-            viewInfo.subresourceRange.baseArrayLayer = baseArrayLayer;
-            viewInfo.subresourceRange.layerCount = layerCount;
+			viewInfo.subresourceRange.baseMipLevel = baseMipLevel;
+			viewInfo.subresourceRange.levelCount = levelCount < 0 ? info.mipLevels : (uint)levelCount;
+			viewInfo.subresourceRange.baseArrayLayer = baseArrayLayer;
+			viewInfo.subresourceRange.layerCount = layerCount;
 
             Utils.CheckResult (vkCreateImageView (Dev.VkDev, ref viewInfo, IntPtr.Zero, out view));
 
@@ -379,7 +363,9 @@ namespace CVKL {
             sampInfo.minFilter = minFilter;
             sampInfo.mipmapMode = mipmapMode;
             sampInfo.minLod = minLod;
-            sampInfo.maxLod = maxLod < 0f ? info.mipLevels : maxLod;
+            sampInfo.maxLod = maxLod < 0f ? info.mipLevels > 1 ? info.mipLevels : 0 : maxLod;
+			sampInfo.compareOp = VkCompareOp.Never;
+			sampInfo.borderColor = VkBorderColor.FloatOpaqueWhite;
 
             Utils.CheckResult (vkCreateSampler (Dev.VkDev, ref sampInfo, IntPtr.Zero, out sampler));
 
@@ -541,9 +527,6 @@ namespace CVKL {
 		public void BuildMipmaps (CommandBuffer cmd) {
 			VkImageSubresourceRange mipSubRange = new VkImageSubresourceRange (VkImageAspectFlags.Color, 0, 1, 0, info.arrayLayers);
 
-			SetLayout (cmd, VkImageLayout.Undefined, VkImageLayout.TransferSrcOptimal, mipSubRange,
-					VkPipelineStageFlags.BottomOfPipe, VkPipelineStageFlags.Transfer);
-
 			for (int i = 1; i < info.mipLevels; i++) {
 				VkImageBlit imageBlit = new VkImageBlit {
 					srcSubresource = new VkImageSubresourceLayers(VkImageAspectFlags.Color, info.arrayLayers, (uint)i - 1),
@@ -552,13 +535,10 @@ namespace CVKL {
 					dstOffsets_1 = new VkOffset3D ((int)info.extent.width >> i, (int)info.extent.height >> i, 1)
 				};
 
-				mipSubRange.baseMipLevel = (uint)i;
-
-				SetLayout (cmd, VkImageLayout.Undefined, VkImageLayout.TransferDstOptimal, mipSubRange,
-					VkPipelineStageFlags.Transfer, VkPipelineStageFlags.Transfer);
-				vkCmdBlitImage (cmd.Handle, handle, VkImageLayout.TransferSrcOptimal, handle, VkImageLayout.TransferDstOptimal, 1, ref imageBlit, VkFilter.Linear);
 				SetLayout (cmd, VkImageLayout.TransferDstOptimal, VkImageLayout.TransferSrcOptimal, mipSubRange,
 					VkPipelineStageFlags.Transfer, VkPipelineStageFlags.Transfer);
+				vkCmdBlitImage (cmd.Handle, handle, VkImageLayout.TransferSrcOptimal, handle, VkImageLayout.TransferDstOptimal, 1, ref imageBlit, VkFilter.Linear);
+				mipSubRange.baseMipLevel = (uint)i;
 			}
 			SetLayout (cmd, VkImageAspectFlags.Color, VkImageLayout.TransferSrcOptimal, VkImageLayout.ShaderReadOnlyOptimal,
 					VkPipelineStageFlags.Transfer, VkPipelineStageFlags.FragmentShader);

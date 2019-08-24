@@ -7,7 +7,8 @@ using VK;
 using static VK.Vk;
 
 namespace CVKL {
-    public class ResourceManager : IDisposable {
+#if MEMORY_POOLS
+	public class ResourceManager : IDisposable {
 		VkPhysicalDeviceMemoryProperties memoryProperties;
 		public MemoryPool[] memoryPools;
 		ulong[] reservedHeapMemory;
@@ -15,7 +16,7 @@ namespace CVKL {
 		VkMemoryHeap getHeapFromMemoryIndex (uint i) => memoryProperties.memoryHeaps[memoryProperties.memoryTypes[i].heapIndex];
 
 
-		public ResourceManager (Device dev, ulong defaultPoolsBlockDivisor = 4) {
+		public ResourceManager (Device dev, ulong defaultPoolsBlockDivisor = 16) {
 			memoryProperties = dev.phy.memoryProperties;
 			memoryPools = new MemoryPool[memoryProperties.memoryTypeCount];
 			reservedHeapMemory = new ulong[memoryProperties.memoryHeapCount];
@@ -51,4 +52,5 @@ namespace CVKL {
 				memoryPools[i].Dispose ();
 		}
 	}
+#endif
 }

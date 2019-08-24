@@ -6,6 +6,7 @@ using VK;
 using static VK.Vk;
 
 namespace CVKL {
+#if MEMORY_POOLS
 	public enum MemoryPoolType {
 		Random,
 		Linear 
@@ -79,7 +80,7 @@ namespace CVKL {
 			mappedPointer = IntPtr.Zero;
 		}
 
-		#region IDisposable Support
+#region IDisposable Support
 		private bool disposedValue;
 
 		protected virtual void Dispose (bool disposing) {
@@ -98,6 +99,7 @@ namespace CVKL {
 			Dispose (true);
 			GC.SuppressFinalize(this);
 		}
-		#endregion
+#endregion
 	}
+#endif
 }

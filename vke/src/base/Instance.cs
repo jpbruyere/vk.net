@@ -44,6 +44,7 @@ namespace CVKL {
         VkInstance inst;
 
 		public IntPtr Handle => inst.Handle;
+		public VkInstance VkInstance => inst;
 
 
 		static class Strings {
@@ -55,7 +56,8 @@ namespace CVKL {
             public static FixedUtf8String VK_KHR_SWAPCHAIN_EXTENSION_NAME = "VK_KHR_swapchain";
             public static FixedUtf8String VK_EXT_DEBUG_REPORT_EXTENSION_NAME = "VK_EXT_debug_report";
 			public static FixedUtf8String VK_EXT_DEBUG_UTILS_EXTENSION_NAME = "VK_EXT_debug_utils";
-			public static FixedUtf8String LayerValidation = "VK_LAYER_KHRONOS_validation"; 
+			public static FixedUtf8String LayerValidation = "VK_LAYER_KHRONOS_validation";
+			public static FixedUtf8String LayerValidation_old = "VK_LAYER_LUNARG_standard_validation"; 
 			public static FixedUtf8String LayerMonitor = "VK_LAYER_LUNARG_monitor";
 			public static FixedUtf8String VkTraceLayeName = "VK_LAYER_LUNARG_vktrace";
             public static FixedUtf8String RenderdocCaptureLayerName = "VK_LAYER_RENDERDOC_Capture";
@@ -65,6 +67,24 @@ namespace CVKL {
         public Instance () {
             init ();
         }
+
+		unsafe bool ExtensionIsSupported (FixedUtf8String layer, string extName) {
+			uint count;
+			Utils.CheckResult (vkEnumerateInstanceExtensionProperties ((IntPtr)layer, out count, IntPtr.Zero));
+			VkExtensionProperties[] tmp = new VkExtensionProperties[count];
+			Utils.CheckResult (vkEnumerateInstanceExtensionProperties (layer, out count, tmp.Pin ()));
+			tmp.Unpin ();
+
+			fixed (VkExtensionProperties* ep = tmp) {
+				for (int i = 0; i < tmp.Length; i++) {
+					IntPtr n = (IntPtr)ep[i].extensionName;
+					if (Marshal.PtrToStringAnsi (n) == extName)
+							return true;
+				}
+			}
+			return false;
+		}
+
 
 
 		void init () {
@@ -80,15 +100,20 @@ namespace CVKL {
 				throw new PlatformNotSupportedException ();
 			}
 
-			if (VALIDATION)
+			if (VALIDATION) {
 				enabledLayerNames.Add (Strings.LayerValidation);
+				enabledLayerNames.Add (Strings.LayerValidation_old);
+
+				if (DEBUG_UTILS) {
+					//if (ExtensionIsSupported(Strings.LayerValidation, Strings.VK_EXT_DEBUG_UTILS_EXTENSION_NAME))
+					instanceExtensions.Add (Strings.VK_EXT_DEBUG_UTILS_EXTENSION_NAME);						
+					instanceExtensions.Add (Strings.VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+				}
+
+			}
 			if (RENDER_DOC_CAPTURE)
 				enabledLayerNames.Add (Strings.RenderdocCaptureLayerName);
 
-			if (DEBUG_UTILS) {
-				instanceExtensions.Add (Strings.VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-				instanceExtensions.Add (Strings.VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
-			}
 
 			VkApplicationInfo appInfo = new VkApplicationInfo () {
 				sType = VkStructureType.ApplicationInfo,
