@@ -16,7 +16,7 @@ namespace CVKL {
 		VkMemoryHeap getHeapFromMemoryIndex (uint i) => memoryProperties.memoryHeaps[memoryProperties.memoryTypes[i].heapIndex];
 
 
-		public ResourceManager (Device dev, ulong defaultPoolsBlockDivisor = 16) {
+		public ResourceManager (Device dev, ulong defaultPoolsBlockDivisor = 4) {
 			memoryProperties = dev.phy.memoryProperties;
 			memoryPools = new MemoryPool[memoryProperties.memoryTypeCount];
 			reservedHeapMemory = new ulong[memoryProperties.memoryHeapCount];

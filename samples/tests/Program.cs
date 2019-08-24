@@ -1,4 +1,13 @@
-﻿using System;
+﻿/* Copyright (c) 2019  Jean-Philippe Bruyère <jp_bruyere@hotmail.com>
+ *
+ * This code is licensed under the MIT license (MIT) (http://opensource.org/licenses/MIT)
+ *
+ * port of the 'High dynamic range rendering' sample from
+ * Copyright by Sascha Willems - www.saschawillems.de
+ * This code is licensed under the MIT license (MIT) (http://opensource.org/licenses/MIT)
+*/
+
+using System;
 using CVKL;
 using VK;
 using static VK.Vk;
@@ -8,49 +17,22 @@ namespace tests {
 		static void Main (string[] args) {
 			Instance.VALIDATION = true;
 			Instance.DEBUG_UTILS = true;
+
 			using (Program vke = new Program ()) {
 				vke.Run ();
 			}
 		}
 
 		DebugReport dbgReport;
-		CVKL.DebugUtils.Messenger msg;
-
 		Image img;
 
 		Program () : base () {
-			msg = new CVKL.DebugUtils.Messenger (instance);
-
 			dbgReport = new DebugReport (instance,
 				VkDebugReportFlagsEXT.DebugEXT |
 				VkDebugReportFlagsEXT.ErrorEXT |
 				VkDebugReportFlagsEXT.WarningEXT |
 				VkDebugReportFlagsEXT.PerformanceWarningEXT |
 				VkDebugReportFlagsEXT.InformationEXT);
-
-
-			CommandBuffer cmd = cmdPool.AllocateAndStart (VkCommandBufferUsageFlags.OneTimeSubmit);
-
-			using (StbImage stbi = new StbImage ("data/textures/texture.jpg")) {
-
-				img = new Image (dev, VkFormat.R8g8b8a8Unorm, VkImageUsageFlags.TransferSrc | VkImageUsageFlags.TransferDst,
-					VkMemoryPropertyFlags.DeviceLocal, (uint)stbi.Width, (uint)stbi.Height, VkImageType.Image2D,
-					VkSampleCountFlags.SampleCount1, VkImageTiling.Optimal, Image.ComputeMipLevels (stbi.Width, stbi.Height));
-
-				using (HostBuffer stag = new HostBuffer (dev, VkBufferUsageFlags.TransferSrc, (ulong)stbi.Size, stbi.Handle)) {
-
-					stag.CopyTo (cmd, img, VkImageLayout.TransferSrcOptimal);
-					img.BuildMipmaps (cmd);
-
-					cmd.End ();
-					presentQueue.Submit (cmd);
-					presentQueue.WaitIdle ();
-					cmd.Free ();
-
-				}
-			}
-
-
 		}
 
 

@@ -9,10 +9,14 @@ using System.Linq;
 namespace deferred {
 	class Program : Crow.CrowWin {
 		static void Main (string[] args) {
-			Instance.DEBUG_UTILS = true;
+			/*Instance.DEBUG_UTILS = true;
 			Instance.VALIDATION = true;
-			Instance.RENDER_DOC_CAPTURE = true;
+			Instance.RENDER_DOC_CAPTURE = true;*/
 			DeferredPbrRenderer.TEXTURE_ARRAY = true;
+			DeferredPbrRenderer.NUM_SAMPLES = VkSampleCountFlags.SampleCount1;
+			DeferredPbrRenderer.HDR_FORMAT = VkFormat.R32g32b32a32Sfloat;
+			DeferredPbrRenderer.MRT_FORMAT = VkFormat.R16g16b16a16Sfloat;
+
 			PbrModelTexArray.TEXTURE_DIM = 1024;
 
 			using (Program vke = new Program ()) {

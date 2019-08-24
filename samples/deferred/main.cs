@@ -8,15 +8,14 @@ namespace deferred {
 	class Deferred : VkWindow {
 		static void Main (string[] args) {
 
-			Instance.VALIDATION = true;
-			Instance.DEBUG_UTILS = true;
+			//Instance.VALIDATION = true;
+			//Instance.DEBUG_UTILS = true;
 			//Instance.RENDER_DOC_CAPTURE = true;
 
 			DeferredPbrRenderer.TEXTURE_ARRAY = true;
 			DeferredPbrRenderer.NUM_SAMPLES = VkSampleCountFlags.SampleCount1;
 			DeferredPbrRenderer.HDR_FORMAT = VkFormat.R32g32b32a32Sfloat;
-			DeferredPbrRenderer.MRT_FORMAT = VkFormat.R32g32b32a32Sfloat;
-			DeferredPbrRenderer.NUM_SAMPLES = VkSampleCountFlags.SampleCount1;
+			DeferredPbrRenderer.MRT_FORMAT = VkFormat.R16g16b16a16Sfloat;
 
 			PbrModelTexArray.TEXTURE_DIM = 1024;
 

@@ -15,7 +15,7 @@
     </PropertyGroup>
     
 	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">    
-		<DefineConstants>TRACE;DEBUG;NETSTANDARD;NETSTANDARD2_0;_WITH_SHADOWS;_WITH_VKVG</DefineConstants>    
+		<DefineConstants>TRACE;DEBUG;NETSTANDARD;NETSTANDARD2_0;_WITH_SHADOWS;WITH_VKVG</DefineConstants>    
 	</PropertyGroup>
 	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
 		<DefineConstants>NETSTANDARD;NETSTANDARD2_0;WITH_SHADOWS;_WITH_VKVG</DefineConstants>    

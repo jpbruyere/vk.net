@@ -470,7 +470,7 @@ namespace CVKL {
 				cmd = cmdPool.AllocateAndStart (VkCommandBufferUsageFlags.OneTimeSubmit);
 
 				vkimg.SetLayout (cmd, VkImageAspectFlags.Color, VkImageLayout.Undefined, VkImageLayout.TransferSrcOptimal,
-						VkPipelineStageFlags.Transfer, VkPipelineStageFlags.Transfer);
+						VkPipelineStageFlags.BottomOfPipe, VkPipelineStageFlags.Transfer);
 
 				Vk.vkCmdBlitImage (cmd.Handle, vkimg.handle, VkImageLayout.TransferSrcOptimal,
 					texArray.handle, VkImageLayout.TransferDstOptimal, 1, ref imageBlit, VkFilter.Linear);
