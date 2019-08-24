@@ -8,14 +8,14 @@ namespace deferred {
 	class Deferred : VkWindow {
 		static void Main (string[] args) {
 
-			//Instance.VALIDATION = true;
-			//Instance.DEBUG_UTILS = true;
+			Instance.VALIDATION = true;
+			Instance.DEBUG_UTILS = true;
 			//Instance.RENDER_DOC_CAPTURE = true;
 
 			DeferredPbrRenderer.TEXTURE_ARRAY = true;
 			DeferredPbrRenderer.NUM_SAMPLES = VkSampleCountFlags.SampleCount1;
 
-			PbrModelTexArray.TEXTURE_DIM = 512;
+			PbrModelTexArray.TEXTURE_DIM = 1024;
 
 			using (Deferred vke = new Deferred ()) {
 				vke.Run ();
@@ -58,22 +58,17 @@ namespace deferred {
 		Queue transferQ;
 		DeferredPbrRenderer renderer;
 
-		DebugReport dbgRepport;
+		CVKL.DebugUtils.Messenger dbgmsg;
 
 		Deferred () : base() {
 
 			if (Instance.DEBUG_UTILS)
-				dbgRepport = new DebugReport (instance,
-					VkDebugReportFlagsEXT.ErrorEXT
-					| VkDebugReportFlagsEXT.DebugEXT
-					| VkDebugReportFlagsEXT.WarningEXT
-					| VkDebugReportFlagsEXT.PerformanceWarningEXT
-				);
+				dbgmsg = new CVKL.DebugUtils.Messenger (instance);
 
 			camera = new Camera (Utils.DegreesToRadians (45f), 1f, 0.1f, 16f);
 			camera.SetPosition (0, 0, 2);
 
-			renderer = new DeferredPbrRenderer (dev, swapChain, presentQueue, cubemapPathes[2], camera.NearPlane, camera.FarPlane);
+			renderer = new DeferredPbrRenderer (dev, swapChain, presentQueue, cubemapPathes[0], camera.NearPlane, camera.FarPlane);
 			renderer.LoadModel (transferQ, modelPathes[curModelIndex]);
 			camera.Model = Matrix4x4.CreateScale (1f / Math.Max (Math.Max (renderer.modelAABB.Width, renderer.modelAABB.Height), renderer.modelAABB.Depth));
 
@@ -279,7 +274,7 @@ namespace deferred {
 			if (disposing) {
 				if (!isDisposed) {
 					renderer.Dispose ();
-					dbgRepport?.Dispose ();
+					dbgmsg?.Dispose ();
 				}
 			}
 			base.Dispose (disposing);

@@ -1,0 +1,45 @@
+<Project>
+    <PropertyGroup>
+        <RootDirectory>$(MSBuildThisFileDirectory)../</RootDirectory>
+        <Deterministic>true</Deterministic>
+        
+        <TargetFrameworks>net471;netstandard2.0</TargetFrameworks>
+        
+		<RepositoryUrl>https://github.com/jpbruyere/vk.net</RepositoryUrl>
+		<License>MIT</License>
+	    <Authors>Jean-Philippe Bruyère</Authors>
+    
+	    <OutputPath>$(SolutionDir)build\$(Configuration)\</OutputPath>
+	    <OutputType>Exe</OutputType>        
+	    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>    
+    </PropertyGroup>
+    
+	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">    
+		<DefineConstants>TRACE;DEBUG;NETSTANDARD;NETSTANDARD2_0;_WITH_SHADOWS;_WITH_VKVG</DefineConstants>    
+	</PropertyGroup>
+	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+		<DefineConstants>NETSTANDARD;NETSTANDARD2_0;WITH_SHADOWS;_WITH_VKVG</DefineConstants>    
+	</PropertyGroup>
+
+	<ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">
+		<Reference Include="System" />
+	</ItemGroup>      
+	
+	<ItemGroup>
+		<ProjectReference Include="$(RootDirectory)vke\CVKL.csproj" />
+	</ItemGroup>    
+	
+	<ItemGroup>
+		<PackageReference Include="Vulkan" Version="0.1.3" />        
+	</ItemGroup>    
+
+	<ItemGroup>    
+	    <GLSLShader Include="shaders\**\*.frag;shaders\**\*.vert;shaders\**\*.comp;shaders\**\*.geom" />        
+		<None Remove="shaders\**\*.frag;shaders\**\*.vert" /> 
+	    <Datas Include="..\data\**\*.*">      
+	      <Link>data\%(RecursiveDir)%(Filename)%(Extension)</Link>
+	    </Datas>
+	</ItemGroup>     
+
+	<Import Project="$(RootDirectory)spirv.targets" />      
+</Project>

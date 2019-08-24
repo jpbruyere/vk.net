@@ -9,7 +9,7 @@ namespace ModelSample {
 		static void Main (string[] args) {
 
 			Instance.VALIDATION = true;
-			//Instance.DEBUG_UTILS = true;
+			Instance.DEBUG_UTILS = true;
 			//Instance.RENDER_DOC_CAPTURE = true;
 
 			using (Program vke = new Program ()) {
@@ -47,10 +47,11 @@ namespace ModelSample {
 		float rotX, rotY, rotZ = 0f, zoom = 2f;
 
 		SimpleModel helmet;
-		DebugReport dbgReport;
+		CVKL.DebugUtils.Messenger dbgmsg;
 
 		Program () : base () {
-			//dbgReport = new DebugReport (instance);
+			if (Instance.DEBUG_UTILS)
+				dbgmsg = new CVKL.DebugUtils.Messenger (instance);
 
 			descriptorPool = new DescriptorPool (dev, 2,
 				new VkDescriptorPoolSize (VkDescriptorType.UniformBuffer),
@@ -64,7 +65,6 @@ namespace ModelSample {
 				new VkDescriptorSetLayoutBinding (1, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
 				new VkDescriptorSetLayoutBinding (2, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler)
 			);
-
 
 			VkPushConstantRange pushConstantRange = new VkPushConstantRange { 
 				stageFlags = VkShaderStageFlags.Vertex,
@@ -249,7 +249,7 @@ namespace ModelSample {
 						frameBuffers[i]?.Dispose ();
 					descriptorPool.Dispose ();
 					uboMats.Dispose ();
-					dbgReport?.Dispose ();
+					dbgmsg?.Dispose ();
 				}
 			}
 

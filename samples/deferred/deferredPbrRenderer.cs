@@ -12,8 +12,8 @@ namespace deferred {
 
 		public static int MAX_MATERIAL_COUNT = 8;
 		public static VkSampleCountFlags NUM_SAMPLES = VkSampleCountFlags.SampleCount1;
-		public static VkFormat HDR_FORMAT = VkFormat.R32g32b32a32Sfloat;
-		public static VkFormat MRT_FORMAT = VkFormat.R32g32b32a32Sfloat;
+		public static VkFormat HDR_FORMAT = VkFormat.R16g16b16a16Sfloat;// VkFormat.R32g32b32a32Sfloat;
+		public static VkFormat MRT_FORMAT = VkFormat.R16g16b16a16Sfloat;
 		public static bool TEXTURE_ARRAY;
 
 		public enum DebugView {
@@ -473,7 +473,7 @@ namespace deferred {
 			gBuffPipeline.Dispose ();
 			composePipeline.Dispose ();
 			toneMappingPipeline.Dispose ();
-			debugPipeline.Dispose ();
+			debugPipeline?.Dispose ();
 
 			descLayoutMain.Dispose ();
 			descLayoutTextures?.Dispose ();
