@@ -107,6 +107,29 @@ namespace CVKL {
 		public static uint ComputeMipLevels(uint size) => (uint)Math.Floor (Math.Log (size)) + 1;
 		public static uint ComputeMipLevels (int width, int height) =>	(uint)Math.Floor (Math.Log (Math.Max (width, height))) + 1;
 
+		public static bool CheckFormatIsSupported (VkImageUsageFlags usage, VkFormatFeatureFlags phyFormatSupport) {
+			if (usage.HasFlag (VkImageUsageFlags.TransferSrc) & !phyFormatSupport.HasFlag (VkFormatFeatureFlags.TransferSrc))
+				return false;
+			if (usage.HasFlag (VkImageUsageFlags.TransferDst) & !phyFormatSupport.HasFlag (VkFormatFeatureFlags.TransferSrc))
+				return false;
+			if (usage.HasFlag (VkImageUsageFlags.Sampled) & !phyFormatSupport.HasFlag (VkFormatFeatureFlags.SampledImage))
+				return false;
+			if (usage.HasFlag (VkImageUsageFlags.Storage) & !phyFormatSupport.HasFlag (VkFormatFeatureFlags.StorageImage))
+				return false;
+			if (usage.HasFlag (VkImageUsageFlags.ColorAttachment) & !phyFormatSupport.HasFlag (VkFormatFeatureFlags.ColorAttachment))
+				return false;
+			if (usage.HasFlag (VkImageUsageFlags.DepthStencilAttachment) & !phyFormatSupport.HasFlag (VkFormatFeatureFlags.DepthStencilAttachment))
+				return false;
+			/*if (usage.HasFlag (VkImageUsageFlags.TransientAttachment) ^ phyFormatSupport.HasFlag (VkFormatFeatureFlags.))
+				return false;*/
+			if (usage.HasFlag (VkImageUsageFlags.InputAttachment) & !phyFormatSupport.HasFlag (VkFormatFeatureFlags.SampledImage))
+				return false;
+			/*if (usage.HasFlag (VkImageUsageFlags.ShadingRateImageNV) ^ phyFormatSupport.HasFlag (VkFormatFeatureFlags.TransferSrc))
+				return false;
+			if (usage.HasFlag (VkImageUsageFlags.FragmentDensityMapEXT) ^ phyFormatSupport.HasFlag (VkFormatFeatureFlags.TransferSrc))
+				return false;*/
+			return true;
+		}
 		/// <summary>
 		/// Load image from byte array containing full image file (jpg, png,...)
 		/// </summary>
