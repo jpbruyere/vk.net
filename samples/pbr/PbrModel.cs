@@ -131,7 +131,7 @@ namespace CVKL {
 		}
 
 		void loadMaterials (glTFLoader ctx, DescriptorSetLayout layout, params AttachmentType[] attachments) {
-			Model.Material[] mats = ctx.LoadMaterial ();
+			glTFLoader.Material[] mats = ctx.LoadMaterial ();
 			materials = new PbrMaterial[mats.Length];
 			descriptorSets = new DescriptorSet[mats.Length];
 

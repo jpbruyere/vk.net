@@ -173,6 +173,9 @@ namespace CVKL {
 				return;
 			}
 
+			if (cmds[idx] == null)
+				return;
+
 			presentQueue.Submit (cmds[idx], swapChain.presentComplete, drawComplete[idx]);
 			presentQueue.Present (swapChain, drawComplete[idx]);
 

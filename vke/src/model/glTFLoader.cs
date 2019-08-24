@@ -483,14 +483,11 @@ namespace CVKL {
 				vkimg.Dispose ();
 			}
 
-			uint imgCount = (uint)gltf.Images.Length;
+			cmd = cmdPool.AllocateAndStart (VkCommandBufferUsageFlags.OneTimeSubmit);
 
 			VkImageSubresourceRange mipSubRange = new VkImageSubresourceRange (VkImageAspectFlags.Color, 0, 1, firstImg, imgCount);
+			uint imgCount = (uint)gltf.Images.Length;
 
-			cmd = cmdPool.AllocateAndStart (VkCommandBufferUsageFlags.OneTimeSubmit);
-			texArray.SetLayout (cmd, VkImageLayout.Undefined, VkImageLayout.TransferSrcOptimal, mipSubRange,
-					VkPipelineStageFlags.Transfer, VkPipelineStageFlags.Transfer);
-				
 			for (int i = 1; i < texArray.CreateInfo.mipLevels; i++) {
 				imageBlit = new VkImageBlit {
 					srcSubresource = new VkImageSubresourceLayers (VkImageAspectFlags.Color, imgCount, (uint)i - 1, firstImg),
@@ -498,14 +495,12 @@ namespace CVKL {
 					dstSubresource = new VkImageSubresourceLayers (VkImageAspectFlags.Color, imgCount, (uint)i, firstImg),
 					dstOffsets_1 = new VkOffset3D ((int)texDim >> i, (int)texDim >> i, 1)
 				};
-				mipSubRange.baseMipLevel = (uint)i;
 
-				texArray.SetLayout (cmd, VkImageLayout.Undefined, VkImageLayout.TransferDstOptimal, mipSubRange,
-					VkPipelineStageFlags.Transfer, VkPipelineStageFlags.Transfer);
 				Vk.vkCmdBlitImage (cmd.Handle, texArray.handle, VkImageLayout.TransferSrcOptimal,
 					texArray.handle, VkImageLayout.TransferDstOptimal, 1, ref imageBlit, VkFilter.Linear);
 				texArray.SetLayout (cmd, VkImageLayout.TransferDstOptimal, VkImageLayout.TransferSrcOptimal, mipSubRange,
 					VkPipelineStageFlags.Transfer, VkPipelineStageFlags.Transfer);
+				mipSubRange.baseMipLevel = (uint)i;
 			}
 
 			texArray.SetLayout (cmd, VkImageAspectFlags.Color, VkImageLayout.TransferSrcOptimal, VkImageLayout.ShaderReadOnlyOptimal,

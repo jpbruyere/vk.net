@@ -49,7 +49,9 @@ namespace CVKL {
 		internal List<Queue> queues = new List<Queue> ();
 		internal bool debugMarkersEnabled;
 
+#if MEMORY_POOLS
 		public ResourceManager resourceManager;
+#endif
 
 		public Device (PhysicalDevice _phy) {
 			phy = _phy;
@@ -118,7 +120,9 @@ namespace CVKL {
 			foreach (Queue q in queues)
 				q.updateHandle ();
 
+#if MEMORY_POOLS
 			resourceManager = new ResourceManager (this);
+#endif
 		}
 
 		public VkSemaphore CreateSemaphore () {
@@ -286,13 +290,15 @@ namespace CVKL {
 			return stream;
 		}
 
-		#region IDisposable Support
+#region IDisposable Support
 		private bool disposedValue = false; // Pour détecter les appels redondants
 
         protected virtual void Dispose (bool disposing) {
             if (!disposedValue) {
 				if (disposing) {
+#if MEMORY_POOLS
 					resourceManager.Dispose ();
+#endif
 				} else
 					System.Diagnostics.Debug.WriteLine ("Device disposed by Finalizer.");
 
@@ -311,6 +317,6 @@ namespace CVKL {
             Dispose (true);
             GC.SuppressFinalize(this);
         }
-        #endregion
+#endregion
     }
 }

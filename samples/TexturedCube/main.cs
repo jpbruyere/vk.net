@@ -9,6 +9,11 @@ using Buffer = CVKL.Buffer;
 namespace TextureCube {
 	class Program : VkWindow {
 		static void Main (string[] args) {
+
+			Instance.VALIDATION = true;
+			Instance.DEBUG_UTILS = true;
+			Instance.RENDER_DOC_CAPTURE = true;
+
 			using (Program vke = new Program ()) {
 				vke.Run ();
 			}
@@ -80,11 +85,11 @@ namespace TextureCube {
 		};
 		int currentImgIndex = 0;
 		string[] imgPathes = {
+			"data/textures/uffizi_cube.ktx",
 			"data/textures/papermill.ktx",
 			"data/textures/cubemap_yokohama_bc3_unorm.ktx",
 			"data/textures/gcanyon_cube.ktx",
 			"data/textures/pisa_cube.ktx",
-			"data/textures/uffizi_cube.ktx",
 		};
 
 
@@ -157,7 +162,7 @@ namespace TextureCube {
 				nextTexture = KTX.KTX.Load (presentQueue, cmdPool, path,
 					VkImageUsageFlags.Sampled, VkMemoryPropertyFlags.DeviceLocal, true);
 			else
-				nextTexture = Image.StbLoad (dev, path);
+				nextTexture = Image.Load (dev, path);
 			updateViewRequested = true;
 		}
 
@@ -190,14 +195,17 @@ namespace TextureCube {
 		}
 
 		public override void UpdateView () {
+			//loadTexture (imgPathes[currentImgIndex]);
+
 			if (nextTexture != null) {
 				dev.WaitIdle ();
 				updateTextureSet ();
 				buildCommandBuffers ();
-			} else 
+			}else 
 				updateMatrices ();
 
 			updateViewRequested = false;
+			//System.Threading.Thread.Sleep (1000);
 		}
 
 		protected override void onMouseMove (double xPos, double yPos) {
@@ -212,6 +220,7 @@ namespace TextureCube {
 
 			updateViewRequested = true;
 		}
+
 		protected override void onKeyDown (Key key, int scanCode, Modifier modifiers) {
 			switch (key) {
 				case Key.Space:

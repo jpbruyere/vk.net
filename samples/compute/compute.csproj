@@ -1,43 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <Import Project="$(RootDirectory)netfx.props" />
   <PropertyGroup>    
-    <OutputPath>$(SolutionDir)build\$(Configuration)\</OutputPath>
-    <OutputType>Exe</OutputType>        
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
-        
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">    
-    <DefineConstants>TRACE;DEBUG;NETSTANDARD;NETSTANDARD2_0</DefineConstants>    
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <DefineConstants>TRACE;RELEASE;NETFRAMEWORK;NET471</DefineConstants>
-    <DefineConstants>TRACE;RELEASE;NETFRAMEWORK;NET471</DefineConstants>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-  </PropertyGroup>
-    
-  <ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">
-    <Reference Include="System" />
-  </ItemGroup>    
-    
-  <ItemGroup>
-    <PackageReference Include="Vulkan" Version="0.1.3" />        
-  </ItemGroup>    
-    
-  <ItemGroup>
-    <ProjectReference Include="..\..\vke\CVKL.csproj">
-    </ProjectReference>
-  </ItemGroup>    
-  
+              
   <ItemGroup>    
-    <GLSLShader Include="shaders\**\*.frag;shaders\**\*.vert;shaders\**\*.comp" />
-    <None Remove="shaders\**\*.frag;shaders\**\*.vert" />     
     <Compile Include="delaunay.cs" /> 
-    <Datas Include="..\data\**\*.*">      
-      <Link>data\%(RecursiveDir)%(Filename)%(Extension)</Link>
-    </Datas>
   </ItemGroup>     
-    
-  <Import Project="$(SolutionDir)spirv.targets" />    
 </Project>

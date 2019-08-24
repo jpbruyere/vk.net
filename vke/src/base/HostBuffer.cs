@@ -68,8 +68,13 @@ namespace CVKL {
             VkMappedMemoryRange mr = new VkMappedMemoryRange
             {
                 sType = VkStructureType.MappedMemoryRange,
-                memory = memoryPool.vkMemory,
+#if MEMORY_POOLS
+				memory = memoryPool.vkMemory,
                 offset = poolOffset + (ulong)(startIndex * TSize),
+#else
+				memory = vkMemory,
+				offset = (ulong)(startIndex * TSize),
+#endif
                 size = (ulong)((endIndex - startIndex) * TSize)
             };
             vkFlushMappedMemoryRanges(Dev.VkDev, 1, ref mr);

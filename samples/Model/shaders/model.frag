@@ -52,7 +52,7 @@ void main()
     vec4 diff = texture(samplerColor, inUV);
     
     vec3 n = normalize(inN);
-    vec3 l = normalize(light);
+    vec3 l = normalize(-light);
     vec3 pn = perturb_normal(n, inV, inUV);    
     
     float lambert = max(0.0, dot(pn, l));
@@ -64,7 +64,7 @@ void main()
        vec3 rd = reflect(l, pn);
        float s = dot(rd, normalize(inV));
        spec = vec3(0.9,0.9,0.9)* //light.specular.xyz * material.specular.xyz *
-             pow(max(0.0, s), 0.5); //0.5 = mat shininess
+             pow(max(0.0, s), 10.5); //0.5 = mat shininess
     }
     //outFragColor = vec4(1.0);  // 
     //outFragColor = vec4(diff.rgb , 1.0);  // 
