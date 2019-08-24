@@ -1,4 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="$(RootDirectory)netfx.props" />
+  <Import Project="$(RootDirectory)netfx.props" />    
 </Project>
 

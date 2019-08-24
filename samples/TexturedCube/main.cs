@@ -10,9 +10,9 @@ namespace TextureCube {
 	class Program : VkWindow {
 		static void Main (string[] args) {
 
-			Instance.VALIDATION = true;
+			/*Instance.VALIDATION = true;
 			Instance.DEBUG_UTILS = true;
-			Instance.RENDER_DOC_CAPTURE = true;
+			Instance.RENDER_DOC_CAPTURE = true;*/
 
 			using (Program vke = new Program ()) {
 				vke.Run ();
@@ -83,7 +83,7 @@ namespace TextureCube {
 			 1.0f,-1.0f, 1.0f,    1.0f, 1.0f,
 			 1.0f, 1.0f, 1.0f,    1.0f, 0.0f,
 		};
-		int currentImgIndex = 0;
+		int currentImgIndex = 4;
 		string[] imgPathes = {
 			"data/textures/uffizi_cube.ktx",
 			"data/textures/papermill.ktx",
@@ -92,6 +92,7 @@ namespace TextureCube {
 			"data/textures/pisa_cube.ktx",
 		};
 
+		VkSampleCountFlags samples = VkSampleCountFlags.SampleCount1;
 
 		Program () : base () {
 			vbo = new GPUBuffer<float> (presentQueue, cmdPool, VkBufferUsageFlags.VertexBuffer, g_vertex_buffer_data);
@@ -105,7 +106,7 @@ namespace TextureCube {
 				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Vertex, VkDescriptorType.UniformBuffer),
 				new VkDescriptorSetLayoutBinding (1, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler));
 				
-			GraphicPipelineConfig cfg = GraphicPipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, VkSampleCountFlags.SampleCount1);
+			GraphicPipelineConfig cfg = GraphicPipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, samples);
 
 			cfg.Layout = new PipelineLayout (dev, dsLayout);
 			cfg.RenderPass = new RenderPass (dev, swapChain.ColorFormat, dev.GetSuitableDepthFormat (), cfg.Samples);
@@ -127,7 +128,8 @@ namespace TextureCube {
 			uboUpdate.Write (dev, uboMats.Descriptor);
 
 			loadTexture (imgPathes[currentImgIndex]);
-			updateTextureSet ();
+			if (nextTexture != null)
+				updateTextureSet ();
 		}
 
 		void buildCommandBuffers () {
@@ -158,12 +160,17 @@ namespace TextureCube {
 
 		//in the thread of the keyboard
 		void loadTexture (string path) {
-			if (path.EndsWith("ktx", StringComparison.OrdinalIgnoreCase))
-				nextTexture = KTX.KTX.Load (presentQueue, cmdPool, path,
-					VkImageUsageFlags.Sampled, VkMemoryPropertyFlags.DeviceLocal, true);
-			else
-				nextTexture = Image.Load (dev, path);
-			updateViewRequested = true;
+			try {
+				if (path.EndsWith ("ktx", StringComparison.OrdinalIgnoreCase))
+					nextTexture = KTX.KTX.Load (presentQueue, cmdPool, path,
+						VkImageUsageFlags.Sampled, VkMemoryPropertyFlags.DeviceLocal, true);
+				else
+					nextTexture = Image.Load (dev, path);
+				updateViewRequested = true;
+			} catch (Exception ex) {
+				Console.WriteLine (ex);
+				nextTexture = null;
+			}
 		}
 
 		//in the main vulkan thread
@@ -180,7 +187,7 @@ namespace TextureCube {
 			nextTexture = null;
 		}
 		void updateMatrices () { 
-			matrices.projection = Matrix4x4.CreatePerspectiveFieldOfView (Utils.DegreesToRadians (60f), (float)swapChain.Width / (float)swapChain.Height, 0.1f, 256.0f);
+			matrices.projection = Matrix4x4.CreatePerspectiveFieldOfView (Utils.DegreesToRadians (60f), (float)swapChain.Width / (float)swapChain.Height, 0.1f, 5.0f);
 			matrices.view =
 				Matrix4x4.CreateFromAxisAngle (Vector3.UnitZ, rotZ) *
 				Matrix4x4.CreateFromAxisAngle (Vector3.UnitY, rotY) *
@@ -189,14 +196,12 @@ namespace TextureCube {
 			uboMats.Update (matrices, (uint)Marshal.SizeOf<Matrices> ());
 		}
 
-		protected override void configureEnabledFeatures (VkPhysicalDeviceFeatures available_features, ref VkPhysicalDeviceFeatures features) {
-			base.configureEnabledFeatures (available_features, ref features);
-			features.textureCompressionBC = available_features.textureCompressionBC;
+		protected override void configureEnabledFeatures (VkPhysicalDeviceFeatures available_features, ref VkPhysicalDeviceFeatures enabled_features) {
+			base.configureEnabledFeatures (available_features, ref enabled_features);
+			enabled_features.textureCompressionBC = available_features.textureCompressionBC;
 		}
 
 		public override void UpdateView () {
-			//loadTexture (imgPathes[currentImgIndex]);
-
 			if (nextTexture != null) {
 				dev.WaitIdle ();
 				updateTextureSet ();
@@ -205,7 +210,7 @@ namespace TextureCube {
 				updateMatrices ();
 
 			updateViewRequested = false;
-			//System.Threading.Thread.Sleep (1000);
+			dev.WaitIdle ();
 		}
 
 		protected override void onMouseMove (double xPos, double yPos) {
@@ -236,6 +241,7 @@ namespace TextureCube {
 		}
 
 		protected override void OnResize () {
+			dev.WaitIdle ();
 
 			updateMatrices ();
 
@@ -258,6 +264,8 @@ namespace TextureCube {
 			}
 
 			buildCommandBuffers ();
+
+			dev.WaitIdle ();
 		}
 			
 		protected override void Dispose (bool disposing) {

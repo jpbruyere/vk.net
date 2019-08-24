@@ -27,12 +27,12 @@
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>    
     <CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
-    <DefineConstants>MEMORY_POOLS;NETSTANDARD;NETSTANDARD2_0;DEBUG;NETFRAMEWORK;NET471</DefineConstants>    
+    <DefineConstants>_MEMORY_POOLS;NETSTANDARD;NETSTANDARD2_0;DEBUG;NETFRAMEWORK;NET471</DefineConstants>    
   </PropertyGroup>
     
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <Optimize>true</Optimize>
-    <DefineConstants>MEMORY_POOLS</DefineConstants>    
+    <DefineConstants>_MEMORY_POOLS</DefineConstants>    
   </PropertyGroup>
       
   <ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">

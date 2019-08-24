@@ -485,8 +485,8 @@ namespace CVKL {
 
 			cmd = cmdPool.AllocateAndStart (VkCommandBufferUsageFlags.OneTimeSubmit);
 
-			VkImageSubresourceRange mipSubRange = new VkImageSubresourceRange (VkImageAspectFlags.Color, 0, 1, firstImg, imgCount);
 			uint imgCount = (uint)gltf.Images.Length;
+			VkImageSubresourceRange mipSubRange = new VkImageSubresourceRange (VkImageAspectFlags.Color, 0, 1, firstImg, imgCount);
 
 			for (int i = 1; i < texArray.CreateInfo.mipLevels; i++) {
 				imageBlit = new VkImageBlit {

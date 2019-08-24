@@ -14,6 +14,9 @@ namespace deferred {
 
 			DeferredPbrRenderer.TEXTURE_ARRAY = true;
 			DeferredPbrRenderer.NUM_SAMPLES = VkSampleCountFlags.SampleCount1;
+			DeferredPbrRenderer.HDR_FORMAT = VkFormat.R32g32b32a32Sfloat;
+			DeferredPbrRenderer.MRT_FORMAT = VkFormat.R32g32b32a32Sfloat;
+			DeferredPbrRenderer.NUM_SAMPLES = VkSampleCountFlags.SampleCount1;
 
 			PbrModelTexArray.TEXTURE_DIM = 1024;
 
@@ -63,12 +66,12 @@ namespace deferred {
 		Deferred () : base() {
 
 			if (Instance.DEBUG_UTILS)
-				dbgmsg = new CVKL.DebugUtils.Messenger (instance);
+				dbgmsg = new CVKL.DebugUtils.Messenger (instance, VkDebugReportFlagsEXT.InformationEXT);
 
 			camera = new Camera (Utils.DegreesToRadians (45f), 1f, 0.1f, 16f);
 			camera.SetPosition (0, 0, 2);
 
-			renderer = new DeferredPbrRenderer (dev, swapChain, presentQueue, cubemapPathes[0], camera.NearPlane, camera.FarPlane);
+			renderer = new DeferredPbrRenderer (dev, swapChain, presentQueue, cubemapPathes[2], camera.NearPlane, camera.FarPlane);
 			renderer.LoadModel (transferQ, modelPathes[curModelIndex]);
 			camera.Model = Matrix4x4.CreateScale (1f / Math.Max (Math.Max (renderer.modelAABB.Width, renderer.modelAABB.Height), renderer.modelAABB.Depth));
 
