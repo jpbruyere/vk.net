@@ -16,7 +16,7 @@ namespace CVKL {
 		internal VkDeviceMemory vkMemory;
 		VkMemoryAllocateInfo memInfo = VkMemoryAllocateInfo.New ();
 
-		Resource firstResource;
+		//Resource firstResource;
 		Resource lastResource;
 
 		//Resource mappedFrom;
@@ -28,7 +28,7 @@ namespace CVKL {
 		public ulong Size => memInfo.allocationSize;
 		public bool IsMapped => mappedPointer != IntPtr.Zero;
 		public IntPtr MappedData => mappedPointer;
-		public Resource First => firstResource;
+		public Resource Last => lastResource;
 
 		public MemoryPool (Device dev, uint memoryTypeIndex, UInt64 size) {
 			this.dev = dev;
@@ -40,35 +40,77 @@ namespace CVKL {
 		public void Add (Resource resource) {
 			resource.memoryPool = this;
 
-			if (lastResource == null) {
-				firstResource = lastResource = resource;
-				resource.poolOffset = 0;
-			} else {
+			ulong limit = Size;
+			ulong offset = 0;
+			Resource previous = lastResource;
 
-				resource.poolOffset = lastResource.poolOffset + lastResource.AllocatedDeviceMemorySize;
-				resource.poolOffset += resource.MemoryAlignment - (resource.poolOffset % resource.MemoryAlignment);
+			if (previous != null) {
+				do {
+					offset = previous.poolOffset + previous.AllocatedDeviceMemorySize;
+					offset += resource.MemoryAlignment - (offset % resource.MemoryAlignment);
 
-				lastResource.next = resource;
-				resource.previous = lastResource;
-				lastResource = resource;
+					if (previous.next == null) {
+						if (offset + resource.AllocatedDeviceMemorySize >= limit) {
+							offset = 0;
+							limit = previous.poolOffset;
+						}
+						break;
+					}
+
+					if (previous.next.poolOffset < previous.poolOffset) {
+						limit = Size;
+						if (offset + resource.AllocatedDeviceMemorySize < Size) 
+							break;
+						offset = 0;
+						limit = previous.next.poolOffset;
+					}else
+						limit = previous.next.poolOffset;
+
+					if (offset + resource.AllocatedDeviceMemorySize < limit)
+						break;
+
+					previous = previous.next;
+
+				} while (previous != lastResource);
+
 			}
+
+			if (offset + resource.AllocatedDeviceMemorySize >= limit)
+				throw new Exception ($"Out of Memory pool: {memInfo.memoryTypeIndex}");
+
+			resource.poolOffset = offset;
+			resource.previous = previous;
+			if (previous != null) {
+				if (previous.next == null) {
+					resource.next = resource.previous = previous;
+					previous.next = previous.previous = resource;
+				} else {
+					resource.next = previous.next;
+					previous.next = resource;
+				}
+			}
+			lastResource = resource;
+
 			resource.bindMemory ();
 		}
+
+
 
 		public void Defrag () { 
 
 		}
 
 		public void Remove (Resource resource) {
-			if (resource == firstResource)
-				firstResource = resource.next;
 			if (resource == lastResource)
 				lastResource = resource.previous;
-			if (resource.previous != null)
-				resource.previous.next = resource.next;
-			if (resource.next != null)
-				resource.next.previous = resource.previous;
-
+			if (lastResource != null) {
+				if (resource.previous == resource.next)//only 1 resources remaining
+					lastResource.next = lastResource.previous = null;
+				else {
+					resource.previous.next = resource.next;
+					resource.next.previous = resource.previous;
+				}
+			}
 			resource.next = resource.previous = null;
 		}
 
