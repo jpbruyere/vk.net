@@ -10,10 +10,11 @@ layout (set = 1, binding = 2) uniform sampler2D samplerOcclusion;
 layout (location = 0) in vec2 inUV;
 layout (location = 1) in vec3 inN;
 layout (location = 2) in vec3 inV;//ViewDir
+layout (location = 3) in vec3 inL;
 
 layout (location = 0) out vec4 outFragColor;
 
-vec3 light = vec3(1.0,.0,1.0);
+
 
 // http://www.thetenthplanet.de/archives/1180
 mat3 cotangent_frame(vec3 N, vec3 p, vec2 uv)
@@ -46,8 +47,19 @@ vec3 perturb_normal( vec3 N, vec3 V, vec2 texcoord )
 }
 
 
-
 void main() 
+{
+    vec4 color = texture(samplerColor, inUV);
+
+    vec3 N = normalize(inN);
+    vec3 L = normalize(inL);
+    vec3 V = normalize(inV);
+    vec3 R = reflect(-L, N);
+    vec3 diffuse = max(dot(N, L), 0.0) * vec3(0.9);
+    vec3 specular = pow(max(dot(R, V), 0.0), 16.0) * vec3(0.75);
+    outFragColor = vec4(diffuse * color.rgb + specular, 1.0);       
+}
+/*void main() 
 {    
     vec4 diff = texture(samplerColor, inUV);
     
@@ -69,4 +81,4 @@ void main()
     //outFragColor = vec4(1.0);  // 
     //outFragColor = vec4(diff.rgb , 1.0);  // 
     outFragColor = vec4(diff.rgb + amb + spec , diff.a);  // 
-}
+}*/

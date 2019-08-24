@@ -106,7 +106,10 @@ namespace KTX {
 						if (numberOfArrayElements == 0)
 							numberOfArrayElements = 1;
 					}
-						
+
+					if (!Image.CheckFormatIsSupported (usage, phyFormatSupport))
+						throw new Exception ($"Unsupported image format: {vkFormat}, {tiling}, {usage}");
+
 					img = new Image (staggingQ.Dev, vkFormat, usage, memoryProperty, pixelWidth, pixelHeight, imgType, samples,
 						tiling, requestedMipsLevels, numberOfArrayElements, pixelDepth, createFlags);
 						
@@ -146,20 +149,14 @@ namespace KTX {
 								bufferCopyRegion.imageExtent.height = imgHeight;
 
 								if (createFlags.HasFlag (VkImageCreateFlags.CubeCompatible)) {
-									//IntPtr ptrFace = img.MappedData;
-									//bufferCopyRegion.imageSubresource.layerCount = 1;
 									for (uint face = 0; face < numberOfFaces; face++) {
-										//bufferCopyRegion.imageSubresource.baseArrayLayer = face;
 										Marshal.Copy (br.ReadBytes ((int)imgSize), 0, stagging.MappedData + (int)bufferOffset, (int)imgSize);
-
-										uint faceOffset = imgSize + (imgSize % 4);
-										//ptrFace += (int)faceOffset;//cube padding
+										uint faceOffset = imgSize + (imgSize % 4);//cube padding																				  
 										bufferOffset += faceOffset;
 									}
 									buffCopies.Add (bufferCopyRegion);
 									bufferCopyRegion.bufferOffset = bufferOffset;
 								} else {
-
 									Marshal.Copy (br.ReadBytes ((int)imgSize), 0, stagging.MappedData + (int)bufferOffset, (int)imgSize);
 									buffCopies.Add (bufferCopyRegion);
 									bufferOffset += imgSize;
@@ -167,7 +164,6 @@ namespace KTX {
 
 								imgWidth /= 2;
 								imgHeight /= 2;
-								//break;
 							}
 							stagging.Unmap ();
 
@@ -175,15 +171,6 @@ namespace KTX {
 								(uint)buffCopies.Count, buffCopies.Pin());
 							buffCopies.Unpin ();
 
-							/*cmd.End ();
-
-							staggingQ.Submit (cmd);
-							staggingQ.WaitIdle ();
-
-							cmd.Free ();
-
-							cmd = staggingCmdPool.AllocateAndStart (VkCommandBufferUsageFlags.OneTimeSubmit);
-							*/
 							if (requestedMipsLevels > numberOfMipmapLevels)
 								img.BuildMipmaps (cmd);								
 							else
@@ -199,30 +186,6 @@ namespace KTX {
 							cmd.Free ();
 
 						}
-
-						//for (int mips = 0; mips < numberOfMipmapLevels; mips++) {
-						//UInt32 imgSize = br.ReadUInt32 ();
-						/*VkImageBlit imageBlit = new VkImageBlit {
-							srcSubresource = new VkImageSubresourceLayers(VkImageAspectFlags.Color, numberOfArrayElements, (uint)mips - 1),
-							srcOffsets_1 = new VkOffset3D((int)pixelWidth >> (mips - 1), (int)pixelHeight >> (mips - 1),1),
-							dstSubresource = new VkImageSubresourceLayers (VkImageAspectFlags.Color, numberOfArrayElements, (uint)mips),
-							dstOffsets_1 = new VkOffset3D ((int)pixelWidth >> mips, (int)pixelHeight >> mips, 1),
-						};*/
-						//for (int layer = 0; layer < numberOfArrayElements; layer++) {
-						//for (int face = 0; face < numberOfFaces; face++) {
-						//for (int slice = 0; slice < pixelDepth; slice++) {
-						/*for (int y = 0; y < pixelHeight; y++) {
-							for (int x = 0; x < pixelWidth; x++) {
-								//Uncompressed texture data matches a GL_UNPACK_ALIGNMENT of 4.
-							}
-						}*/
-						//}
-						//Byte cubePadding[0-3]
-						//}
-						//}
-						//Byte mipPadding[0-3]
-						//}
-
 					} else { 
 					}
 				}

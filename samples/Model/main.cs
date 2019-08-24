@@ -226,7 +226,12 @@ namespace ModelSample {
 				//helmet.Meshes
 				cmd.BindVertexBuffer (vbo);
 				cmd.BindIndexBuffer (ibo, IndexBufferType);
-				cmd.DrawIndexed ((uint)Meshes[0].Primitives[0].indexCount);
+				foreach (Mesh m in Meshes) {
+					foreach (var p in m.Primitives) {
+						cmd.DrawIndexed (p.indexCount,1,p.indexBase,p.vertexBase);
+					}
+				}
+
 				//foreach (Scene sc in Scenes) {
 				//	foreach (Node node in sc.Root.Children)
 				//		RenderNode (cmd, pipelineLayout, node, sc.Root.localMatrix, shadowPass);
