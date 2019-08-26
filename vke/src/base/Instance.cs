@@ -102,11 +102,11 @@ namespace CVKL {
 
 			if (VALIDATION) {
 				enabledLayerNames.Add (Strings.LayerValidation);
-				enabledLayerNames.Add (Strings.LayerValidation_old);
+				//enabledLayerNames.Add (Strings.LayerValidation_old);
 
 				if (DEBUG_UTILS) {
 					//if (ExtensionIsSupported(Strings.LayerValidation, Strings.VK_EXT_DEBUG_UTILS_EXTENSION_NAME))
-					instanceExtensions.Add (Strings.VK_EXT_DEBUG_UTILS_EXTENSION_NAME);						
+					//instanceExtensions.Add (Strings.VK_EXT_DEBUG_UTILS_EXTENSION_NAME);						
 					instanceExtensions.Add (Strings.VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
 				}
 

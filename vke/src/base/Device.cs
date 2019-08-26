@@ -245,20 +245,25 @@ namespace CVKL {
         }
 
         public VkShaderModule LoadSPIRVShader (string filename) {
-            byte[] shaderCode = File.ReadAllBytes (filename);
-            ulong shaderSize = (ulong)shaderCode.Length;
-            unsafe {
-                // Create a new shader module that will be used for Pipeline creation
-                VkShaderModuleCreateInfo moduleCreateInfo = VkShaderModuleCreateInfo.New();
-                moduleCreateInfo.codeSize = new UIntPtr (shaderSize);
-                moduleCreateInfo.pCode = shaderCode.Pin();
+			VkShaderModule shaderModule;
+			using (Stream stream = StaticGetStreamFromPath (filename)) {
+				using (BinaryReader br = new BinaryReader (stream)) {
+					byte[] shaderCode = br.ReadBytes ((int)stream.Length);
+					ulong shaderSize = (ulong)shaderCode.Length;
 
-                Utils.CheckResult (vkCreateShaderModule (VkDev, ref moduleCreateInfo, IntPtr.Zero, out VkShaderModule shaderModule));
+					// Create a new shader module that will be used for Pipeline creation
+					VkShaderModuleCreateInfo moduleCreateInfo = VkShaderModuleCreateInfo.New ();
+					moduleCreateInfo.codeSize = new UIntPtr (shaderSize);
+					moduleCreateInfo.pCode = shaderCode.Pin ();
 
-				shaderCode.Unpin ();
+					Utils.CheckResult (vkCreateShaderModule (VkDev, ref moduleCreateInfo, IntPtr.Zero, out shaderModule));
 
-                return shaderModule;            
-            }
+					shaderCode.Unpin ();
+				}
+
+			}
+			return shaderModule;            
+
         }
 
 		public static Stream StaticGetStreamFromPath (string path) {

@@ -54,12 +54,16 @@ namespace CVKL.DebugUtils {
         //    return VkBool32.False;
         //}
         
-        public Messenger (Instance instance, VkDebugReportFlagsEXT flags = VkDebugReportFlagsEXT.ErrorEXT | VkDebugReportFlagsEXT.WarningEXT) {
+        public Messenger (Instance instance,
+        	VkDebugUtilsMessageTypeFlagsEXT typeMask =  VkDebugUtilsMessageTypeFlagsEXT.ValidationEXT,
+			VkDebugUtilsMessageSeverityFlagsEXT severityMask = VkDebugUtilsMessageSeverityFlagsEXT.ErrorEXT | VkDebugUtilsMessageSeverityFlagsEXT.WarningEXT) {
+
 			inst = instance;
 			VkDebugUtilsMessengerCreateInfoEXT info = VkDebugUtilsMessengerCreateInfoEXT.New ();
-			info.messageType = VkDebugUtilsMessageTypeFlagsEXT.ValidationEXT | VkDebugUtilsMessageTypeFlagsEXT.GeneralEXT | VkDebugUtilsMessageTypeFlagsEXT.PerformanceEXT;
-			info.messageSeverity = VkDebugUtilsMessageSeverityFlagsEXT.ErrorEXT | VkDebugUtilsMessageSeverityFlagsEXT.WarningEXT | VkDebugUtilsMessageSeverityFlagsEXT.InfoEXT | VkDebugUtilsMessageSeverityFlagsEXT.VerboseEXT;
+			info.messageType = typeMask;
+			info.messageSeverity = severityMask;
 			info.pfnUserCallback = Marshal.GetFunctionPointerForDelegate (onMessage);
+			info.pUserData = IntPtr.Zero;
 
 			Utils.CheckResult (vkCreateDebugUtilsMessengerEXT (inst.VkInstance, ref info, IntPtr.Zero, out handle));
         }

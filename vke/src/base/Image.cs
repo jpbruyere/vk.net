@@ -51,6 +51,8 @@ namespace CVKL {
         public VkExtent3D Extent => info.extent;
         public VkFormat Format => info.format;
 		public VkImage Handle => handle;
+		public uint Width => CreateInfo.extent.width;
+		public uint Height => CreateInfo.extent.height;
 
 		protected override VkDebugMarkerObjectNameInfoEXT DebugMarkerInfo
 			=> new VkDebugMarkerObjectNameInfoEXT(VkDebugReportObjectTypeEXT.ImageEXT, handle.Handle);
@@ -210,11 +212,9 @@ namespace CVKL {
 		/// create host visible linear image without command from path
 		/// </summary>
 		public static Image Load (Device dev,
-			string path, VkFormat format = VkFormat.Undefined, bool reserveSpaceForMipmaps = true,
+			string path, VkImageUsageFlags usage = VkImageUsageFlags.Sampled, bool reserveSpaceForMipmaps = true, VkFormat format = VkFormat.Undefined,
 			VkMemoryPropertyFlags memoryProps = VkMemoryPropertyFlags.HostVisible | VkMemoryPropertyFlags.HostCoherent,
-			VkImageTiling tiling = VkImageTiling.Linear, 
-			VkImageType imageType = VkImageType.Image2D, 
-			VkImageUsageFlags usage = VkImageUsageFlags.Sampled) {
+			VkImageTiling tiling = VkImageTiling.Linear, VkImageType imageType = VkImageType.Image2D) {
 
 			if (format == VkFormat.Undefined)
 				format = DefaultTextureFormat;
@@ -412,11 +412,57 @@ namespace CVKL {
             };
             SetLayout (cmdbuffer, oldImageLayout, newImageLayout, subresourceRange, srcStageMask, dstStageMask);
         }
+		public void SetLayout (
+			CommandBuffer cmdbuffer,
+			VkImageAspectFlags aspectMask,
+			VkAccessFlags srcAccessMask,
+			VkAccessFlags dstAccessMask,
+			VkImageLayout oldImageLayout,
+			VkImageLayout newImageLayout,
+			VkPipelineStageFlags srcStageMask = VkPipelineStageFlags.AllCommands,
+			VkPipelineStageFlags dstStageMask = VkPipelineStageFlags.AllCommands) {
+			VkImageSubresourceRange subresourceRange = new VkImageSubresourceRange {
+				aspectMask = aspectMask,
+				baseMipLevel = 0,
+				levelCount = CreateInfo.mipLevels,
+				layerCount = CreateInfo.arrayLayers,
+			};
+			SetLayout (cmdbuffer, srcAccessMask, dstAccessMask, oldImageLayout, newImageLayout, subresourceRange, srcStageMask, dstStageMask);
+		}
+		public void SetLayout (
+			CommandBuffer cmdbuffer,
+			VkAccessFlags srcAccessMask,
+			VkAccessFlags dstAccessMask,
+			VkImageLayout oldImageLayout,
+			VkImageLayout newImageLayout,
+			VkImageSubresourceRange subresourceRange,
+			VkPipelineStageFlags srcStageMask = VkPipelineStageFlags.AllCommands,
+			VkPipelineStageFlags dstStageMask = VkPipelineStageFlags.AllCommands) {
 
-        // Create an image memory barrier for changing the layout of
-        // an image and put it into an active command buffer
-        // See chapter 11.4 "Image Layout" for details
-        public void SetLayout (
+			VkImageMemoryBarrier imageMemoryBarrier = VkImageMemoryBarrier.New ();
+			imageMemoryBarrier.srcQueueFamilyIndex = Vk.QueueFamilyIgnored;
+			imageMemoryBarrier.dstQueueFamilyIndex = Vk.QueueFamilyIgnored;
+			imageMemoryBarrier.oldLayout = oldImageLayout;
+			imageMemoryBarrier.newLayout = newImageLayout;
+			imageMemoryBarrier.image = handle;
+			imageMemoryBarrier.subresourceRange = subresourceRange;
+			imageMemoryBarrier.srcAccessMask = srcAccessMask;
+			imageMemoryBarrier.dstAccessMask = dstAccessMask;
+
+			Vk.vkCmdPipelineBarrier (
+				cmdbuffer.Handle,
+				srcStageMask,
+				dstStageMask,
+				0,
+				0, IntPtr.Zero,
+				0, IntPtr.Zero,
+				1, ref imageMemoryBarrier);
+
+		}
+		// Create an image memory barrier for changing the layout of
+		// an image and put it into an active command buffer
+		// See chapter 11.4 "Image Layout" for details
+		public void SetLayout (
             CommandBuffer cmdbuffer,            
             VkImageLayout oldImageLayout,
             VkImageLayout newImageLayout,
@@ -566,7 +612,15 @@ namespace CVKL {
 			SetLayout (cmd, VkImageAspectFlags.Color, VkImageLayout.TransferSrcOptimal, VkImageLayout.ShaderReadOnlyOptimal,
 					VkPipelineStageFlags.Transfer, VkPipelineStageFlags.FragmentShader);
 		}
-
+		public void BlitTo (CommandBuffer cmd, Image dest) {
+			VkImageBlit imageBlit = new VkImageBlit {
+				srcSubresource = new VkImageSubresourceLayers (VkImageAspectFlags.Color, info.arrayLayers, 0),
+				srcOffsets_1 = new VkOffset3D ((int)info.extent.width, (int)info.extent.height, 1),
+				dstSubresource = new VkImageSubresourceLayers (VkImageAspectFlags.Color, info.arrayLayers, 0),
+				dstOffsets_1 = new VkOffset3D ((int)dest.info.extent.width, (int)dest.info.extent.height, 1)
+			};
+			vkCmdBlitImage (cmd.Handle, handle, VkImageLayout.TransferSrcOptimal, dest.handle, VkImageLayout.TransferDstOptimal, 1, ref imageBlit, VkFilter.Linear);
+		}
 		public override string ToString () {
 			return string.Format ($"{base.ToString ()}[0x{handle.Handle.ToString("x")}]");
 		}

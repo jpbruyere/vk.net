@@ -64,8 +64,13 @@ namespace CVKL {
 					prefix = "DBUG";
                     break;
             }
-
-            Console.WriteLine ("{0} {1}: {2}",prefix, messageCode, Marshal.PtrToStringAnsi(pMessage));
+			try {
+				string msg = Marshal.PtrToStringAnsi (pMessage);
+				string[] tmp = msg.Split ('|');
+				Console.WriteLine ($"{prefix}:{tmp[1]} |{Marshal.PtrToStringAnsi (pLayerPrefix)}({messageCode}){objectType}:{tmp[0]}");
+			} catch (Exception ex) {
+				Console.WriteLine ("error parsing debug message: " + ex);
+			}
 			Console.ForegroundColor = ConsoleColor.White;
             return VkBool32.False;
         }

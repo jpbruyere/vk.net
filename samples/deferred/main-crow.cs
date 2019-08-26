@@ -166,7 +166,6 @@ namespace deferred {
 
 			crow.Load ("#deferred.menu.crow").DataSource = this;
 
-
 		}
 
 		protected override void recordDraw (CommandBuffer cmd, int imageIndex) {

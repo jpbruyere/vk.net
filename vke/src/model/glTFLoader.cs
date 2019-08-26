@@ -455,13 +455,13 @@ namespace CVKL {
 				if (img.BufferView != null) {//load image from gltf buffer view
 					GL.BufferView bv = gltf.BufferViews[(int)img.BufferView];
 					EnsureBufferIsLoaded (bv.Buffer);
-					vkimg = Image.Load (dev, bufferHandles[bv.Buffer].AddrOfPinnedObject () + bv.ByteOffset, (ulong)bv.ByteLength);
+					vkimg = Image.Load (dev, bufferHandles[bv.Buffer].AddrOfPinnedObject () + bv.ByteOffset, (ulong)bv.ByteLength, VkImageUsageFlags.TransferSrc);
 				} else if (img.Uri.StartsWith ("data:", StringComparison.Ordinal)) {//load base64 encoded image
 					Debug.WriteLine ("loading embedded image {0} : {1}", img.Name, img.MimeType);
-					vkimg = Image.Load (dev, glTFLoader.loadDataUri (img));
+					vkimg = Image.Load (dev, glTFLoader.loadDataUri (img), VkImageUsageFlags.TransferSrc);
 				} else {
 					Debug.WriteLine ("loading image {0} : {1} : {2}", img.Name, img.MimeType, img.Uri);//load image from file path in uri
-					vkimg = Image.Load (dev, Path.Combine (baseDirectory, img.Uri));
+					vkimg = Image.Load (dev, Path.Combine (baseDirectory, img.Uri), VkImageUsageFlags.TransferSrc);
 				}
 
 				imageBlit.srcOffsets_1 = new VkOffset3D ((int)vkimg.CreateInfo.extent.width, (int)vkimg.CreateInfo.extent.height, 1);
@@ -469,8 +469,10 @@ namespace CVKL {
 
 				cmd = cmdPool.AllocateAndStart (VkCommandBufferUsageFlags.OneTimeSubmit);
 
-				vkimg.SetLayout (cmd, VkImageAspectFlags.Color, VkImageLayout.Undefined, VkImageLayout.TransferSrcOptimal,
-						VkPipelineStageFlags.BottomOfPipe, VkPipelineStageFlags.Transfer);
+				vkimg.SetLayout (cmd, VkImageAspectFlags.Color,
+						VkAccessFlags.HostWrite, VkAccessFlags.TransferRead,
+						VkImageLayout.Undefined, VkImageLayout.TransferSrcOptimal,
+						VkPipelineStageFlags.Host, VkPipelineStageFlags.Transfer);
 
 				Vk.vkCmdBlitImage (cmd.Handle, vkimg.handle, VkImageLayout.TransferSrcOptimal,
 					texArray.handle, VkImageLayout.TransferDstOptimal, 1, ref imageBlit, VkFilter.Linear);
@@ -496,15 +498,21 @@ namespace CVKL {
 					dstOffsets_1 = new VkOffset3D ((int)texDim >> i, (int)texDim >> i, 1)
 				};
 
+				texArray.SetLayout (cmd,
+					VkAccessFlags.TransferWrite, VkAccessFlags.TransferRead,
+					VkImageLayout.TransferDstOptimal, VkImageLayout.TransferSrcOptimal, mipSubRange,
+					VkPipelineStageFlags.Transfer, VkPipelineStageFlags.Transfer);
+
 				Vk.vkCmdBlitImage (cmd.Handle, texArray.handle, VkImageLayout.TransferSrcOptimal,
 					texArray.handle, VkImageLayout.TransferDstOptimal, 1, ref imageBlit, VkFilter.Linear);
-				texArray.SetLayout (cmd, VkImageLayout.TransferDstOptimal, VkImageLayout.TransferSrcOptimal, mipSubRange,
-					VkPipelineStageFlags.Transfer, VkPipelineStageFlags.Transfer);
+				texArray.SetLayout (cmd, VkImageLayout.TransferSrcOptimal, VkImageLayout.ShaderReadOnlyOptimal, mipSubRange,
+					VkPipelineStageFlags.Transfer, VkPipelineStageFlags.FragmentShader);
+
 				mipSubRange.baseMipLevel = (uint)i;
 			}
-
-			texArray.SetLayout (cmd, VkImageAspectFlags.Color, VkImageLayout.TransferSrcOptimal, VkImageLayout.ShaderReadOnlyOptimal,
-					VkPipelineStageFlags.Transfer, VkPipelineStageFlags.FragmentShader);
+			mipSubRange.baseMipLevel = texArray.CreateInfo.mipLevels - 1;
+			texArray.SetLayout (cmd, VkImageLayout.TransferDstOptimal, VkImageLayout.ShaderReadOnlyOptimal, mipSubRange,
+				VkPipelineStageFlags.Transfer, VkPipelineStageFlags.FragmentShader);
 
 			cmd.End ();
 			transferQ.Submit (cmd);
