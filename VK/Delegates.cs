@@ -32,9 +32,9 @@ namespace VK
          VkInternalAllocationType allocationType,
          VkSystemAllocationScope allocationScope);
 
-    public unsafe delegate void PFN_vkVoidFunction();
+    public delegate void PFN_vkVoidFunction();
 
-    public unsafe delegate VkBool32 PFN_vkDebugReportCallbackEXT(
+    public delegate VkBool32 PFN_vkDebugReportCallbackEXT(
         VkDebugReportFlagsEXT flags,
         VkDebugReportObjectTypeEXT objectType,
         ulong @object,
@@ -44,7 +44,7 @@ namespace VK
         IntPtr pMessage,
         IntPtr pUserData);
 
-	public unsafe delegate VkBool32 PFN_vkDebugUtilsMessengerCallbackEXT (
+	public delegate VkBool32 PFN_vkDebugUtilsMessengerCallbackEXT (
 		VkDebugUtilsMessageSeverityFlagsEXT messageSeverity,
 		VkDebugUtilsMessageTypeFlagsEXT messageTypes,
 		IntPtr pCallbackData,

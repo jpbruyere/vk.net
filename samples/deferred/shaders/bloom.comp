@@ -1,0 +1,61 @@
+#version 450
+
+layout (local_size_x = 16, local_size_y = 16) in;
+layout (binding = 0, rgba16) uniform readonly image2D inputImage;
+layout (binding = 1, rgba16) uniform image2D resultImage;
+
+layout(push_constant) uniform PushConsts {
+    vec2 texSize;
+    int dir;
+} pc;
+
+void main(void)
+{
+	// From the OpenGL Super bible
+	const float weights[] = float[](0.0024499299678342,
+									0.0043538453346397,
+									0.0073599963704157,
+									0.0118349786570722,
+									0.0181026699707781,
+									0.0263392293891488,
+									0.0364543006660986,
+									0.0479932050577658,
+									0.0601029809166942,
+									0.0715974486241365,
+									0.0811305381519717,
+									0.0874493212267511,
+									0.0896631113333857,
+									0.0874493212267511,
+									0.0811305381519717,
+									0.0715974486241365,
+									0.0601029809166942,
+									0.0479932050577658,
+									0.0364543006660986,
+									0.0263392293891488,
+									0.0181026699707781,
+									0.0118349786570722,
+									0.0073599963704157,
+									0.0043538453346397,
+									0.0024499299678342);
+
+
+	const float blurScale = 0.003;
+	const float blurStrength = 1.0;
+
+	float ar = 1.0;
+	// Aspect ratio for vertical blur pass
+	if (pc.dir == 1)
+		ar = pc.texSize.y / pc.texSize.x;
+
+	vec2 P = gl_GlobalInvocationID.yx - vec2(0, (weights.length() >> 1) * ar * blurScale);
+
+	vec4 color = vec4(0.0);
+	for (int i = 0; i < weights.length(); i++)
+	{
+		vec2 dv = vec2(0.0, i * blurScale) * ar;
+		color += imageLoad (inputImage, ivec2(P + dv)) * weights[i] * blurStrength;
+	}
+    
+    //imageStore(resultImage, ivec2(gl_GlobalInvocationID.xy), color);	
+    imageStore(resultImage, ivec2(gl_GlobalInvocationID.xy), vec4(1,0,0,1));	
+}

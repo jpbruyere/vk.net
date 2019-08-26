@@ -13,6 +13,7 @@ using static deferred.DeferredPbrRenderer;
 namespace deferred {
 	public class ShadowMapRenderer : IDisposable {
 		Device dev;
+		Queue gQueue;
 
 		public static uint SHADOWMAP_SIZE = 4096;
 		public static VkFormat SHADOWMAP_FORMAT = VkFormat.D32SfloatS8Uint;
@@ -35,9 +36,10 @@ namespace deferred {
 		DescriptorSet dsShadow;
 		DeferredPbrRenderer renderer;
 
-		public ShadowMapRenderer (Device dev, DeferredPbrRenderer renderer, float farPlane = 16f) {
+		public ShadowMapRenderer (Queue gQueue, DeferredPbrRenderer renderer, float farPlane = 16f) {
 			this.lightFarPlane = farPlane;
-			this.dev = dev;
+			this.gQueue = gQueue;
+			this.dev = gQueue.Dev;
 			this.renderer = renderer;
 
 			descriptorPool = new DescriptorPool (dev, 1,
@@ -78,7 +80,7 @@ namespace deferred {
 
 			cfg.Layout = new PipelineLayout (dev, descLayoutShadow);
 			cfg.Layout.AddPushConstants (
-				new VkPushConstantRange (VkShaderStageFlags.Vertex, (uint)Marshal.SizeOf<Matrix4x4> ())
+				new VkPushConstantRange (VkShaderStageFlags.Vertex|VkShaderStageFlags.Geometry, (uint)Marshal.SizeOf<Matrix4x4> ())
 			);
 
 			cfg.AddVertexBinding<PbrModel.Vertex> (0);
@@ -139,7 +141,7 @@ namespace deferred {
 
 			shadowPass.End (cmd);
 
-			renderer.presentQueue.EndSubmitAndWait (cmd);
+			gQueue.EndSubmitAndWait (cmd);
 			updateShadowMap = false;
 		}
 

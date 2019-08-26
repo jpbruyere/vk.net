@@ -10,7 +10,7 @@ namespace TextureSample {
 		static void Main (string[] args) {
 			Instance.VALIDATION = true;
 			Instance.DEBUG_UTILS = true;
-			Instance.RENDER_DOC_CAPTURE = true;
+			//Instance.RENDER_DOC_CAPTURE = true;
 			using (Program vke = new Program ()) {
 				vke.Run ();
 			}
@@ -64,21 +64,8 @@ namespace TextureSample {
 			"data/textures/tex256.jpg",
 		};
 
-		DebugReport dbgReport;
-		CVKL.DebugUtils.Messenger msg;
-
-		Program () : base () {
-
-			msg = new CVKL.DebugUtils.Messenger (instance);
-
-			if (Instance.DEBUG_UTILS)
-				dbgReport = new DebugReport (instance,
-					VkDebugReportFlagsEXT.DebugEXT|
-					VkDebugReportFlagsEXT.ErrorEXT |
-					VkDebugReportFlagsEXT.WarningEXT |
-					VkDebugReportFlagsEXT.PerformanceWarningEXT |
-					VkDebugReportFlagsEXT.InformationEXT);
-
+		Program () : base () {		
+				
 			loadTexture (imgPathes[currentImgIndex]);
 
 			vbo = new GPUBuffer<float> (presentQueue, cmdPool, VkBufferUsageFlags.VertexBuffer, vertices);
@@ -121,8 +108,7 @@ namespace TextureSample {
 		void buildCommandBuffers () {
 			for (int i = 0; i < swapChain.ImageCount; ++i) { 								
                   	cmds[i]?.Free ();
-				cmds[i] = cmdPool.AllocateCommandBuffer ();
-				cmds[i].Start ();
+				cmds[i] = cmdPool.AllocateAndStart ();
 
 				recordDraw (cmds[i], frameBuffers[i]);
 
@@ -265,8 +251,6 @@ namespace TextureSample {
 					vbo.Dispose ();
 					ibo.Dispose ();
 					uboMats.Dispose ();
-					dbgReport?.Dispose ();
-					msg?.Dispose ();
 				}
 			}
 

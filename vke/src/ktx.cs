@@ -176,7 +176,7 @@ namespace KTX {
 							else
 								img.SetLayout (cmd, VkImageAspectFlags.Color,
 									VkImageLayout.TransferDstOptimal, VkImageLayout.ShaderReadOnlyOptimal,
-									VkPipelineStageFlags.Transfer, VkPipelineStageFlags.TopOfPipe);
+									VkPipelineStageFlags.Transfer, VkPipelineStageFlags.FragmentShader);
 
 							cmd.End ();
 

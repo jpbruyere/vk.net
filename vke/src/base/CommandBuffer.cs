@@ -116,7 +116,10 @@ namespace CVKL {
 			vkCmdPushConstants (handle, pipelineLayout.handle, stageFlags, offset, (uint)Marshal.SizeOf (data), data.Pin ());
 			data.Unpin ();
 		}
-
+		public void PushConstant (PipelineLayout pipelineLayout, VkShaderStageFlags stageFlags, uint size, Object data, uint offset = 0) {
+			vkCmdPushConstants (handle, pipelineLayout.handle, stageFlags, offset, size, data.Pin ());
+			data.Unpin ();
+		}
 		public void BeginRegion (string name, float r = 1f, float g = 0.1f, float b=0.1f, float a = 1f) {
 			if (!Device.debugMarkersEnabled)
 				return;

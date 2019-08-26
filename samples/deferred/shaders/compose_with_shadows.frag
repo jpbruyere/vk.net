@@ -7,8 +7,6 @@ layout (set = 0, binding = 0) uniform UBO {
     mat4 model;
     mat4 view;
     vec4 camPos;    
-    float exposure;
-    float gamma;
     float prefilteredCubeMipLevels;
     float scaleIBLAmbient;
 } ubo;
@@ -252,14 +250,16 @@ void main()
         vec3 diffuseContrib = (1.0 - F) * diffuse(pbrInputs);
         vec3 specContrib = F * G * D / (4.0 * NdotL * NdotV);        
         // Obtain final intensity as reflectance (BRDF) scaled by the energy of the light (cosine law)
+        vec3 color = NdotL * lights[i].color.rgb * (diffuseContrib + specContrib);
+        
+        #if SHADOW
         vec4 shadowClip = lights[i].mvp * vec4(pos, 1);
         float shadowFactor = filterPCF(shadowClip, i);
-
-        
-        vec3 color = NdotL * lights[i].color.rgb * (diffuseContrib + specContrib);
-
         // Calculate lighting contribution from image based lighting source (IBL)
         colors += shadowFactor * (color + getIBLContribution(pbrInputs, n, reflection));
+        #else
+        colors += color + getIBLContribution(pbrInputs, n, reflection);
+        #endif
         
         
     }
@@ -267,11 +267,11 @@ void main()
     
     
     const float u_OcclusionStrength = 1.0f;
-    const float u_EmissiveFactor = 1.0f;
+    const float u_EmissiveFactor = 3.0f;
     
     //AO is in the alpha channel of the normalAttachment    
     colors = mix(colors, colors * subpassLoad(samplerN_AO, gl_SampleID).a, u_OcclusionStrength);
-    colors += emissive;             
+    colors += emissive * u_EmissiveFactor;             
     
     outColor = vec4(colors, baseColor.a);       
 }
