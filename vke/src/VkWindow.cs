@@ -51,6 +51,8 @@ namespace CVKL {
 		protected CommandBuffer[] cmds;
 		protected VkSemaphore[] drawComplete;
 
+		DebugReport dbgRepport;
+
 		protected uint fps;
 		protected bool updateViewRequested = true, rebuildBuffers;
 		protected double lastMouseX, lastMouseY;
@@ -116,6 +118,15 @@ namespace CVKL {
 
 		void initVulkan (bool vSync) {
 			instance = new Instance ();
+
+			if (Instance.DEBUG_UTILS) {
+				//dbgmsg = new CVKL.DebugUtils.Messenger (instance);
+				dbgRepport = new DebugReport (instance,
+					VkDebugReportFlagsEXT.ErrorEXT
+					| VkDebugReportFlagsEXT.WarningEXT
+					| VkDebugReportFlagsEXT.PerformanceWarningEXT
+				);
+			}
 
 			hSurf = instance.CreateSurface (hWin);
 
@@ -329,10 +340,10 @@ namespace CVKL {
 
 				vkDestroySurfaceKHR (instance.Handle, hSurf, IntPtr.Zero);
 
-				cmdPool.Dispose ();
-
 				if (disposing) {
+					cmdPool.Dispose ();
 					dev.Dispose ();
+					dbgRepport?.Dispose ();
 					instance.Dispose ();
 				} else
 					Debug.WriteLine ("a VkWindow has not been correctly disposed");

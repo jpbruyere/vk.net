@@ -9,6 +9,14 @@ namespace test {
 		VkPhysicalDeviceFeatures enabledFeatures = default (VkPhysicalDeviceFeatures);
 		string[] enabledExtensions = { Ext.D.VK_KHR_swapchain };
 
+		static void Main (string[] args) {
+			Instance.VALIDATION = true;
+			//Instance.DEBUG_UTILS = true;
+
+			using (Program vke = new Program ())
+				vke.Run ();
+		}
+
 		Instance instance;
 		PhysicalDevice phy;
 		Device dev;
@@ -33,13 +41,13 @@ namespace test {
 			instance = new Instance ();
 
 #if DEBUG
-			dbgReport = new DebugReport (instance,
+			/*dbgReport = new DebugReport (instance,
 				VkDebugReportFlagsEXT.ErrorEXT
 				| VkDebugReportFlagsEXT.DebugEXT
 				| VkDebugReportFlagsEXT.WarningEXT
 				| VkDebugReportFlagsEXT.PerformanceWarningEXT
 			
-			);
+			);*/
 #endif
 
 			phy = instance.GetAvailablePhysicalDevice ().FirstOrDefault ();
@@ -117,14 +125,9 @@ namespace test {
 			dev.Dispose ();
 
 #if DEBUG
-			dbgReport.Dispose ();
+			dbgReport?.Dispose ();
 #endif
 			instance.Dispose ();
-		}
-
-		static void Main (string[] args) {
-			using (Program vke = new Program ())
-				vke.Run ();
 		}
 	}
 }

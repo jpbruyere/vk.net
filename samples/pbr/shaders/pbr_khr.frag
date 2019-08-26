@@ -7,7 +7,7 @@
 #extension GL_ARB_shading_language_420pack : enable
 
 #define MANUAL_SRGB 0
-#define DEBUG 0
+#define DEBUG 1
 
 struct Material {
     vec4 baseColorFactor;
@@ -177,8 +177,7 @@ vec3 getIBLContribution(PBRInfo pbrInputs, vec3 n, vec3 reflection)
     vec3 diffuse = diffuseLight * pbrInputs.diffuseColor;
     vec3 specular = specularLight * (pbrInputs.specularColor * brdf.x + brdf.y);
 
-    // For presentation, this allows us to disable IBL terms
-    // For presentation, this allows us to disable IBL terms
+    // For presentation, this allows us to disable IBL terms    
     diffuse *= ubo.scaleIBLAmbient;
     specular *= ubo.scaleIBLAmbient;
 

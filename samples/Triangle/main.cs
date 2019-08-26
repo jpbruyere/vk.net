@@ -11,6 +11,7 @@ namespace Triangle {
 		static void Main (string[] args) {
 			//Instance.RENDER_DOC_CAPTURE = true;
 			Instance.VALIDATION = true;
+			Instance.DEBUG_UTILS = true;
 
 			using (Program vke = new Program ()) {
 				vke.Run ();

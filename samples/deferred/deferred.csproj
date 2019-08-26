@@ -33,5 +33,8 @@
   <ItemGroup>
     <PackageReference Include="Crow.VK" Version="0.9.0-beta" />
   </ItemGroup>
-     
+    
+  <ItemGroup>
+    <Folder Include="shaders\" />
+  </ItemGroup>    
 </Project>

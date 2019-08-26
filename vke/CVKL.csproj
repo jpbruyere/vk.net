@@ -1,10 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <Import Project="$(RootDirectory)netfx.props" />
   <PropertyGroup>        
-    <Copyright></Copyright>
-    <AssemblyVersion>0.1.5</AssemblyVersion>
+    <AssemblyVersion>0.1.6</AssemblyVersion>
     <Description>C# vulkan library with IDispose model and references counting</Description>
-    <Company></Company>
     <Product>CVKL</Product>
     <PackageId>CVKL</PackageId>
     <PackageTags>C# vulkan game library compute glfw</PackageTags>    
@@ -45,7 +43,7 @@
   </ItemGroup>    
   <ItemGroup>
     <PackageReference Include="glTF2Loader" Version="1.1.3-alpha" />
-    <PackageReference Include="Vulkan" Version="0.1.3" />        
+    <PackageReference Include="Vulkan" Version="0.1.4-beta" />        
   </ItemGroup>
   <ItemGroup>        
     <None Remove="shaders\**\*.frag;shaders\**\*.vert;shaders\**\*.comp;shaders\**\*.geom" />
