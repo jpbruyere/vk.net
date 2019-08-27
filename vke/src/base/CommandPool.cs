@@ -19,6 +19,7 @@ namespace CVKL {
 
 			Activate ();
         }
+		public CommandPool (Queue queue) : this(queue.dev, queue.qFamIndex) {}
 		#endregion
 
 		protected override VkDebugMarkerObjectNameInfoEXT DebugMarkerInfo

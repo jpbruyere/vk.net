@@ -5,10 +5,11 @@
 layout(push_constant) uniform PushConsts {
 	float exposure;
 	float gamma;
+	float debug;
 } pc;
 
 layout (set = 0, binding = 0) uniform sampler2D samplerHDR;
-//layout (set = 0, binding = 1) uniform sampler2D bloom;
+layout (set = 0, binding = 1) uniform sampler2D bloom;
 
 layout (location = 0) in vec2 inUV;
 layout (location = 0) out vec4 outColor;
@@ -47,17 +48,20 @@ vec3 SRGBtoLINEAR(vec3 srgbIn)
 }
 									                                  
 void main() 
-{    
-    //vec4 hdrColor = texelFetch (samplerHDR, ivec2(inUV), gl_SampleID);    
-    vec4 hdrColor = texture (samplerHDR, inUV);    
-    outColor = vec4(SRGBtoLINEAR(tonemap(hdrColor.rgb)), hdrColor.a);
+{
+	if (pc.debug < 0.0f) {    
+	    //vec4 hdrColor = texelFetch (samplerHDR, ivec2(inUV), gl_SampleID);    
+	    vec4 hdrColor = texture (samplerHDR, inUV);    
+	    //vec4 c = texture (bloom, inUV);
+	    //float lum = (0.299*c.r + 0.587*c.g + 0.114*c.b);
+	    //if (lum>1.0)
+	    //    hdrColor.rgb += c.rgb * 0.05;
+	    outColor = vec4(SRGBtoLINEAR(tonemap(hdrColor.rgb)), hdrColor.a);	    
+    }else
+    	outColor = texture (bloom, inUV);
     
     
-    //outColor = texture (bloom, inUV);
-    
-    /*float lum = (0.299*hdrColor.r + 0.587*hdrColor.g + 0.114*hdrColor.b);
-    if (lum<1.0)
-        discard;
+    /*
     outColor = vec4(SRGBtoLINEAR(tonemap(hdrColor.rgb)), hdrColor.a);;*/
     
 /*  vec3 mapped = vec3(1.0) - exp(-hdrColor.rgb * pc.exposure);        
