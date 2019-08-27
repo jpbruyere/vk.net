@@ -72,7 +72,7 @@ namespace CVKL {
             present.pWaitSemaphores = wait.Pin();
             present.pImageIndices = idx.Pin();
 
-            Utils.CheckResult (vkQueuePresentKHR (handle, ref present));
+            vkQueuePresentKHR (handle, ref present);
 
 			sc.Unpin ();
 			wait.Unpin ();

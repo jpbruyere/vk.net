@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Numerics;
+using System.Runtime.InteropServices;
 using CVKL;
 using Glfw;
 using VK;
@@ -79,6 +80,7 @@ namespace deferred {
 			camera = new Camera (Utils.DegreesToRadians (45f), 1f, 0.1f, 16f);
 			camera.SetPosition (0, 0, 2);
 
+			//renderer = new DeferredPbrRenderer (presentQueue, cubemapPathes[2], swapChain.Width, swapChain.Height, camera.NearPlane, camera.FarPlane);
 			renderer = new DeferredPbrRenderer (presentQueue, cubemapPathes[2], swapChain.Width, swapChain.Height, camera.NearPlane, camera.FarPlane);
 			renderer.LoadModel (transferQ, modelPathes[curModelIndex]);
 			camera.Model = Matrix4x4.CreateScale (1f / Math.Max (Math.Max (renderer.modelAABB.Width, renderer.modelAABB.Height), renderer.modelAABB.Depth));
@@ -87,8 +89,9 @@ namespace deferred {
 		}
 
 		void init_final_pl() {
-			descriptorPool = new DescriptorPool (dev, 1,
-				new VkDescriptorPoolSize (VkDescriptorType.CombinedImageSampler, 1)
+			descriptorPool = new DescriptorPool (dev, 3,
+				new VkDescriptorPoolSize (VkDescriptorType.CombinedImageSampler, 2),
+				new VkDescriptorPoolSize (VkDescriptorType.StorageImage, 4)
 			);
 
 			GraphicPipelineConfig cfg = GraphicPipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, DeferredPbrRenderer.NUM_SAMPLES);
@@ -96,8 +99,8 @@ namespace deferred {
 			cfg.Layout = new PipelineLayout (dev,
 				new VkPushConstantRange (VkShaderStageFlags.Fragment, 2 * sizeof (float)),
 				new DescriptorSetLayout (dev, 0,
-					new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler)
-					//new VkDescriptorSetLayoutBinding (1, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler)
+					new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler),
+					new VkDescriptorSetLayoutBinding (1, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler)
 					));
 
 			cfg.RenderPass = new RenderPass (dev, swapChain.ColorFormat, DeferredPbrRenderer.NUM_SAMPLES);
@@ -108,9 +111,102 @@ namespace deferred {
 			plToneMap = new GraphicPipeline (cfg);
 
 			descriptorSet = descriptorPool.Allocate (cfg.Layout.DescriptorSetLayouts[0]);
+
+			init_blur ();
 		}
 
+		ComputePipeline plBlur;
+		DescriptorSetLayout dsLayoutBlur;
+		DescriptorSet dsetBlurPing, dsetBlurPong;
+		Image downSamp, downSamp2;
+		CommandPool computeCmdPool;
+
+		struct BlurPushCsts {
+			public Vector2 texSize;
+			public int dir;
+			public float scale;
+			public float strength;
+		};
+		BlurPushCsts pcBloom = new BlurPushCsts () { strength = 1.3f, scale = 0.4f };
+
+		void init_blur () {
+			computeCmdPool = new CommandPool (computeQ);
+
+			blurComplete = dev.CreateSemaphore ();
+
+			dsLayoutBlur = new DescriptorSetLayout (dev,
+				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Compute, VkDescriptorType.StorageImage),
+				new VkDescriptorSetLayoutBinding (1, VkShaderStageFlags.Compute, VkDescriptorType.StorageImage)
+			);
+			plBlur = new ComputePipeline (
+				new PipelineLayout (dev, new VkPushConstantRange (VkShaderStageFlags.Compute, (uint)Marshal.SizeOf<BlurPushCsts> ()), dsLayoutBlur),
+				"shaders/bloom.comp.spv");
+
+			dsetBlurPing = descriptorPool.Allocate (dsLayoutBlur);
+			dsetBlurPong = descriptorPool.Allocate (dsLayoutBlur);
+		}
+
+		void buildBlurCmd (CommandBuffer cmd) {
+			renderer.hdrImgResolved.SetLayout (cmd, VkImageAspectFlags.Color,
+				VkAccessFlags.ColorAttachmentWrite, VkAccessFlags.TransferRead,
+				VkImageLayout.ColorAttachmentOptimal, VkImageLayout.TransferSrcOptimal,
+				VkPipelineStageFlags.ColorAttachmentOutput, VkPipelineStageFlags.Transfer);
+			downSamp.SetLayout (cmd, VkImageAspectFlags.Color,
+				VkAccessFlags.ShaderRead, VkAccessFlags.TransferWrite,
+				VkImageLayout.ShaderReadOnlyOptimal, VkImageLayout.TransferDstOptimal,
+				VkPipelineStageFlags.FragmentShader, VkPipelineStageFlags.Transfer);
+
+
+			renderer.hdrImgResolved.BlitTo (cmd, downSamp);
+
+			renderer.hdrImgResolved.SetLayout (cmd, VkImageAspectFlags.Color,
+				VkImageLayout.TransferSrcOptimal, VkImageLayout.ShaderReadOnlyOptimal,
+				VkPipelineStageFlags.Transfer, VkPipelineStageFlags.FragmentShader);
+
+			downSamp2.SetLayout (cmd, VkImageAspectFlags.Color,
+				0, VkAccessFlags.MemoryWrite,
+				VkImageLayout.Undefined, VkImageLayout.General,
+				VkPipelineStageFlags.AllCommands, VkPipelineStageFlags.ComputeShader);
+
+			downSamp.SetLayout (cmd, VkImageAspectFlags.Color,
+				VkAccessFlags.TransferWrite, VkAccessFlags.MemoryRead,
+				VkImageLayout.TransferDstOptimal, VkImageLayout.General,
+				VkPipelineStageFlags.Transfer, VkPipelineStageFlags.ComputeShader);
+
+			plBlur.Bind (cmd);
+
+			pcBloom.dir = 0;
+
+			plBlur.BindDescriptorSet (cmd, dsetBlurPing);
+			cmd.PushConstant (plBlur.Layout, VkShaderStageFlags.Compute, pcBloom);
+			cmd.Dispatch (downSamp.Width / 16, downSamp.Height / 16);
+
+			cmd.SetMemoryBarrier (VkPipelineStageFlags.ComputeShader, VkPipelineStageFlags.ComputeShader,
+									VkAccessFlags.ShaderWrite, VkAccessFlags.ShaderRead);
+				
+			plBlur.BindDescriptorSet (cmd, dsetBlurPong);
+			cmd.PushConstant (plBlur.Layout, VkShaderStageFlags.Compute, 1, (uint)Marshal.SizeOf<Vector2> ());
+			cmd.Dispatch (downSamp.Width / 16, downSamp.Height / 16);
+
+			downSamp.SetLayout (cmd, VkImageAspectFlags.Color,
+				VkAccessFlags.MemoryWrite, VkAccessFlags.ShaderRead,
+				VkImageLayout.General, VkImageLayout.ShaderReadOnlyOptimal,
+				VkPipelineStageFlags.ComputeShader, VkPipelineStageFlags.FragmentShader);
+				/*
+			downSamp.SetLayout (cmd, VkImageAspectFlags.Color,
+				VkAccessFlags.TransferWrite, VkAccessFlags.ShaderRead,
+				VkImageLayout.TransferDstOptimal, VkImageLayout.ShaderReadOnlyOptimal,
+				VkPipelineStageFlags.Transfer, VkPipelineStageFlags.FragmentShader);
+				*/
+			cmd.End ();
+		}
+
+
 		CommandBuffer cmdPbr;
+		CommandBuffer cmdBlur;
+		VkSemaphore blurComplete;
+		const uint downSizing = 2;
+		float finalDebug = -1.0f;
 
 		void buildCommandBuffers () {
 			cmdPbr?.Free ();
@@ -118,12 +214,19 @@ namespace deferred {
 			renderer.buildCommandBuffers (cmdPbr);
 			cmdPbr.End ();
 
+			cmdBlur?.Free ();
+			cmdBlur = computeCmdPool.AllocateAndStart ();
+			buildBlurCmd (cmdBlur);
+
+
 			for (int i = 0; i < swapChain.ImageCount; ++i) {
 				cmds[i]?.Free ();
 				cmds[i] = cmdPool.AllocateAndStart ();
 
-				renderer.hdrImgResolved.SetLayout (cmds[i], VkImageAspectFlags.Color, VkImageLayout.ColorAttachmentOptimal, VkImageLayout.ShaderReadOnlyOptimal,
-					VkPipelineStageFlags.ColorAttachmentOutput, VkPipelineStageFlags.FragmentShader);
+				//renderer.hdrImgResolved.SetLayout (cmds[i], VkImageAspectFlags.Color,
+					//VkAccessFlags.TransferRead, VkAccessFlags.ShaderRead,
+					//VkImageLayout.TransferSrcOptimal, VkImageLayout.ShaderReadOnlyOptimal,
+					//VkPipelineStageFlags.Transfer, VkPipelineStageFlags.FragmentShader);
 
 				plToneMap.RenderPass.Begin (cmds[i], frameBuffers[i]);
 
@@ -133,7 +236,7 @@ namespace deferred {
 				plToneMap.Bind (cmds[i]);
 				plToneMap.BindDescriptorSet (cmds[i], descriptorSet);
 
-				cmds[i].PushConstant (plToneMap.Layout, VkShaderStageFlags.Fragment, 2 * sizeof(float), new float[] { renderer.exposure, renderer.gamma }, 0);
+				cmds[i].PushConstant (plToneMap.Layout, VkShaderStageFlags.Fragment, 12, new float[] { renderer.exposure, renderer.gamma, finalDebug }, 0);
 
 				cmds[i].Draw (3, 1, 0, 0);
 
@@ -175,6 +278,8 @@ namespace deferred {
 			}
 
 		}
+
+
 		protected override void render () {
 			int idx = swapChain.GetNextImage ();
 			if (idx < 0) {
@@ -187,7 +292,9 @@ namespace deferred {
 
 			presentQueue.Submit (cmdPbr, swapChain.presentComplete, renderer.DrawComplete);
 
-			presentQueue.Submit (cmds[idx], renderer.DrawComplete, drawComplete[idx]);
+			computeQ.Submit (cmdBlur, renderer.DrawComplete, blurComplete);
+
+			presentQueue.Submit (cmds[idx], blurComplete, drawComplete[idx]);
 			presentQueue.Present (swapChain, drawComplete[idx]);
 
 			presentQueue.WaitIdle ();
@@ -195,8 +302,26 @@ namespace deferred {
 		protected override void OnResize () {
 			dev.WaitIdle ();
 
-			UpdateView ();
 			renderer.Resize (swapChain.Width, swapChain.Height);
+
+			UpdateView ();
+
+			downSamp?.Dispose ();
+			downSamp2?.Dispose ();
+			downSamp = new Image (dev, VkFormat.R16g16b16a16Sfloat, VkImageUsageFlags.TransferDst | VkImageUsageFlags.Storage | VkImageUsageFlags.Sampled,
+				VkMemoryPropertyFlags.DeviceLocal, renderer.Width / downSizing, renderer.Height / downSizing, VkImageType.Image2D);
+			downSamp2 = new Image (dev, VkFormat.R16g16b16a16Sfloat, VkImageUsageFlags.Storage,
+				VkMemoryPropertyFlags.DeviceLocal, renderer.Width / downSizing, renderer.Height/ downSizing, VkImageType.Image2D);
+			downSamp.CreateView (); downSamp.CreateSampler ();
+			downSamp.Descriptor.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
+			downSamp2.CreateView (); downSamp2.CreateSampler ();
+			downSamp2.Descriptor.imageLayout = VkImageLayout.General;
+
+			downSamp.SetName ("HDRimgDownScaled");
+			downSamp2.SetName ("HDRimgDownScaled2");
+
+			pcBloom.texSize.X = downSamp.Width;
+			pcBloom.texSize.Y = downSamp.Height;
 
 			if (frameBuffers != null)
 				for (int i = 0; i < swapChain.ImageCount; ++i)
@@ -214,8 +339,13 @@ namespace deferred {
 					});
 			}
 
-			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (plToneMap.Layout.DescriptorSetLayouts[0]);
-			uboUpdate.Write (dev, descriptorSet, renderer.hdrImgResolved.Descriptor);
+			DescriptorSetWrites dsUpdate = new DescriptorSetWrites (plToneMap.Layout.DescriptorSetLayouts[0]);
+			dsUpdate.Write (dev, descriptorSet, renderer.hdrImgResolved.Descriptor, downSamp.Descriptor);
+
+			dsUpdate = new DescriptorSetWrites (dsLayoutBlur);
+			downSamp.Descriptor.imageLayout = VkImageLayout.General;
+			dsUpdate.Write (dev, dsetBlurPong, downSamp2.Descriptor, downSamp.Descriptor);
+			dsUpdate.Write (dev, dsetBlurPing, downSamp.Descriptor, downSamp2.Descriptor);
 
 			buildCommandBuffers ();
 
@@ -342,19 +472,38 @@ namespace deferred {
 						renderer.exposure -= 0.3f;
 					else
 						renderer.exposure += 0.3f;
+					rebuildBuffers = true;
 					break;
 				case Key.F3:
 					if (modifiers.HasFlag (Modifier.Shift))
 						renderer.gamma -= 0.1f;
 					else
 						renderer.gamma += 0.1f;
+					rebuildBuffers = true;
 					break;
-				case Key.F4:
-					if (camera.Type == Camera.CamType.FirstPerson)
-						camera.Type = Camera.CamType.LookAt;
-					else
-						camera.Type = Camera.CamType.FirstPerson;
-					Console.WriteLine ($"camera type = {camera.Type}");
+				case Key.D:
+					finalDebug = -finalDebug;
+					rebuildBuffers = true;
+					break;
+				case Key.B:
+					if (modifiers.HasFlag (Modifier.Control)) {
+						if (modifiers.HasFlag (Modifier.Shift))
+							pcBloom.strength -= 0.1f;
+						else
+							pcBloom.strength += 0.1f;
+					} else {
+						if (modifiers.HasFlag (Modifier.Shift))
+							pcBloom.scale *= 1.1f;
+						else
+							pcBloom.scale *= 0.9f;
+					}
+					Console.WriteLine ($"Bloom: scale = {pcBloom.scale}, strength = {pcBloom.strength}");
+					rebuildBuffers = true;
+					//if (camera.Type == Camera.CamType.FirstPerson)
+					//	camera.Type = Camera.CamType.LookAt;
+					//else
+					//	camera.Type = Camera.CamType.FirstPerson;
+					//Console.WriteLine ($"camera type = {camera.Type}");
 					break;
 				case Key.KeypadAdd:
 					curModelIndex++;
@@ -379,8 +528,18 @@ namespace deferred {
 		protected override void Dispose (bool disposing) {
 			if (disposing) {
 				if (!isDisposed) {
+					computeCmdPool.Dispose ();
+					downSamp?.Dispose ();
+					downSamp2?.Dispose ();
+					if (frameBuffers != null)
+						foreach (Framebuffer fb in frameBuffers)
+							fb.Dispose ();
 					renderer.Dispose ();
+					plBlur.Dispose ();
+					plToneMap.Dispose ();
+					descriptorPool.Dispose ();
 				}
+				dev.DestroySemaphore (blurComplete);
 			}
 			base.Dispose (disposing);
 		}

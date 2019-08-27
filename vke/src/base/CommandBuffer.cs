@@ -120,6 +120,14 @@ namespace CVKL {
 			vkCmdPushConstants (handle, pipelineLayout.handle, stageFlags, offset, size, data.Pin ());
 			data.Unpin ();
 		}
+		public void SetMemoryBarrier (VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask,
+			VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, VkDependencyFlags dependencyFlags = VkDependencyFlags.ByRegion) {
+			VkMemoryBarrier memoryBarrier = VkMemoryBarrier.New ();
+			memoryBarrier.srcAccessMask = srcAccessMask;
+			memoryBarrier.dstAccessMask = dstAccessMask;
+			Vk.vkCmdPipelineBarrier (Handle, srcStageMask, dstStageMask,
+				dependencyFlags, 1, ref memoryBarrier, 0, IntPtr.Zero, 0, IntPtr.Zero);
+		}
 		public void BeginRegion (string name, float r = 1f, float g = 0.1f, float b=0.1f, float a = 1f) {
 			if (!Device.debugMarkersEnabled)
 				return;
