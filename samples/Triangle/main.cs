@@ -138,6 +138,7 @@ namespace Triangle {
 		}
 
 		protected override void OnResize () {
+			dev.WaitIdle ();
 
 			if (frameBuffers != null)
 				for (int i = 0; i < swapChain.ImageCount; ++i)
@@ -156,12 +157,14 @@ namespace Triangle {
 					});
 
 			buildCommandBuffers ();
+
+			dev.WaitIdle ();
 		}
 
-		protected override void Dispose (bool disposing) {
+		protected override void Dispose (bool disposing) {		
+			dev.WaitIdle ();
 			if (disposing) {
 				if (!isDisposed) {
-					dev.WaitIdle ();
 					pipeline.Dispose ();
 					dsLayout.Dispose ();
 					for (int i = 0; i < swapChain.ImageCount; i++)

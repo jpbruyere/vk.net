@@ -50,16 +50,6 @@ namespace deferred {
 			public Matrix4x4 mvp;
 		}
 
-		struct BloomPushCsts {
-			readonly Vector2 texSize;
-			public int dir;
-			public BloomPushCsts(uint width, uint height, int dir) {
-				this.texSize = new Vector2 (width, height);
-				this.dir = dir;
-			}
-		};
-
-
 		public Matrices matrices = new Matrices {
 			scaleIBLAmbient = 0.5f,
 		};
@@ -75,7 +65,7 @@ namespace deferred {
 		};
 
 		Framebuffer frameBuffer;
-		public Image gbColorRough, gbEmitMetal, gbN_AO, gbPos, hdrImgResolved, hdrImgMS;//, downSamp, downSamp2;
+		public Image gbColorRough, gbEmitMetal, gbN_AO, gbPos, hdrImgResolved, hdrImgMS;
 
 		DescriptorPool descriptorPool;
 		DescriptorSetLayout descLayoutMain, descLayoutTextures, descLayoutGBuff;
@@ -103,7 +93,10 @@ namespace deferred {
 		//const int SP_TONE_MAPPING 	= 3;
 
 		string cubemapPath;
+
 		uint width, height;
+		public uint Width => width;
+		public uint Height => height;
 
 		public DeferredPbrRenderer (Queue gQueue, string cubemapPath, uint width, uint height, float nearPlane, float farPlane) {
 			this.gQueue = gQueue;
@@ -333,25 +326,8 @@ namespace deferred {
 			dsMainWrite = new DescriptorSetWrites (dsMain, descLayoutMain.Bindings[6]);
 			dsMainWrite.Write (dev, shadowMapRenderer.shadowMap.Descriptor);
 #endif
-			init_blur ();
 		}
 
-		ComputePipeline plBlur;
-		DescriptorSetLayout dsLayoutBlur;
-		DescriptorSet dsetPing, dsetPong;
-
-		void init_blur () {
-			dsLayoutBlur = new DescriptorSetLayout (dev,
-				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Compute, VkDescriptorType.StorageImage),
-				new VkDescriptorSetLayoutBinding (1, VkShaderStageFlags.Compute, VkDescriptorType.StorageImage)
-			);
-			plBlur = new ComputePipeline (
-				new PipelineLayout (dev, new VkPushConstantRange (VkShaderStageFlags.Compute, (uint)Marshal.SizeOf<BloomPushCsts>()), dsLayoutBlur),
-				"shaders/computeTest.comp.spv");
-
-			dsetPing = descriptorPool.Allocate (dsLayoutBlur);
-			dsetPong = descriptorPool.Allocate (dsLayoutBlur);
-		}
 
 		public void LoadModel (Queue transferQ, string path) {
 			dev.WaitIdle ();
@@ -381,10 +357,7 @@ namespace deferred {
 			modelAABB = model.DefaultScene.AABB;
 		}
 		public void buildCommandBuffers (CommandBuffer cmd) {
-			//downSamp.SetLayout (cmd, VkImageAspectFlags.Color,
-				//VkAccessFlags.ShaderWrite, VkAccessFlags.TransferWrite,
-				//VkImageLayout.General, VkImageLayout.TransferDstOptimal,
-				//VkPipelineStageFlags.ComputeShader, VkPipelineStageFlags.Transfer);
+
 
 			renderPass.Begin (cmd, frameBuffer);
 
@@ -431,34 +404,9 @@ namespace deferred {
 				VkPipelineStageFlags.FragmentShader, VkPipelineStageFlags.Transfer);*/
 
 			/*=====
-			hdrImg.SetLayout (cmd, VkImageAspectFlags.Color,
-				VkAccessFlags.ColorAttachmentWrite, VkAccessFlags.TransferRead,
-				VkImageLayout.ColorAttachmentOptimal, VkImageLayout.TransferSrcOptimal,
-				VkPipelineStageFlags.ColorAttachmentOutput, VkPipelineStageFlags.Transfer);
-
-			hdrImg.BlitTo (cmd, downSamp);
-
-			hdrImg.SetLayout (cmd, VkImageAspectFlags.Color, VkImageLayout.TransferSrcOptimal, VkImageLayout.ColorAttachmentOptimal,
-				VkPipelineStageFlags.Transfer, VkPipelineStageFlags.ColorAttachmentOutput);
 			=========*/
 
 			/*
-			downSamp.SetLayout (cmd, VkImageAspectFlags.Color,
-				VkAccessFlags.TransferWrite, VkAccessFlags.MemoryRead,
-				VkImageLayout.TransferDstOptimal, VkImageLayout.General,
-				VkPipelineStageFlags.Transfer, VkPipelineStageFlags.FragmentShader);
-
-			plBlur.Bind (cmd);
-			BloomPushCsts pcBloom = new BloomPushCsts (downSamp.Width, downSamp.Height, 0);
-
-
-			plBlur.BindDescriptorSet (cmd, dsetPing);
-			cmd.PushConstant (plBlur.Layout, VkShaderStageFlags.Compute, pcBloom);
-			cmd.Dispatch (downSamp.Width / 16, downSamp.Height / 16);
-
-			plBlur.BindDescriptorSet (cmd, dsetPong);
-			cmd.PushConstant (plBlur.Layout, VkShaderStageFlags.Compute, 1, (uint)Marshal.SizeOf<Vector2> ());
-			cmd.Dispatch (downSamp.Width / 16, downSamp.Height / 16);
 			*/
 
 			/*======
@@ -508,8 +456,6 @@ namespace deferred {
 			hdrImgResolved?.Dispose ();
 			hdrImgMS?.Dispose ();
 
-			//downSamp?.Dispose ();
-			//downSamp2?.Dispose ();
 
 			hdrImgResolved = new Image (dev, HDR_FORMAT, VkImageUsageFlags.Sampled | VkImageUsageFlags.ColorAttachment | VkImageUsageFlags.TransferSrc, VkMemoryPropertyFlags.DeviceLocal, width, height, VkImageType.Image2D, VkSampleCountFlags.SampleCount1);
 			gbColorRough = new Image (dev, VkFormat.R8g8b8a8Unorm, VkImageUsageFlags.InputAttachment | VkImageUsageFlags.ColorAttachment | VkImageUsageFlags.TransientAttachment, VkMemoryPropertyFlags.DeviceLocal, width, height, VkImageType.Image2D, NUM_SAMPLES);
@@ -519,8 +465,6 @@ namespace deferred {
 			if (NUM_SAMPLES != VkSampleCountFlags.SampleCount1)
 				hdrImgMS = new Image (dev, HDR_FORMAT, VkImageUsageFlags.ColorAttachment | VkImageUsageFlags.TransientAttachment, VkMemoryPropertyFlags.DeviceLocal, width, height, VkImageType.Image2D, NUM_SAMPLES);
 
-			//downSamp = new Image (dev, VkFormat.R16g16b16a16Sfloat, VkImageUsageFlags.TransferDst | VkImageUsageFlags.Storage | VkImageUsageFlags.Sampled, VkMemoryPropertyFlags.DeviceLocal, width / blurScale, height / blurScale, VkImageType.Image2D);
-			//downSamp2 = new Image (dev, VkFormat.R16g16b16a16Sfloat, VkImageUsageFlags.TransferDst | VkImageUsageFlags.Storage | VkImageUsageFlags.Sampled, VkMemoryPropertyFlags.DeviceLocal, width / blurScale, height / blurScale, VkImageType.Image2D);
 
 			gbColorRough.CreateView (); gbColorRough.CreateSampler ();
 			gbColorRough.Descriptor.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
@@ -535,23 +479,12 @@ namespace deferred {
 
 			hdrImgMS?.CreateView ();
 
-			//downSamp.CreateView (); downSamp.CreateSampler ();
-			//downSamp.Descriptor.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
-			//downSamp2.CreateView (); downSamp2.CreateSampler ();
-			//downSamp2.Descriptor.imageLayout = VkImageLayout.General;
 
 			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (descLayoutGBuff);
 			uboUpdate.Write (dev, dsGBuff,	gbColorRough.Descriptor,
 										gbEmitMetal.Descriptor,
 										gbN_AO.Descriptor,
 										gbPos.Descriptor);
-			//uboUpdate = new DescriptorSetWrites (dsMain, descLayoutMain.Bindings[8]);
-			//uboUpdate.Write (dev, downSamp.Descriptor);
-
-			//uboUpdate = new DescriptorSetWrites (dsetPing, dsLayoutBlur);
-			//downSamp.Descriptor.imageLayout = VkImageLayout.General;
-			//uboUpdate.Write (dev, downSamp.Descriptor, downSamp2.Descriptor);
-			//uboUpdate.Write (dev, dsetPong, downSamp2.Descriptor, downSamp.Descriptor);
 
 			gbColorRough.SetName ("GBuffColorRough");
 			gbEmitMetal.SetName ("GBuffEmitMetal");
@@ -559,8 +492,6 @@ namespace deferred {
 			gbPos.SetName ("GBuffPos");
 			hdrImgResolved.SetName ("HDRimg resolved");
 			hdrImgMS?.SetName ("HDRimg resolved");
-			//downSamp.SetName ("HDRimgDownScaled");
-			//downSamp2.SetName ("HDRimgDownScaled2");
 		}
 
 		public void Resize (uint width, uint height) {
