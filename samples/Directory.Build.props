@@ -11,7 +11,8 @@
     
 	    <OutputPath>$(SolutionDir)build\$(Configuration)\</OutputPath>
 	    <OutputType>Exe</OutputType>        
-	    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>    
+	    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+	    <IncludeDefaultNoneItems>false</IncludeDefaultNoneItems>
     </PropertyGroup>
     
 	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">    
@@ -34,11 +35,7 @@
 	</ItemGroup>    
 
 	<ItemGroup>    
-	    <GLSLShader Include="shaders\**\*.frag;shaders\**\*.vert;shaders\**\*.comp;shaders\**\*.geom" />        
-		<None Remove="shaders\**\*.frag;shaders\**\*.vert" /> 
-	    <Datas Include="..\data\**\*.*">      
-	      <Link>data\%(RecursiveDir)%(Filename)%(Extension)</Link>
-	    </Datas>
+		<GLSLShader Include="shaders\**\*.frag;shaders\**\*.vert;shaders\**\*.comp;shaders\**\*.geom" />
 	</ItemGroup>     
 
 	<Import Project="$(RootDirectory)spirv.targets" />      
