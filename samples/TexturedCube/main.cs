@@ -85,11 +85,11 @@ namespace TextureCube {
 		};
 		int currentImgIndex = 4;
 		string[] imgPathes = {
-			"data/textures/uffizi_cube.ktx",
-			"data/textures/papermill.ktx",
-			"data/textures/cubemap_yokohama_bc3_unorm.ktx",
-			"data/textures/gcanyon_cube.ktx",
-			"data/textures/pisa_cube.ktx",
+			"../data/textures/uffizi_cube.ktx",
+			"../data/textures/papermill.ktx",
+			"../data/textures/cubemap_yokohama_bc3_unorm.ktx",
+			"../data/textures/gcanyon_cube.ktx",
+			"../data/textures/pisa_cube.ktx",
 		};
 
 		VkSampleCountFlags samples = VkSampleCountFlags.SampleCount1;

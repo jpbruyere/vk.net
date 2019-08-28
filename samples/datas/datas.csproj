@@ -1,13 +1,28 @@
-<Project InitialTargets="DataCopy" Sdk="Microsoft.NET.Sdk">
-<!--	xmlns="http://schemas.microsoft.com/developer/msbuild/2003">-->
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <TargetFrameworks>net471;netstandard2.0</TargetFrameworks>        
+        <ProjectGuid>{0819E729-64D0-4D96-B7A7-FFDE86639977}</ProjectGuid>
+        <OutputType>Exe</OutputType>
+    </PropertyGroup>
     
-  <PropertyGroup>
-	<TargetFramework>net471</TargetFramework>
-    <EnableDefaultItems>false</EnableDefaultItems>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' " />
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' " />
-  <ItemGroup>
-    <Datas Include="data\**\*.*" />      
-  </ItemGroup>     
+    <ItemGroup>
+        <Datas Include="data\**\*.*" />        
+    </ItemGroup> 
+
+    <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+        <OutputPath>$(SolutionDir)build\Debug\</OutputPath>
+    </PropertyGroup>
+        
+    <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+        <OutputPath>$(SolutionDir)build\Release\</OutputPath>
+    </PropertyGroup>  
+
+    <Target Name="Build" Condition="'@(Datas)'!=''">        
+        <Copy SourceFiles="@(Datas)" DestinationFiles="@(Datas-&gt;'$(OutputPath)data\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />        
+    </Target>    
+
+
+    <Target Name="Clean">
+      <RemoveDir Directories="$(OutputPath)\data\" />
+    </Target>
 </Project>

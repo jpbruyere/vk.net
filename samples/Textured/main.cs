@@ -59,11 +59,11 @@ namespace Textured {
 		string[] imgPathes = {
 			"/mnt/devel/vulkan/VulkanExamples/data/models/voyager/voyager_rgba_unorm.ktx",
 			"/mnt/devel/vulkan/vulkanExUpstream/data/models/voyager/voyager_astc_8x8_unorm.ktx",
-			"data/textures/rgba-reference.ktx",
+			"../data/textures/rgba-reference.ktx",
 			"/mnt/devel/vulkan/vulkanExUpstream/data/textures/trail_astc_8x8_unorm.ktx",
-			"data/textures/texturearray_rocks_bc3_unorm.ktx",
-			"data/textures/texture.jpg",
-			"data/textures/tex256.jpg",
+			"../data/textures/texturearray_rocks_bc3_unorm.ktx",
+			"../data/textures/texture.jpg",
+			"../data/textures/tex256.jpg",
 		};
 
 		Program () : base () {		

@@ -33,6 +33,10 @@ namespace SpirVTasks {
 			get;
 			set;
 		}
+		public ITaskItem SpirVCompilerPath {
+			get;
+			set;
+		}
 		[Required]
 		[Output]
 		public ITaskItem DestinationFile {
@@ -43,7 +47,7 @@ namespace SpirVTasks {
 		volatile bool success;
 
 		bool tryFindInclude (string include, out string incFile) {
-			if (!string.IsNullOrEmpty (AdditionalIncludeDirectories.ItemSpec)) {
+			if (!string.IsNullOrEmpty (AdditionalIncludeDirectories?.ItemSpec)) {
 				foreach (string incDir in AdditionalIncludeDirectories.ItemSpec.Split (';', ',', '|')) {
 					incFile = Path.Combine (incDir, include);
 					if (File.Exists (incFile))
@@ -62,7 +66,6 @@ namespace SpirVTasks {
 					if (line.Trim ().StartsWith ("#include", StringComparison.Ordinal)) {
 						string include = line.Split ('"', '<', '>')[1];
 						string incFile = Path.Combine (Path.GetDirectoryName (src), include);
-
 						if (!File.Exists (incFile)) {
 							if (!tryFindInclude(include, out incFile))
 								throw new IncludeFileNotFound (src, srcLine, include);
@@ -75,23 +78,43 @@ namespace SpirVTasks {
 			}
 		}
 
+		bool tryFindGlslcExecutable (out string glslcPath) {
+			if (!string.IsNullOrEmpty (SpirVCompilerPath?.ItemSpec)) {
+				glslcPath = SpirVCompilerPath.ItemSpec;
+				if (!File.Exists (glslcPath))
+					return false;
+			}
+
+			string glslcExec = "glslc";
+			if (Environment.OSVersion.Platform.ToString ().StartsWith ("Win", StringComparison.Ordinal))
+				glslcExec = glslcExec + "exe";
+
+			glslcPath = Path.Combine (Environment.GetEnvironmentVariable ("VULKAN_SDK"), "bin");
+			glslcPath = Path.Combine (glslcPath, glslcExec);
+			if (File.Exists (glslcPath))
+				return true;
+
+			string envStrPathes = Environment.GetEnvironmentVariable ("PATH");
+			if (!string.IsNullOrEmpty (envStrPathes)) {
+				foreach (string path in envStrPathes.Split (';')) {
+					glslcPath = Path.Combine (path, glslcExec);
+					if (File.Exists (glslcPath))
+						return true;
+				}
+			}
+			return false;		
+		}
+
 
 		public override bool Execute () {
 
 			success = true;
 
-			string glslcPath = Path.Combine (Environment.GetEnvironmentVariable ("VULKAN_SDK"), "bin");
-			glslcPath = Path.Combine (glslcPath, "glslc");
-
-			if (!File.Exists (glslcPath)) {
+			if (!tryFindGlslcExecutable(out string glslcPath)) {
 				BuildErrorEventArgs err = new BuildErrorEventArgs ("execute", "VK001", BuildEngine.ProjectFileOfTaskNode, 0, 0, 0, 0, $"glslc command not found: {glslcPath}", "Set 'VULKAN_SDK' environment variable", "SpirVTasks");
 				BuildEngine.LogErrorEvent (err);
 				return false;
 			}
-
-			//foreach (string item in DestinationFile.MetadataNames) {
-			//	Log.LogMessage (MessageImportance.High, $"METADATA name: {item} = {DestinationFile.GetMetadata(item)}");
-			//}
 
 			string tempFile = Path.Combine (TempDirectory.ItemSpec, SourceFile.ItemSpec);
 			if (File.Exists (tempFile))
@@ -103,11 +126,11 @@ namespace SpirVTasks {
 					build_source (SourceFile.ItemSpec, sw);
 				}
 			} catch (IncludeFileNotFound ex) {
-				BuildErrorEventArgs err = new BuildErrorEventArgs ("include", "ERR_INC", ex.SourceFile, ex.SourceLine, 0, 0, 0, $"include file not found: {ex.FileName}", "", "SpirVTasks");
+				BuildErrorEventArgs err = new BuildErrorEventArgs ("include", "VK002", ex.SourceFile, ex.SourceLine, 0, 0, 0, $"include file not found: {ex.FileName}", "", "SpirVTasks");
 				BuildEngine.LogErrorEvent (err);
 				return false;
 			}catch (Exception ex) {
-				BuildErrorEventArgs err = new BuildErrorEventArgs ("include", "ERR", SourceFile.ItemSpec, 0, 0, 0, 0, ex.ToString(), "", "SpirVTasks");
+				BuildErrorEventArgs err = new BuildErrorEventArgs ("include", "VK000", SourceFile.ItemSpec, 0, 0, 0, 0, ex.ToString(), "", "SpirVTasks");
 				BuildEngine.LogErrorEvent (err);
 				return false;
 			}
@@ -115,8 +138,8 @@ namespace SpirVTasks {
 			Directory.CreateDirectory (Path.GetDirectoryName (DestinationFile.ItemSpec));
 
 			Process glslc = new Process();
-			glslc.StartInfo.StandardOutputEncoding = System.Text.Encoding.ASCII;
-			glslc.StartInfo.StandardErrorEncoding = System.Text.Encoding.ASCII;
+			//glslc.StartInfo.StandardOutputEncoding = System.Text.Encoding.ASCII;
+			//glslc.StartInfo.StandardErrorEncoding = System.Text.Encoding.ASCII;
 			glslc.StartInfo.UseShellExecute = false;
 			glslc.StartInfo.RedirectStandardOutput = true;
 			glslc.StartInfo.RedirectStandardError = true;
@@ -149,7 +172,6 @@ namespace SpirVTasks {
 
 			string[] tmp = e.Data.Split (':');
 
-
 			Log.LogMessage (MessageImportance.High, $"glslc: {e.Data}");
 
 			if (tmp.Length == 5) {
@@ -161,8 +183,6 @@ namespace SpirVTasks {
 				success = false;
 			} else {
 				Log.LogMessage (MessageImportance.High, $"{e.Data}");
-				//BuildErrorEventArgs err = new BuildErrorEventArgs ("unkn", "ERR0", BuildEngine.ProjectFileOfTaskNode, 0, 0, 0, 0, $"{e.Data}", "no help", "SpirVTasks");
-				//BuildEngine.LogErrorEvent (err);
 			}
 		}
 

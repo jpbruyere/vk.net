@@ -88,8 +88,8 @@ namespace ModelSample {
 
 			pipeline = new GraphicPipeline (cfg);
 
-			helmet = new SimpleModel (presentQueue, "data/models/DamagedHelmet/glTF/DamagedHelmet.gltf");
-			//helmet = new SimpleModel (presentQueue, "data/models/Hubble.glb");
+			helmet = new SimpleModel (presentQueue, "../data/models/DamagedHelmet/glTF/DamagedHelmet.gltf");
+			//helmet = new SimpleModel (presentQueue, "../data/models/Hubble.glb");
 
 			//helmet = new SimpleModel (presentQueue, "/mnt/devel/vulkan/Lugdunum/resources/models/Box.gltf");
 

@@ -1,9 +1,0 @@
-<Project Sdk="Microsoft.NET.Sdk">
-    <PropertyGroup>
-        <OutputPath>$(SolutionDir)build</OutputPath>
-        <TargetFramework>net471</TargetFramework>        
-    </PropertyGroup>
-    <ItemGroup>        
-        <PackageReference Include="Microsoft.Build.Utilities.Core" Version="16.0.461" />
-    </ItemGroup>
-</Project>
