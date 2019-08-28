@@ -50,8 +50,7 @@ namespace ModelSample {
 		CVKL.DebugUtils.Messenger dbgmsg;
 
 		Program () : base () {
-			if (Instance.DEBUG_UTILS)
-				dbgmsg = new CVKL.DebugUtils.Messenger (instance);
+
 
 			descriptorPool = new DescriptorPool (dev, 2,
 				new VkDescriptorPoolSize (VkDescriptorType.UniformBuffer),

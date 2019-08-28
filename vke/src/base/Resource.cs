@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using VK;
@@ -6,7 +7,8 @@ using VK;
 using static VK.Vk;
 
 namespace CVKL {
-    public abstract class Resource : Activable {
+	[DebuggerDisplay ("{previous.name} <- {name} -> {next.name}")]
+	public abstract class Resource : Activable {
 		protected VkMemoryRequirements memReqs;
 #if MEMORY_POOLS
 		internal MemoryPool memoryPool;
@@ -102,5 +104,5 @@ namespace CVKL {
 			base.Dispose (disposing);
         }
 #endregion
-    }
+	}
 }

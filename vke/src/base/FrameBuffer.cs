@@ -73,6 +73,7 @@ namespace CVKL {
 
 					v = new Image (renderPass.Dev, ad.format, usage, VkMemoryPropertyFlags.DeviceLocal,
 						_width, _height, VkImageType.Image2D, ad.samples, VkImageTiling.Optimal, 1, createInfo.layers);
+					v.SetName ($"fbImg{i}");
 					v.CreateView (VkImageViewType.ImageView2D, aspectFlags);
 				} else
 					v.Activate ();//increase ref and create handle if not already activated
