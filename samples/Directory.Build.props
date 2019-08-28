@@ -26,7 +26,7 @@
 		<Reference Include="System" />
 	</ItemGroup>      
 	
-	<ItemGroup>
+	<ItemGroup>		
 		<ProjectReference Include="$(RootDirectory)vke\CVKL.csproj" />
 	</ItemGroup>    
 	

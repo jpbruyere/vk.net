@@ -9,16 +9,16 @@ namespace deferred {
 	class Deferred : VkWindow {
 		static void Main (string[] args) {
 
-			Instance.VALIDATION = true;
-			Instance.DEBUG_UTILS = true;
-			Instance.RENDER_DOC_CAPTURE = true;
+			//Instance.VALIDATION = true;
+			//Instance.DEBUG_UTILS = true;
+			//Instance.RENDER_DOC_CAPTURE = true;
 
 			DeferredPbrRenderer.TEXTURE_ARRAY = true;
-			DeferredPbrRenderer.NUM_SAMPLES = VkSampleCountFlags.SampleCount2;
+			DeferredPbrRenderer.NUM_SAMPLES = VkSampleCountFlags.SampleCount1;
 			DeferredPbrRenderer.HDR_FORMAT = VkFormat.R16g16b16a16Sfloat;
 			DeferredPbrRenderer.MRT_FORMAT = VkFormat.R32g32b32a32Sfloat;
 
-			PbrModelTexArray.TEXTURE_DIM = 512;
+			PbrModelTexArray.TEXTURE_DIM = 1024;
 
 			using (Deferred vke = new Deferred ()) {
 				vke.Run ();
@@ -71,7 +71,6 @@ namespace deferred {
 		GraphicPipeline plToneMap;
 		Framebuffer[] frameBuffers;
 		DescriptorPool descriptorPool;
-		DescriptorSetLayout dsLayout;
 		DescriptorSet descriptorSet;
 
 
@@ -176,7 +175,7 @@ namespace deferred {
 			plBlur.Bind (cmd);
 
 			pcBloom.dir = 0;
-
+			/*
 			plBlur.BindDescriptorSet (cmd, dsetBlurPing);
 			cmd.PushConstant (plBlur.Layout, VkShaderStageFlags.Compute, pcBloom);
 			cmd.Dispatch (downSamp.Width / 16, downSamp.Height / 16);
@@ -191,13 +190,13 @@ namespace deferred {
 			downSamp.SetLayout (cmd, VkImageAspectFlags.Color,
 				VkAccessFlags.MemoryWrite, VkAccessFlags.ShaderRead,
 				VkImageLayout.General, VkImageLayout.ShaderReadOnlyOptimal,
-				VkPipelineStageFlags.ComputeShader, VkPipelineStageFlags.FragmentShader);
-				/*
+				VkPipelineStageFlags.ComputeShader, VkPipelineStageFlags.FragmentShader);*/
+
 			downSamp.SetLayout (cmd, VkImageAspectFlags.Color,
 				VkAccessFlags.TransferWrite, VkAccessFlags.ShaderRead,
 				VkImageLayout.TransferDstOptimal, VkImageLayout.ShaderReadOnlyOptimal,
 				VkPipelineStageFlags.Transfer, VkPipelineStageFlags.FragmentShader);
-				*/
+				
 			cmd.End ();
 		}
 

@@ -28,7 +28,7 @@ layout(push_constant) uniform PushConsts {
     mat4 model;
 } pc;
 
-vec3 light = vec3(10.0,.0,-10.0);
+vec3 light = vec3(2.0,2.0,-2.0);
 
 void main() 
 {
