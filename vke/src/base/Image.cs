@@ -35,7 +35,7 @@ namespace CVKL {
 	/// created for the same vkImage, you may call the constructor accepting a vkImage as parameter to import an existing one. vkImage handle of
 	/// such imported image will not be disposed with the sampler and the view.
 	/// </summary>
-    public class Image : Resource {
+	public class Image : Resource {
 		public static VkFormat DefaultTextureFormat = VkFormat.R8g8b8a8Unorm;
 
 		internal VkImage handle; 

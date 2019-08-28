@@ -31,7 +31,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "datas", "samples\datas\data
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "compute", "samples\compute\compute.csproj", "{D6B4200E-25FA-4AFD-BD9E-4240BAF1AFE4}"
 EndProject
-Project("{9344BDBB-3E7F-41FC-A0DD-8665D75EE146}") = "Model", "samples\Model\Model.csproj", "{F134D6DF-893C-41B0-85FC-82E30773F3D5}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Model", "samples\Model\Model.csproj", "{F134D6DF-893C-41B0-85FC-82E30773F3D5}"
 EndProject
 Project("{9344BDBB-3E7F-41FC-A0DD-8665D75EE146}") = "tests", "samples\tests\tests.csproj", "{3FE2F866-C21D-4FED-B2F3-3385789165A2}"
 EndProject

@@ -86,7 +86,7 @@ namespace CVKL {
 					previous.next = previous.previous = resource;
 				} else {
 					resource.next = previous.next;
-					previous.next = resource;
+					previous.next = resource.next.previous = resource;
 				}
 			}
 			lastResource = resource;
@@ -111,7 +111,7 @@ namespace CVKL {
 					resource.next.previous = resource.previous;
 				}
 			}
-			resource.next = resource.previous = null;
+ 			resource.next = resource.previous = null;
 		}
 
 		public void Map (ulong size = Vk.WholeSize, ulong offset = 0) {
