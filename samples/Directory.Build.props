@@ -13,6 +13,9 @@
 	    <OutputType>Exe</OutputType>        
 	    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 	    <IncludeDefaultNoneItems>false</IncludeDefaultNoneItems>
+	    
+	    <SpirVAdditionalIncludeDirectories>$(MSBuildThisFileDirectory)common\shaders</SpirVAdditionalIncludeDirectories>
+
     </PropertyGroup>
     
 	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">    
@@ -22,21 +25,21 @@
 		<DefineConstants>NETSTANDARD;NETSTANDARD2_0;WITH_SHADOWS;_WITH_VKVG</DefineConstants>    
 	</PropertyGroup>
 
-	<ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">
+<!--	<ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">
 		<Reference Include="System" />
-	</ItemGroup>      
+	</ItemGroup>      -->
 	
 	<ItemGroup>		
 		<ProjectReference Include="$(RootDirectory)vke\CVKL.csproj" />
 	</ItemGroup>    
 	
 	<ItemGroup>
-		<PackageReference Include="Vulkan" Version="0.1.4-beta" />        
+		<PackageReference Include="SpirVTasks" Version="0.1.6-beta" />        
+		<PackageReference Include="Vulkan" Version="0.1.4" />        
 	</ItemGroup>    
 
 	<ItemGroup>    
 		<GLSLShader Include="shaders\**\*.frag;shaders\**\*.vert;shaders\**\*.comp;shaders\**\*.geom" />
 	</ItemGroup>     
-
-	<Import Project="$(RootDirectory)spirv.targets" />      
+	
 </Project>

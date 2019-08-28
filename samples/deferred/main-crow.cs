@@ -111,20 +111,20 @@ namespace deferred {
 		}
 
 		string[] cubemapPathes = {
-			"data/textures/papermill.ktx",
-			"data/textures/cubemap_yokohama_bc3_unorm.ktx",
-			"data/textures/gcanyon_cube.ktx",
-			"data/textures/pisa_cube.ktx",
-			"data/textures/uffizi_cube.ktx",
+			"../data/textures/papermill.ktx",
+			"../data/textures/cubemap_yokohama_bc3_unorm.ktx",
+			"../data/textures/gcanyon_cube.ktx",
+			"../data/textures/pisa_cube.ktx",
+			"../data/textures/uffizi_cube.ktx",
 		};
 		string[] modelPathes = {
 				//"/mnt/devel/gts/vkChess.net/data/models/chess.glb",
 				//"/home/jp/gltf/jaguar/scene.gltf",
-				"data/models/DamagedHelmet/glTF/DamagedHelmet.gltf",
-				"data/models/shadow.glb",
-				"data/models/Hubble.glb",
-				"data/models/MER_static.glb",
-				"data/models/ISS_stationary.glb",
+				"../data/models/DamagedHelmet/glTF/DamagedHelmet.gltf",
+				"../data/models/shadow.glb",
+				"../data/models/Hubble.glb",
+				"../data/models/MER_static.glb",
+				"../data/models/ISS_stationary.glb",
 			};
 
 		int curModelIndex = 0;

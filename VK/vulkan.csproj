@@ -10,7 +10,7 @@
         
     <PackageId>Vulkan</PackageId>
     <PackageTags>C# vulkan net binding</PackageTags>    
-    <PackageVersion>$(AssemblyVersion)-beta</PackageVersion>        
+    <PackageVersion>$(AssemblyVersion)</PackageVersion>        
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <PackageProjectUrl>https://github.com/jpbruyere/vk.net/blob/master/README.md</PackageProjectUrl>
     <!--<PackageIconUrl>https://github.com/KhronosGroup/glTF/blob/master/specification/figures/gltf.png</PackageIconUrl>-->
