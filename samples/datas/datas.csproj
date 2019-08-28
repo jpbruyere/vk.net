@@ -1,0 +1,13 @@
+<Project InitialTargets="DataCopy" Sdk="Microsoft.NET.Sdk">
+<!--	xmlns="http://schemas.microsoft.com/developer/msbuild/2003">-->
+    
+  <PropertyGroup>
+	<TargetFramework>net471</TargetFramework>
+    <EnableDefaultItems>false</EnableDefaultItems>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' " />
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' " />
+  <ItemGroup>
+    <Datas Include="data\**\*.*" />      
+  </ItemGroup>     
+</Project>

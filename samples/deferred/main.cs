@@ -18,7 +18,7 @@ namespace deferred {
 			DeferredPbrRenderer.HDR_FORMAT = VkFormat.R16g16b16a16Sfloat;
 			DeferredPbrRenderer.MRT_FORMAT = VkFormat.R32g32b32a32Sfloat;
 
-			PbrModelTexArray.TEXTURE_DIM = 1024;
+			PbrModelTexArray.TEXTURE_DIM = 512;
 
 			using (Deferred vke = new Deferred ()) {
 				vke.Run ();
@@ -205,7 +205,7 @@ namespace deferred {
 		CommandBuffer cmdPbr;
 		CommandBuffer cmdBlur;
 		VkSemaphore blurComplete;
-		const uint downSizing = 2;
+		const uint downSizing = 1;
 		float finalDebug = -1.0f;
 
 		void buildCommandBuffers () {
