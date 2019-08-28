@@ -32,6 +32,7 @@ namespace deferred {
 		public int lightNumDebug = 0;
 		public int debugMip = 0;
 		public int debugFace = 0;
+
 		const float lightMoveSpeed = 0.1f;
 		public float exposure = 2.0f;
 		public float gamma = 1.2f;
@@ -367,6 +368,7 @@ namespace deferred {
 			cmd.BindDescriptorSet (gBuffPipeline.Layout, dsMain);
 
 			envCube.RecordDraw (cmd);
+
 			renderPass.BeginSubPass (cmd);
 
 			if (model != null) {
@@ -394,29 +396,10 @@ namespace deferred {
 			cmd.Draw (3, 1, 0, 0);
 
 			//renderPass.BeginSubPass (cmd);
-
 			//toneMappingPipeline.Bind (cmd);
 			//cmd.Draw (3, 1, 0, 0);
 
 			renderPass.End (cmd);
-
-			/*downSamp.SetLayout (cmd, VkImageAspectFlags.Color, VkImageLayout.ShaderReadOnlyOptimal, VkImageLayout.TransferDstOptimal,
-				VkPipelineStageFlags.FragmentShader, VkPipelineStageFlags.Transfer);*/
-
-			/*=====
-			=========*/
-
-			/*
-			*/
-
-			/*======
-			downSamp.SetLayout (cmd, VkImageAspectFlags.Color,
-				VkAccessFlags.ShaderWrite, VkAccessFlags.ShaderRead,
-				VkImageLayout.General, VkImageLayout.ShaderReadOnlyOptimal,
-				VkPipelineStageFlags.ComputeShader, VkPipelineStageFlags.FragmentShader);
-				=======*/
-
-
 		}
 
 		public void MoveLight (Vector4 dir) {
@@ -446,7 +429,6 @@ namespace deferred {
 
 		#endregion
 
-		const int blurScale = 4;
 
 		void createGBuff () {
 			gbColorRough?.Dispose ();
@@ -495,6 +477,9 @@ namespace deferred {
 		}
 
 		public void Resize (uint width, uint height) {
+			this.width = width;
+			this.height = height;
+
 			frameBuffer?.Dispose ();
 			createGBuff ();
 
@@ -516,11 +501,6 @@ namespace deferred {
 			gbPos.Dispose ();
 			hdrImgMS?.Dispose ();
 			hdrImgResolved.Dispose ();
-
-			//downSamp.Dispose ();
-			//downSamp2.Dispose ();
-			//plBlur.Dispose ();
-			//dsLayoutBlur.Dispose ();
 
 			gBuffPipeline.Dispose ();
 			composePipeline.Dispose ();

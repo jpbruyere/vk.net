@@ -44,6 +44,7 @@ namespace CVKL {
 			=> new VkDebugMarkerObjectNameInfoEXT(VkDebugReportObjectTypeEXT.RenderPassEXT, handle.Handle);
 
 		#region CTORS
+
 		public RenderPass (Device device, VkSampleCountFlags samples = VkSampleCountFlags.SampleCount1) : base(device) {
 			Samples = samples;
 		}
@@ -175,8 +176,16 @@ namespace CVKL {
                 finalLayout = finalLayout,
             });
         }
+		//public void AddDependency (SubPass srcSubpass, SubPass dstSubpass,
+		//	VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask,
+		//	VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask,
+		//	VkDependencyFlags dependencyFlags = VkDependencyFlags.ByRegion) {
 
-        public void AddDependency (uint srcSubpass, uint dstSubpass,
+		//	AddDependency (srcSubpass.Index, dstSubpass.Index, srcStageMask, dstStageMask,
+		//		srcAccessMask, dstAccessMask, dependencyFlags);
+		//}
+
+		public void AddDependency (uint srcSubpass, uint dstSubpass,
             VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask,
             VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask,
             VkDependencyFlags dependencyFlags = VkDependencyFlags.ByRegion) {
@@ -191,7 +200,10 @@ namespace CVKL {
             });
         }
         public void AddSubpass (params SubPass[] subPass) {
-            subpasses.AddRange (subPass);
+			for (uint i = 0; i < subPass.Length; i++) {
+				subPass[i].Index = (uint)subpasses.Count + i;
+				subpasses.Add (subPass[i]);
+			}
         }
         /// <summary>
         /// Begin Render pass with framebuffer extent dimensions

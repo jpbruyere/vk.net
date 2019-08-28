@@ -28,7 +28,8 @@ using VK;
 
 namespace CVKL {
 	public class SubPass {
-        List<VkAttachmentReference> colorRefs = new List<VkAttachmentReference>();
+		public uint Index { get; internal set; }
+		List<VkAttachmentReference> colorRefs = new List<VkAttachmentReference>();
         List<VkAttachmentReference> inputRefs = new List<VkAttachmentReference>();
         MarshaledObject<VkAttachmentReference> depthRef;
         List<VkAttachmentReference> resolveRefs = new List<VkAttachmentReference>();
@@ -113,5 +114,7 @@ namespace CVKL {
 			if (resolveRefs.Count > 0)
 				resolveRefs.Unpin ();
 		}
-    }
+
+		public static implicit operator uint(SubPass sp) => sp.Index;
+	}
 }
