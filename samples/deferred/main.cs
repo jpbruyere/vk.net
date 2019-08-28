@@ -8,11 +8,11 @@ using VK;
 namespace deferred {
 	class Deferred : VkWindow {
 		static void Main (string[] args) {
-
-			//Instance.VALIDATION = true;
-			//Instance.DEBUG_UTILS = true;
-			//Instance.RENDER_DOC_CAPTURE = true;
-
+#if DEBUG
+			Instance.VALIDATION = true;
+			Instance.DEBUG_UTILS = true;
+			Instance.RENDER_DOC_CAPTURE = false;
+#endif
 			DeferredPbrRenderer.TEXTURE_ARRAY = true;
 			DeferredPbrRenderer.NUM_SAMPLES = VkSampleCountFlags.SampleCount1;
 			DeferredPbrRenderer.HDR_FORMAT = VkFormat.R16g16b16a16Sfloat;
@@ -75,7 +75,7 @@ namespace deferred {
 
 
 
-		Deferred () : base("deferred", 1024, 1024) {		
+		Deferred () : base("deferred") {		
 			camera = new Camera (Utils.DegreesToRadians (45f), 1f, 0.1f, 16f);
 			camera.SetPosition (0, 0, 2);
 
@@ -104,8 +104,8 @@ namespace deferred {
 
 			cfg.RenderPass = new RenderPass (dev, swapChain.ColorFormat, DeferredPbrRenderer.NUM_SAMPLES);
 
-			cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/FullScreenQuad.vert.spv");
-			cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/tone_mapping.frag.spv");
+			cfg.AddShader (VkShaderStageFlags.Vertex, "#deferred.FullScreenQuad.vert.spv");
+			cfg.AddShader (VkShaderStageFlags.Fragment, "#deferred.tone_mapping.frag.spv");
 
 			plToneMap = new GraphicPipeline (cfg);
 
@@ -139,7 +139,7 @@ namespace deferred {
 			);
 			plBlur = new ComputePipeline (
 				new PipelineLayout (dev, new VkPushConstantRange (VkShaderStageFlags.Compute, (uint)Marshal.SizeOf<BlurPushCsts> ()), dsLayoutBlur),
-				"shaders/bloom.comp.spv");
+				"#deferred.bloom.comp.spv");
 
 			dsetBlurPing = descriptorPool.Allocate (dsLayoutBlur);
 			dsetBlurPong = descriptorPool.Allocate (dsLayoutBlur);

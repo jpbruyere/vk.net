@@ -13,7 +13,7 @@
     </PropertyGroup>
     
   <ItemGroup>    
-    <Compile Include="EnvironmentPipeline.cs;deferredPbrRenderer.cs;shadowMapRenderer.cs" />
+    <Compile Include="EnvironmentPipeline.cs;DeferredPbrRenderer.cs;shadowMapRenderer.cs" />
   </ItemGroup>     
 
 

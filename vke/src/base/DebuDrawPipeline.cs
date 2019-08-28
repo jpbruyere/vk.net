@@ -23,8 +23,8 @@ namespace CVKL {
 			cfg.AddVertexAttributes (0, VkFormat.R32g32b32Sfloat, VkFormat.R32g32b32Sfloat);
 			cfg.blendAttachments[0] = new VkPipelineColorBlendAttachmentState (true);
 
-			cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/debug.vert.spv");
-			cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/debug.frag.spv");
+			cfg.AddShader (VkShaderStageFlags.Vertex, "#CVKL.debug.vert.spv");
+			cfg.AddShader (VkShaderStageFlags.Fragment, "#CVKL.debug.frag.spv");
 
 			layout = cfg.Layout;
 

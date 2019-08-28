@@ -72,7 +72,7 @@ namespace test {
 				
 			plCompute = new ComputePipeline (
 				new PipelineLayout (dev, new VkPushConstantRange (VkShaderStageFlags.Compute, sizeof (int)), dsLayoutCompute),
-				"shaders/computeTest.comp.spv" );
+				"#compute.computeTest.comp.spv" );
 
 			dsetPing = dsPool.Allocate (dsLayoutCompute);
 			dsetPong = dsPool.Allocate (dsLayoutCompute);

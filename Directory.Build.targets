@@ -16,17 +16,21 @@
 		<CompileGLSLTask SourceFile="%(GLSLShader.Identity)"
 						 AdditionalIncludeDirectories="$(MSBuildThisFileDirectory)samples\common\shaders"
 						 TempDirectory="$(IntermediateOutputPath)"
-						 DestinationFile="$(OutputPath)%(RelativeDir)%(Filename)%(Extension).spv" />		
-<!--		<Exec Command="glslc %(GLSLShader.Identity) -o $(OutputPath)%(RelativeDir)%(Filename)%(Extension).spv"
-		      ConsoleToMSBuild="true" EchoOff="true" Outputs="$(OutputPath)%(RelativeDir)%(Filename)%(Extension).spv">
-		    <Output TaskParameter="ConsoleOutput" PropertyName="OutputOfExec" />
-		</Exec>-->
-		<!--<CreateItem
-            Include="$(OutputPath)%(GLSLShader.RelativeDir)%(Filename)%(Extension).spv">			
-           	<Output
+						 DestinationFile="$(IntermediateOutputPath)%(RelativeDir)%(Filename)%(Extension).spv" />		
+		<CreateItem
+            Include="$(IntermediateOutputPath)%(GLSLShader.RelativeDir)%(Filename)%(Extension).spv">			
+           	<Output				
                TaskParameter="Include"
                ItemName="EmbeddedResource"/>
+			
         </CreateItem>		
-		<Message Importance="High" Text="Embedding $(OutputPath)%(GLSLShader.RelativeDir)%(Filename)%(Extension).spv" />-->
+		<Message Importance="High" Text="Embedding $(IntermediateOutputPath)%(GLSLShader.RelativeDir)%(Filename)%(Extension).spv" />
+	</Target>
+	<Target Name="ModifyEmbeddedResourceNames" AfterTargets="CompileShaders">
+	  <ItemGroup>
+	    <EmbeddedResource>
+	      <LogicalName>$(AssemblyName).%(EmbeddedResource.Filename)%(Extension)</LogicalName>
+	    </EmbeddedResource>
+	  </ItemGroup>
 	</Target>
 </Project>

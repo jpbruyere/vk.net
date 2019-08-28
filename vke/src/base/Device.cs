@@ -275,11 +275,7 @@ namespace CVKL {
 				stream = Assembly.GetEntryAssembly ().GetManifestResourceStream (resId);
 				if (stream != null)
 					return stream;
-				//second search CVKL assemlby
-				stream = Assembly.GetExecutingAssembly ().GetManifestResourceStream (resId);
-				if (stream != null)
-					return stream;
-				//if still not found, search assembly named with the 1st element of the resId
+				//if not found, search assembly named with the 1st element of the resId
 				string assemblyName = resId.Split ('.')[0];
 				Assembly a = AppDomain.CurrentDomain.GetAssemblies ().FirstOrDefault (aa => aa.GetName ().Name == assemblyName);
 				if (a == null)

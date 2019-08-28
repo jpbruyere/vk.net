@@ -9,11 +9,11 @@ using Buffer = CVKL.Buffer;
 namespace TextureCube {
 	class Program : VkWindow {
 		static void Main (string[] args) {
-
-			/*Instance.VALIDATION = true;
+#if DEBUG
+			Instance.VALIDATION = true;
 			Instance.DEBUG_UTILS = true;
-			Instance.RENDER_DOC_CAPTURE = true;*/
-
+			Instance.RENDER_DOC_CAPTURE = false;
+#endif
 			using (Program vke = new Program ()) {
 				vke.Run ();
 			}
@@ -211,14 +211,14 @@ namespace TextureCube {
 			cfg.AddVertexBinding (0, 5 * sizeof(float));
 			cfg.AddVertexAttributes (0, VkFormat.R32g32b32Sfloat, VkFormat.R32g32Sfloat);
 
-			cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/skybox.vert.spv");
-			cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/skybox.frag.spv");
+			cfg.AddShader (VkShaderStageFlags.Vertex, "#TexturedCube.skybox.vert.spv");
+			cfg.AddShader (VkShaderStageFlags.Fragment, "#TexturedCube.skybox.frag.spv");
 
 			pipeline = new GraphicPipeline (cfg);
 
 			cfg.ResetShadersAndVerticesInfos ();
-			cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/FullScreenQuad.vert.spv");
-			cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/simpletexture.frag.spv");
+			cfg.AddShader (VkShaderStageFlags.Vertex, "#TexturedCube.FullScreenQuad.vert.spv");
+			cfg.AddShader (VkShaderStageFlags.Fragment, "#TexturedCube.simpletexture.frag.spv");
 
 			cfg.blendAttachments[0] = new VkPipelineColorBlendAttachmentState (true);
 

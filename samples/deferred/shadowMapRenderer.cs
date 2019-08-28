@@ -86,8 +86,8 @@ namespace deferred {
 			cfg.AddVertexBinding<PbrModel.Vertex> (0);
 			cfg.AddVertexAttributes (0, VkFormat.R32g32b32Sfloat);
 
-			cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/shadow.vert.spv");
-			cfg.AddShader (VkShaderStageFlags.Geometry, "shaders/shadow.geom.spv");
+			cfg.AddShader (VkShaderStageFlags.Vertex, "#deferred.shadow.vert.spv");
+			cfg.AddShader (VkShaderStageFlags.Geometry, "#deferred.shadow.geom.spv");
 
 			shadowPipeline = new GraphicPipeline (cfg);
 

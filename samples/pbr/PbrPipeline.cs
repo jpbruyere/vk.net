@@ -78,8 +78,8 @@ namespace CVKL {
 			cfg.AddVertexBinding<PbrModel2.Vertex> (0);
 			cfg.AddVertexAttributes (0, VkFormat.R32g32b32Sfloat, VkFormat.R32g32b32Sfloat, VkFormat.R32g32Sfloat, VkFormat.R32g32Sfloat);
 
-			cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/pbr.vert.spv");
-			cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/pbr_khr.frag.spv");
+			cfg.AddShader (VkShaderStageFlags.Vertex, "#pbr.pbr.vert.spv");
+			cfg.AddShader (VkShaderStageFlags.Fragment, "#pbr.pbr_khr.frag.spv");
 
 			layout = cfg.Layout;
 

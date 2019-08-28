@@ -83,7 +83,7 @@ namespace CVKL {
 		public uint Width => width;
 		public uint Height => height;
 
-		public VkWindow (string name = "VkWindow", uint _width = 1024, uint _height = 1024, bool vSync = false) {
+		public VkWindow (string name = "VkWindow", uint _width = 800, uint _height = 600, bool vSync = false) {
 			currentWindow = this;
 
 			width = _width;
