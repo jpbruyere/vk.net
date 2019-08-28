@@ -16,7 +16,11 @@ namespace pbrSample {
 	class Program : VkWindow{
 
 		static void Main (string[] args) {
+#if DEBUG
 			Instance.VALIDATION = true;
+			Instance.DEBUG_UTILS = true;
+			Instance.RENDER_DOC_CAPTURE = false;
+#endif
 			using (Program vke = new Program ()) {
 				vke.Run ();
 			}
@@ -77,8 +81,8 @@ namespace pbrSample {
 			GraphicPipelineConfig cfg = GraphicPipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, samples, false);
 			cfg.RenderPass = pbrPipeline.RenderPass;
 			cfg.Layout = pbrPipeline.Layout;
-			cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/FullScreenQuad.vert.spv");
-			cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/simpletexture.frag.spv");
+			cfg.AddShader (VkShaderStageFlags.Vertex, "#pbr.FullScreenQuad.vert.spv");
+			cfg.AddShader (VkShaderStageFlags.Fragment, "#pbr.simpletexture.frag.spv");
 			cfg.blendAttachments[0] = new VkPipelineColorBlendAttachmentState (true);
 
 			uiPipeline = new GraphicPipeline (cfg);

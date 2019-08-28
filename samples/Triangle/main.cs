@@ -9,9 +9,11 @@ using VK;
 namespace Triangle {
 	class Program : VkWindow {
 		static void Main (string[] args) {
-			//Instance.RENDER_DOC_CAPTURE = true;
+#if DEBUG
 			Instance.VALIDATION = true;
 			Instance.DEBUG_UTILS = true;
+			Instance.RENDER_DOC_CAPTURE = false;
+#endif
 
 			using (Program vke = new Program ()) {
 				vke.Run ();
@@ -72,8 +74,8 @@ namespace Triangle {
 			cfg.AddVertexBinding<Vertex> (0);
 			cfg.AddVertexAttributes (0, VkFormat.R32g32b32Sfloat, VkFormat.R32g32b32Sfloat);
 
-			cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/triangle.vert.spv");
-			cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/triangle.frag.spv");
+			cfg.AddShader (VkShaderStageFlags.Vertex, "#Triangle.main.vert.spv");
+			cfg.AddShader (VkShaderStageFlags.Fragment, "#Triangle.main.frag.spv");
 
 			pipeline = new GraphicPipeline (cfg);
 

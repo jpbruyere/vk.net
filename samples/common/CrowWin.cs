@@ -65,8 +65,8 @@ namespace Crow {
 			CVKL.GraphicPipelineConfig cfg = CVKL.GraphicPipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, samples, false);
 			cfg.Layout = new CVKL.PipelineLayout (dev, descLayout);
 			cfg.RenderPass = new CVKL.RenderPass (dev, swapChain.ColorFormat, samples);
-			cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/FullScreenQuad.vert.spv");
-			cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/simpletexture.frag.spv");
+			cfg.AddShader (VkShaderStageFlags.Vertex, "#deferred.FullScreenQuad.vert.spv");
+			cfg.AddShader (VkShaderStageFlags.Fragment, "#deferred.simpletexture.frag.spv");
 
 			cfg.blendAttachments[0] = new VkPipelineColorBlendAttachmentState (true);
 

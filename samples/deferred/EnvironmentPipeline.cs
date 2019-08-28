@@ -33,8 +33,8 @@ namespace CVKL {
 				cfg.Layout = plLayout;
 				cfg.AddVertexBinding (0, 3 * sizeof (float));
 				cfg.AddVertexAttributes (0, VkFormat.R32g32b32Sfloat);
-				cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/skybox.vert.spv");
-				cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/skybox.frag.spv");
+				cfg.AddShader (VkShaderStageFlags.Vertex, "#deferred.skybox.vert.spv");
+				cfg.AddShader (VkShaderStageFlags.Fragment, "#deferred.skybox.frag.spv");
 				cfg.multisampleState.rasterizationSamples = Samples;
 
 				layout = cfg.Layout;
@@ -119,8 +119,8 @@ namespace CVKL {
 			cfg.RenderPass.AddAttachment (format, VkImageLayout.ShaderReadOnlyOptimal);
 			cfg.RenderPass.ClearValues.Add (new VkClearValue { color = new VkClearColorValue (0, 0, 0) });
 			cfg.RenderPass.AddSubpass (new SubPass (VkImageLayout.ColorAttachmentOptimal));
-			cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/genbrdflut.vert.spv");
-			cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/genbrdflut.frag.spv");
+			cfg.AddShader (VkShaderStageFlags.Vertex, "#deferred.genbrdflut.vert.spv");
+			cfg.AddShader (VkShaderStageFlags.Fragment, "#deferred.genbrdflut.frag.spv");
 
 			using (GraphicPipeline pl = new GraphicPipeline (cfg)) {
 				using (Framebuffer fb = new Framebuffer (cfg.RenderPass, dim, dim, lutBrdf)) {
@@ -193,11 +193,11 @@ namespace CVKL {
 			cfg.AddVertexBinding (0, 3 * sizeof (float));
 			cfg.AddVertexAttributes (0, VkFormat.R32g32b32Sfloat);
 
-			cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/filtercube.vert.spv");
+			cfg.AddShader (VkShaderStageFlags.Vertex, "#deferred.filtercube.vert.spv");
 			if (target == CBTarget.PREFILTEREDENV)
-				cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/prefilterenvmap.frag.spv");
+				cfg.AddShader (VkShaderStageFlags.Fragment, "#deferred.prefilterenvmap.frag.spv");
 			else
-				cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/irradiancecube.frag.spv");
+				cfg.AddShader (VkShaderStageFlags.Fragment, "#deferred.irradiancecube.frag.spv");
 
 			Matrix4x4[] matrices = {
 				// POSITIVE_X

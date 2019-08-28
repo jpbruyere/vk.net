@@ -5,12 +5,14 @@ using Glfw;
 using CVKL;
 using VK;
 
-namespace TextureSample {
+namespace Textured {
 	class Program : VkWindow {
 		static void Main (string[] args) {
+#if DEBUG
 			Instance.VALIDATION = true;
 			Instance.DEBUG_UTILS = true;
-			//Instance.RENDER_DOC_CAPTURE = true;
+			Instance.RENDER_DOC_CAPTURE = false;
+#endif
 			using (Program vke = new Program ()) {
 				vke.Run ();
 			}
@@ -88,8 +90,8 @@ namespace TextureSample {
 			cfg.AddVertexBinding (0, 5 * sizeof(float));
 			cfg.AddVertexAttributes (0, VkFormat.R32g32b32Sfloat, VkFormat.R32g32Sfloat);
 
-			cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/main.vert.spv");
-			cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/main.frag.spv");
+			cfg.AddShader (VkShaderStageFlags.Vertex, "#Textured.main.vert.spv");
+			cfg.AddShader (VkShaderStageFlags.Fragment, "#Textured.main.frag.spv");
 
 			pipeline = new GraphicPipeline (cfg);
 

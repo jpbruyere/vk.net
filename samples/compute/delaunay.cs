@@ -6,6 +6,11 @@ using CVKL;
 namespace delaunay {
 	class Program : VkWindow {
 		static void Main (string[] args) {
+#if DEBUG
+			Instance.VALIDATION = true;
+			Instance.DEBUG_UTILS = true;
+			Instance.RENDER_DOC_CAPTURE = false;
+#endif
 			using (Program vke = new Program ()) {
 				vke.Run ();
 			}
@@ -92,8 +97,8 @@ namespace delaunay {
 			cfg.RenderPass.ClearValues[0] = new VkClearValue { color = new VkClearColorValue (0.0f, 0.1f, 0.0f) };
 
 			cfg.ResetShadersAndVerticesInfos ();
-			cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/FullScreenQuad.vert.spv");
-			cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/simpletexture.frag.spv");
+			cfg.AddShader (VkShaderStageFlags.Vertex, "#compute.FullScreenQuad.vert.spv");
+			cfg.AddShader (VkShaderStageFlags.Fragment, "#compute.simpletexture.frag.spv");
 
 			cfg.blendAttachments[0] = new VkPipelineColorBlendAttachmentState (true);
 
@@ -101,10 +106,10 @@ namespace delaunay {
 
 			plCompute = new ComputePipeline (
 				new PipelineLayout (dev, new VkPushConstantRange (VkShaderStageFlags.Compute, 2 * sizeof (int)), dslCompute),
-				"shaders/computeTest.comp.spv");
+				"#compute.computeTest.comp.spv");
 			plNormalize = new ComputePipeline (
 				plCompute.Layout,
-				"shaders/normalize.comp.spv");
+				"#compute.normalize.comp.spv");
 
 			dsImage = dsPool.Allocate (dslImage);
 			dsetPing = dsPool.Allocate (dslCompute);

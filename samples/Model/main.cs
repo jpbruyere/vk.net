@@ -7,11 +7,11 @@ using VK;
 namespace ModelSample {
 	class Program : VkWindow {
 		static void Main (string[] args) {
-
+#if DEBUG
 			Instance.VALIDATION = true;
 			Instance.DEBUG_UTILS = true;
-			//Instance.RENDER_DOC_CAPTURE = true;
-
+			Instance.RENDER_DOC_CAPTURE = false;
+#endif
 			using (Program vke = new Program ()) {
 				vke.Run ();
 			}
@@ -83,8 +83,8 @@ namespace ModelSample {
 			cfg.AddVertexBinding<Model.Vertex> (0);
 			cfg.AddVertexAttributes (0, VkFormat.R32g32b32Sfloat, VkFormat.R32g32b32Sfloat, VkFormat.R32g32Sfloat);
 
-			cfg.AddShader (VkShaderStageFlags.Vertex, "shaders/model.vert.spv");
-			cfg.AddShader (VkShaderStageFlags.Fragment, "shaders/model.frag.spv");
+			cfg.AddShader (VkShaderStageFlags.Vertex, "#Model.model.vert.spv");
+			cfg.AddShader (VkShaderStageFlags.Fragment, "#Model.model.frag.spv");
 
 			pipeline = new GraphicPipeline (cfg);
 

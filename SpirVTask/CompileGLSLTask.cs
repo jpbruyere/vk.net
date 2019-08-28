@@ -89,8 +89,8 @@ namespace SpirVTasks {
 				return false;
 			}
 
-			//foreach (string item in SourceFile.MetadataNames) {
-			//	Log.LogMessage (MessageImportance.High, $"METADATA name: {item}");
+			//foreach (string item in DestinationFile.MetadataNames) {
+			//	Log.LogMessage (MessageImportance.High, $"METADATA name: {item} = {DestinationFile.GetMetadata(item)}");
 			//}
 
 			string tempFile = Path.Combine (TempDirectory.ItemSpec, SourceFile.ItemSpec);
