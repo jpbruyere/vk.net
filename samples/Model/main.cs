@@ -194,7 +194,7 @@ namespace ModelSample {
 				dev = transferQ.Dev;
 
 				using (CommandPool cmdPool = new CommandPool (dev, transferQ.index)) {
-					using (CVKL.glTFLoader ctx = new CVKL.glTFLoader (path, transferQ, cmdPool)) {
+					using (CVKL.glTF.glTFLoader ctx = new CVKL.glTF.glTFLoader(path, transferQ, cmdPool)) {
 						ulong vertexCount, indexCount;
 
 						ctx.GetVertexCount (out vertexCount, out indexCount, out IndexBufferType);

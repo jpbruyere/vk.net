@@ -1,7 +1,7 @@
 <Project>
-  <UsingTask AssemblyFile="$(MSBuildThisFileDirectory)..\..\lib\$(TargetFramework)\SpirVTasks.dll" TaskName="SpirVTasks.CompileGLSLTask" />
+  <UsingTask AssemblyFile="$(MSBuildThisFileDirectory)..\lib\$(TargetFramework)\SpirVTasks_$(TargetFramework).dll" TaskName="SpirVTasks.CompileGLSLTask" />
   <ItemGroup>
-    <PropertyPageSchema Include="$(MSBuildThisFileDirectory)..\spirv.xml" />
+    <PropertyPageSchema Include="$(MSBuildThisFileDirectory)spirv.xml" />
     <AvailableItemName Include="GLSLShader">
       <Targets>DXC</Targets>
     </AvailableItemName>

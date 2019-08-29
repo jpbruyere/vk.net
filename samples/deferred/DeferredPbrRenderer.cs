@@ -2,6 +2,7 @@
 using System.Numerics;
 using System.Runtime.InteropServices;
 using CVKL;
+using CVKL.glTF;
 using VK;
 
 namespace deferred {

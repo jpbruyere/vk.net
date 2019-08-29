@@ -1,59 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="$(RootDirectory)netfx.props" />
-  <PropertyGroup>        
-    <AssemblyVersion>0.1.6</AssemblyVersion>
-    <Description>C# vulkan library with IDispose model and references counting</Description>
-    <Product>CVKL</Product>
-    <PackageId>CVKL</PackageId>
-    <PackageTags>C# vulkan game library compute glfw</PackageTags>    
-    <PackageVersion>$(AssemblyVersion)</PackageVersion>
-    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-    <PackageRequireLicenseAcceptance>False</PackageRequireLicenseAcceptance>
-    <PackageProjectUrl>https://github.com/jpbruyere/vk.net/blob/master/README.md</PackageProjectUrl>
-    <PackageLicense>https://opensource.org/licenses/MIT</PackageLicense>
-    <PackageReleaseNotes></PackageReleaseNotes>
-    <!--<PackageIconUrl>https://github.com/KhronosGroup/glTF/blob/master/specification/figures/gltf.png</PackageIconUrl>-->    
-    <SynchReleaseVersion>false</SynchReleaseVersion>
-    <AssemblyName>CVKL</AssemblyName>
-    <OutputPath>$(SolutionDir)build\$(Configuration)\</OutputPath>              
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>        
-    
-  </PropertyGroup>
-    
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <WarningLevel>4</WarningLevel>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>    
-    <CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
-    <DefineConstants>MEMORY_POOLS;NETSTANDARD;NETSTANDARD2_0;DEBUG;NETFRAMEWORK;NET471</DefineConstants>    
-  </PropertyGroup>
-    
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <Optimize>true</Optimize>
-    <DefineConstants>MEMORY_POOLS</DefineConstants>    
-  </PropertyGroup>
-      
-<!--  <ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">
-    <Reference Include="System" />
-    <Reference Include="System.Runtime" />        
-    <Reference Include="System.Core" />
-  </ItemGroup>-->
-  <ItemGroup Condition="$(TargetFramework.StartsWith('netstandard'))">
-    <PackageReference Include="System.Numerics.Vectors" Version="4.6.0-preview4.19212.13" />
-  </ItemGroup>    
-  <ItemGroup>
-    <PackageReference Include="glTF2Loader" Version="1.1.3-alpha" />
-    <PackageReference Include="Vulkan" Version="0.1.4" />
-<!--        <ProjectReference Include="$(SolutionDir)SpirVTask\SpirVTasks.csproj" />-->
-  </ItemGroup>
-  <ItemGroup>        
-    <Compile Remove="Properties\AssemblyInfo.cs;src\Renderer.cs;src\QueueFamily.cs" />
-  </ItemGroup>
-    
-  <ItemGroup>
-    <Folder Include="src\base\" />
-  </ItemGroup>
-  <ItemGroup>
-<!--    -->
-  </ItemGroup>  
+	<Import Project="$(RootDirectory)netfx.props" />
+	<PropertyGroup>
+		<AssemblyName>CVKL</AssemblyName>
+		<Product>CVKL</Product>
+		<PackageId>CVKL</PackageId>
+		<AssemblyVersion>0.1.7</AssemblyVersion>
+		<Description>C# vulkan library with IDispose model and references counting</Description>
+		<PackageTags>C# vulkan game library compute glfw</PackageTags>
+		<PackageVersion>$(AssemblyVersion)-beta</PackageVersion>
+		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+		<PackageRequireLicenseAcceptance>False</PackageRequireLicenseAcceptance>
+		<PackageProjectUrl>https://github.com/jpbruyere/vk.net/blob/master/README.md</PackageProjectUrl>
+		<License>MIT</License>
+		<PackageReleaseNotes>
+		</PackageReleaseNotes>
+		<!--<PackageIconUrl>https://github.com/KhronosGroup/glTF/blob/master/specification/figures/gltf.png</PackageIconUrl>-->
+		<SynchReleaseVersion>false</SynchReleaseVersion>
+		<OutputPath>$(SolutionDir)build\$(Configuration)\</OutputPath>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+	</PropertyGroup>
+	
+	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+		<WarningLevel>4</WarningLevel>
+		<DebugType>full</DebugType>
+		<Optimize>false</Optimize>
+		<CheckForOverflowUnderflow>true</CheckForOverflowUnderflow>
+		<DefineConstants>MEMORY_POOLS;NETSTANDARD;NETSTANDARD2_0;DEBUG;NETFRAMEWORK;NET471</DefineConstants>
+	</PropertyGroup>
+	
+	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+		<Optimize>true</Optimize>
+		<DefineConstants>MEMORY_POOLS</DefineConstants>
+	</PropertyGroup>
+	
+	<ItemGroup Condition="$(TargetFramework.StartsWith('netstandard'))">
+		<PackageReference Include="System.Numerics.Vectors" Version="4.5.0" />		
+	</ItemGroup>
+		
+	<ItemGroup>
+		<PackageReference Include="Vulkan" Version="0.1.4" />
+	</ItemGroup>
+	<ItemGroup>
+		<Compile Remove="Properties\AssemblyInfo.cs;src\Renderer.cs;src\QueueFamily.cs" />
+	</ItemGroup>
 </Project>
