@@ -33,7 +33,7 @@ namespace VK {
 			GCHandle hnd = GCHandle.Alloc (n, GCHandleType.Pinned);
 			IntPtr del = Vk.vkGetInstanceProcAddr (inst, hnd.AddrOfPinnedObject ());
 			if (del == IntPtr.Zero)
-				Console.WriteLine ("instance function pointer not found for " + name);
+				System.Diagnostics.Debug.WriteLine ("instance function pointer not found for " + name);
 			hnd.Free ();
 			return del;
 		}
@@ -45,7 +45,7 @@ namespace VK {
 			GCHandle hnd = GCHandle.Alloc (n, GCHandleType.Pinned);
 			IntPtr del = Vk.vkGetDeviceProcAddr (dev, hnd.AddrOfPinnedObject ());
 			if (del == IntPtr.Zero)
-				Console.WriteLine ("device function pointer not found for " + name);
+				System.Diagnostics.Debug.WriteLine ("device function pointer not found for " + name);
 			else
 				ptr = del;
 			hnd.Free ();			
