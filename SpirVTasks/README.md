@@ -11,32 +11,32 @@
 </p>
 </h1>
 
-SpirVTasks nuget package add SpirV compilation support to msbuild project. Resulting `.spv`
-files will be embedded with the resource ID = ProjectName.file.ext.spv.
+**SpirVTasks** package add **SpirV** compilation support to msbuild project. Error and warning
+are transmited to the **IDE**. Resulting `.spv` files will be embedded with the resource ID = ProjectName.file.ext.spv.
 
-Add glsl files to your project with the **`GLSLShader`** tag.
+Add glsl files to your project with the **`<GLSLShader>`** tag.
 
 ```xml
 <ItemGroup>    
-	<GLSLShader Include="shaders\*.frag;shaders\*.vert;shaders\*.comp;shaders\*.geom" />
+  <GLSLShader Include="shaders\*.frag;shaders\*.vert;shaders\*.comp;shaders\*.geom" />
 </ItemGroup> 
 ```
 
 The add-on will search for **glslc** executable with the **VULKAN_SDK** or **PATH** environments variables.
-You may also point to glslc with the **`SpirVglslcPath`** property (>= 0.1.7), but if the property is set.
+You may also point to glslc with the **`<SpirVglslcPath>`** property (>= 0.1.7), but if the property is set.
 
 ```xml
 <PropertyGroup>
-    <SpirVglslcPath>bin\glslc.exe</SpirVglslcPath>
+  <SpirVglslcPath>bin\glslc.exe</SpirVglslcPath>
 </PropertyGroup>
 ```
 
 I've added an **include** mechanism for glsl, file are searched from the location of the current parsed file,
-then in the **`SpirVAdditionalIncludeDirectories`** directories property.
+then in the **`<SpirVAdditionalIncludeDirectories>`** directories property.
 
 ```xml
 <PropertyGroup>
-    <SpirVAdditionalIncludeDirectories>$(MSBuildThisFileDirectory)common\shaders</SpirVAdditionalIncludeDirectories>
+  <SpirVAdditionalIncludeDirectories>$(MSBuildThisFileDirectory)common\</SpirVAdditionalIncludeDirectories>
 </PropertyGroup>
 ```
 
