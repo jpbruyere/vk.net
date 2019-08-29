@@ -9,11 +9,13 @@
 		<License>MIT</License>
 		<Authors>Jean-Philippe Bruyère</Authors>
 
-		<OutputPath>$(SolutionDir)build\$(Configuration)\</OutputPath>
+		<OutputPath>$(SolutionDir)build\$(Configuration)\</OutputPath>    	    
 		<OutputType>Exe</OutputType>        
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<IncludeDefaultNoneItems>false</IncludeDefaultNoneItems>
-
+		
+		<LangVersion>7.2</LangVersion>
+		
 		<SpirVAdditionalIncludeDirectories>$(MSBuildThisFileDirectory)common\shaders</SpirVAdditionalIncludeDirectories>
 
 	</PropertyGroup>
@@ -23,22 +25,22 @@
 	</PropertyGroup>
 	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
 		<DefineConstants>NETSTANDARD;NETSTANDARD2_0;WITH_SHADOWS;_WITH_VKVG</DefineConstants>    
-	</PropertyGroup>
+	</PropertyGroup>  
 	
 	<ItemGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">		
 		<ProjectReference Include="$(RootDirectory)vke\CVKL.csproj" />
 	</ItemGroup>	
-	<ItemGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">		
-		<PackageReference Include="CVKL" Version="0.1.7-beta" />
-	</ItemGroup>   
+	<ItemGroup >		
+		<PackageReference Include="CVKL" Version="0.1.7-beta" Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' "/>
+	</ItemGroup>	
 	
 	<ItemGroup>
 		<PackageReference Include="SpirVTasks" Version="0.1.8-beta" />        
-		<PackageReference Include="Vulkan" Version="0.1.4" />        
+		<PackageReference Include="Vulkan" Version="0.1.4" />
 	</ItemGroup>    
 
-	<ItemGroup>    
+	<ItemGroup>
 		<GLSLShader Include="shaders\**\*.frag;shaders\**\*.vert;shaders\**\*.comp;shaders\**\*.geom" />
-	</ItemGroup>     
+	</ItemGroup>
 	
 </Project>

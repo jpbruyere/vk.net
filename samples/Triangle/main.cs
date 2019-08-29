@@ -80,8 +80,9 @@ namespace Triangle {
 			pipeline = new GraphicPipeline (cfg);
 
 			//note that descriptor set is allocated after the pipeline creation that use this layout, layout is activated
-			//automaticaly on pipeline creation.
+			//automaticaly on pipeline creation, and will be disposed automatically when no longuer in use.
 			descriptorSet = descriptorPool.Allocate (dsLayout);
+
 			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (descriptorSet, dsLayout);
 			uboUpdate.Write (dev, uboMats.Descriptor);
 

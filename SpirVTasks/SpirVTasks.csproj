@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <TargetFrameworks>net471;netstandard2.0</TargetFrameworks>
-        <AssemblyVersion>0.1.6</AssemblyVersion>
+        <AssemblyVersion>0.1.8</AssemblyVersion>
         <Description>MSBuild addon to compile and embed spirV shaders</Description>
 
         <PackageId>SpirVTasks</PackageId>
@@ -19,6 +19,7 @@
 		<EnableDefaultNoneItems>false</EnableDefaultNoneItems>
 		<EnableDefaultCompileItems>true</EnableDefaultCompileItems>
         
+		<AssemblyName>SpirVTasks_$(TargetFramework)</AssemblyName>
     </PropertyGroup>
     <ItemGroup>        
         <PackageReference Include="Microsoft.Build.Utilities.Core" Version="16.0.461" />
@@ -27,12 +28,7 @@
       <Content Include="SpirVTasks.targets">
         <Pack>true</Pack>
         <IncludeInPackage>true</IncludeInPackage>
-        <PackagePath>build\net471\</PackagePath>
-      </Content>
-      <Content Include="SpirVTasks.targets">
-        <Pack>true</Pack>
-        <IncludeInPackage>true</IncludeInPackage>
-        <PackagePath>build\netstandard2.0\</PackagePath>
+        <PackagePath>build\</PackagePath>
       </Content>
       <Content Include="spirv.xml">        
         <Pack>true</Pack>

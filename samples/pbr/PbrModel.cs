@@ -59,7 +59,7 @@ namespace CVKL {
 		public PbrModel2 (Queue transferQ, string path) {
 			dev = transferQ.Dev;
 			using (CommandPool cmdPool = new CommandPool (dev, transferQ.index)) {
-				using (glTFLoader ctx = new glTFLoader (path, transferQ, cmdPool)) {
+				using (glTF.glTFLoader ctx = new glTF.glTFLoader (path, transferQ, cmdPool)) {
 					ulong vertexCount, indexCount;
 
 					ctx.GetVertexCount (out vertexCount, out indexCount, out IndexBufferType);
@@ -82,7 +82,7 @@ namespace CVKL {
 		public PbrModel2 (Queue transferQ, string path, DescriptorSetLayout layout, params AttachmentType[] attachments) {
             dev = transferQ.Dev;
 			using (CommandPool cmdPool = new CommandPool (dev, transferQ.index)) {
-				using (glTFLoader ctx = new glTFLoader (path, transferQ, cmdPool)) {
+				using (glTF.glTFLoader ctx = new glTF.glTFLoader (path, transferQ, cmdPool)) {
 					ulong vertexCount, indexCount;
 
 					ctx.GetVertexCount (out vertexCount, out indexCount, out IndexBufferType);
@@ -108,8 +108,8 @@ namespace CVKL {
 			}
 		}
 
-		void loadMaterials (glTFLoader ctx, DescriptorSetLayout layout, params AttachmentType[] attachments) {
-			glTFLoader.Material[] mats = ctx.LoadMaterial ();
+		void loadMaterials (glTF.glTFLoader ctx, DescriptorSetLayout layout, params AttachmentType[] attachments) {
+			glTF.glTFLoader.Material[] mats = ctx.LoadMaterial ();
 			materials = new PbrMaterial[mats.Length];
 			descriptorSets = new DescriptorSet[mats.Length];
 

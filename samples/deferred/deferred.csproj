@@ -37,4 +37,7 @@
   <ItemGroup>
     <Folder Include="shaders\" />
   </ItemGroup>    
+  <ItemGroup>
+    <ProjectReference Include="..\..\CVKL.Addons\gltfLoader\gltfLoader.csproj" />
+  </ItemGroup>
 </Project>

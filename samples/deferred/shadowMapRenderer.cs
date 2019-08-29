@@ -7,6 +7,7 @@ using System;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using CVKL;
+using CVKL.glTF;
 using VK;
 using static deferred.DeferredPbrRenderer;
 

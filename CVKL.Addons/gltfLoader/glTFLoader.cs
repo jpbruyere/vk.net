@@ -1,28 +1,6 @@
-﻿//
-// glTFLoader .cs
+﻿// Copyright (c) 2019  Jean-Philippe Bruyère <jp_bruyere@hotmail.com>
 //
-// Author:
-//       Jean-Philippe Bruyère <jp_bruyere@hotmail.com>
-//
-// Copyright (c) 2019 jp
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-// THE SOFTWARE.
+// This code is licensed under the MIT license (MIT) (http://opensource.org/licenses/MIT)
 using System;
 using System.Diagnostics;
 using System.Numerics;
@@ -36,7 +14,7 @@ using System.IO;
 
 
 
-namespace CVKL {
+namespace CVKL.glTF {
 	using static VK.Utils;
 	using static CVKL.Model;
 
@@ -94,7 +72,7 @@ namespace CVKL {
 
 		public Queue transferQ;
 		public CommandPool cmdPool;
-		Device dev => transferQ.dev;
+		Device dev => transferQ.Dev;
 
 		public GL.Gltf gltf;
 		public string baseDirectory;
@@ -474,8 +452,8 @@ namespace CVKL {
 						VkImageLayout.Undefined, VkImageLayout.TransferSrcOptimal,
 						VkPipelineStageFlags.Host, VkPipelineStageFlags.Transfer);
 
-				Vk.vkCmdBlitImage (cmd.Handle, vkimg.handle, VkImageLayout.TransferSrcOptimal,
-					texArray.handle, VkImageLayout.TransferDstOptimal, 1, ref imageBlit, VkFilter.Linear);
+				Vk.vkCmdBlitImage (cmd.Handle, vkimg.Handle, VkImageLayout.TransferSrcOptimal,
+					texArray.Handle, VkImageLayout.TransferDstOptimal, 1, ref imageBlit, VkFilter.Linear);
 
 				cmd.End ();
 				transferQ.Submit (cmd);
@@ -503,8 +481,8 @@ namespace CVKL {
 					VkImageLayout.TransferDstOptimal, VkImageLayout.TransferSrcOptimal, mipSubRange,
 					VkPipelineStageFlags.Transfer, VkPipelineStageFlags.Transfer);
 
-				Vk.vkCmdBlitImage (cmd.Handle, texArray.handle, VkImageLayout.TransferSrcOptimal,
-					texArray.handle, VkImageLayout.TransferDstOptimal, 1, ref imageBlit, VkFilter.Linear);
+				Vk.vkCmdBlitImage (cmd.Handle, texArray.Handle, VkImageLayout.TransferSrcOptimal,
+					texArray.Handle, VkImageLayout.TransferDstOptimal, 1, ref imageBlit, VkFilter.Linear);
 				texArray.SetLayout (cmd, VkImageLayout.TransferSrcOptimal, VkImageLayout.ShaderReadOnlyOptimal, mipSubRange,
 					VkPipelineStageFlags.Transfer, VkPipelineStageFlags.FragmentShader);
 
