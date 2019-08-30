@@ -26,7 +26,7 @@
 	</PropertyGroup>
 	
 	<ItemGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">		
-		<ProjectReference Include="$(RootDirectory)vke\CVKL.csproj" />
+		<ProjectReference Include="$(RootDirectory)CVKL\CVKL.csproj" />
 	</ItemGroup>	
 	<ItemGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">		
 		<PackageReference Include="CVKL" Version="0.1.7-beta" />
