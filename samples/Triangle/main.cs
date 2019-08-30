@@ -169,7 +169,6 @@ namespace Triangle {
 			if (disposing) {
 				if (!isDisposed) {
 					pipeline.Dispose ();
-					dsLayout.Dispose ();
 					for (int i = 0; i < swapChain.ImageCount; i++)
 						frameBuffers[i].Dispose ();
 					descriptorPool.Dispose ();

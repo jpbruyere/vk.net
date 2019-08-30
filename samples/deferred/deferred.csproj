@@ -2,7 +2,7 @@
   <Import Project="$(RootDirectory)netfx.props" />
   <PropertyGroup>    
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>        
-    <EnableDefaultNoneItems>false</EnableDefaultNoneItems>     
+<!--    <EnableDefaultNoneItems>false</EnableDefaultNoneItems>     -->
   </PropertyGroup>
         
     <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">    

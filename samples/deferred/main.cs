@@ -64,6 +64,7 @@ namespace deferred {
 
 		int curModelIndex = 0;
 		bool reloadModel;
+		bool rebuildBuffers;
 
 		Queue transferQ, computeQ;
 		DeferredPbrRenderer renderer;

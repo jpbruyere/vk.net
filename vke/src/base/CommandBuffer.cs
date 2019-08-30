@@ -10,23 +10,28 @@ using static VK.Vk;
 
 namespace CVKL {
 	/// <summary>
+	/// Command buffers are objects used to record commands which can be subsequently submitted to a device queue for execution.
+	/// There are two levels of command buffers 
+	/// - primary command buffers, which can execute secondary command buffers, and which are submitted to queues
+	/// - secondary command buffers, which can be executed by primary command buffers, and which are not directly submitted to queues.
 	/// Command buffer are not derived from activable, because their state is retained by the pool which create them.
 	/// </summary>
-    public class CommandBuffer {
-		public enum States { Init, Record, Pending, Invalid };
+	public class CommandBuffer {
+		public enum States { Init, Record, Executable, Pending, Invalid };
 
         CommandPool pool;
         VkCommandBuffer handle;
-		//States state;
 
         public VkCommandBuffer Handle => handle;
 		public Device Device => pool?.Dev;//this help
-		//public States State => state;
+		//public States State { get; internal set; }
 
         internal CommandBuffer (VkDevice _dev, CommandPool _pool, VkCommandBuffer _buff)
         {
             pool = _pool;
             handle = _buff;
+
+			//State = States.Init;
         }
 
 
@@ -87,13 +92,25 @@ namespace CVKL {
             VkRect2D scissor = new VkRect2D (offsetX, offsetY, width, height);
             vkCmdSetScissor (handle, 0, 1, ref scissor);
         }
-        public void BindPipeline (Pipeline pipeline, VkPipelineBindPoint bindPoint = VkPipelineBindPoint.Graphics) {
+        public void BindPipeline (Pipeline pipeline, VkPipelineBindPoint bindPoint) {
             vkCmdBindPipeline (handle, bindPoint, pipeline.Handle);
         }
 		public void Dispatch (uint groupCountX, uint groupCountY = 1, uint groupCountZ = 1) {
 			vkCmdDispatch (handle, groupCountX, groupCountY, groupCountZ);
 		}
-
+		public void BindPipeline (Pipeline pl) {
+			pl.Bind (this);
+		}
+		/// <summary>
+		/// bind pipeline and descriptor set with default pipeline layout
+		/// </summary>
+		/// <param name="pl">pipeline to bind</param>
+		/// <param name="ds">descriptor set</param>
+		/// <param name="firstset">first set to bind</param>
+		public void BindPipeline (Pipeline pl, DescriptorSet ds, uint firstset = 0) {
+			pl.Bind (this);
+			pl.BindDescriptorSet (this, ds, firstset);
+		}
 		public void BindDescriptorSet (PipelineLayout pipelineLayout, DescriptorSet descriptorSet, uint firstSet = 0) {
             vkCmdBindDescriptorSets (handle, VkPipelineBindPoint.Graphics, pipelineLayout.handle, firstSet, 1, ref descriptorSet.handle, 0, IntPtr.Zero);
         }
@@ -106,7 +123,7 @@ namespace CVKL {
         public void BindIndexBuffer (Buffer indices, VkIndexType indexType = VkIndexType.Uint32, ulong offset = 0) {
             vkCmdBindIndexBuffer (handle, indices.handle, offset, indexType);
         }
-        public void DrawIndexed (uint indexCount, uint instanceCount = 1, uint firstIndex = 0, int vertexOffset = 0, uint firstInstance = 1) {
+        public void DrawIndexed (uint indexCount, uint instanceCount = 1, uint firstIndex = 0, int vertexOffset = 0, uint firstInstance = 0) {
             vkCmdDrawIndexed (Handle, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
         }
         public void Draw (uint vertexCount, uint instanceCount = 1, uint firstVertex = 0, uint firstInstance = 0) {
@@ -115,6 +132,9 @@ namespace CVKL {
 		public void PushConstant (PipelineLayout pipelineLayout, VkShaderStageFlags stageFlags, Object data, uint offset = 0) {
 			vkCmdPushConstants (handle, pipelineLayout.handle, stageFlags, offset, (uint)Marshal.SizeOf (data), data.Pin ());
 			data.Unpin ();
+		}
+		public void PushConstant (Pipeline pipeline, object obj, int rangeIndex = 0, uint offset = 0) {
+			PushConstant (pipeline.Layout, pipeline.Layout.PushConstantRanges[rangeIndex].stageFlags, obj, offset);
 		}
 		public void PushConstant (PipelineLayout pipelineLayout, VkShaderStageFlags stageFlags, uint size, Object data, uint offset = 0) {
 			vkCmdPushConstants (handle, pipelineLayout.handle, stageFlags, offset, size, data.Pin ());

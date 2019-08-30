@@ -1,28 +1,6 @@
-﻿//
-// VkWindow.cs
+﻿// Copyright (c) 2019  Jean-Philippe Bruyère <jp_bruyere@hotmail.com>
 //
-// Author:
-//       Jean-Philippe Bruyère <jp_bruyere@hotmail.com>
-//
-// Copyright (c) 2019 jp
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-// THE SOFTWARE.
+// This code is licensed under the MIT license (MIT) (http://opensource.org/licenses/MIT)
 using System;
 using System.Linq;
 using System.Diagnostics;
@@ -54,7 +32,7 @@ namespace CVKL {
 		DebugReport dbgRepport;
 
 		protected uint fps;
-		protected bool updateViewRequested = true, rebuildBuffers;
+		protected bool updateViewRequested = true;
 		protected double lastMouseX, lastMouseY;
 		protected bool[] MouseButton => buttons;
 
@@ -143,7 +121,7 @@ namespace CVKL {
 			//activate the device to have effective queues created accordingly to what's available
 			dev.Activate (enabledFeatures, EnabledDeviceExtensions);
 
-			swapChain = new SwapChain (presentQueue as PresentQueue, width, height, VkFormat.B8g8r8a8Srgb,
+			swapChain = new SwapChain (presentQueue as PresentQueue, width, height, VkFormat.B8g8r8a8Unorm,
 				vSync ? VkPresentModeKHR.FifoKHR : VkPresentModeKHR.MailboxKHR);
 			swapChain.Create ();
 

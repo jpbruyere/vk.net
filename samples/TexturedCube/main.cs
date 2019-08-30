@@ -1,4 +1,7 @@
-﻿using System;
+﻿// Copyright (c) 2019  Jean-Philippe Bruyère <jp_bruyere@hotmail.com>
+//
+// This code is licensed under the MIT license (MIT) (http://opensource.org/licenses/MIT)
+using System;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using Glfw;
@@ -33,7 +36,7 @@ namespace TextureCube {
 		GPUBuffer<float> 	vbo;
 		DescriptorPool 		descriptorPool;
 		DescriptorSetLayout dsLayout;
-		DescriptorSet 		descriptorSet;
+		DescriptorSet 		descriptorSet, dsVkvg;
 		GraphicPipeline 	pipeline;
 		Framebuffer[] 		frameBuffers;
 
@@ -94,121 +97,41 @@ namespace TextureCube {
 
 		VkSampleCountFlags samples = VkSampleCountFlags.SampleCount1;
 
-		vkvg.Device vkvgDev;
-		vkvg.Surface vkvgSurf;
-		Image uiImage;
-		GraphicPipeline uiPipeline;
-		DescriptorSet dsVKVG;
-
-		void initUISurface () {
-			uiImage?.Dispose ();
-			vkvgSurf?.Dispose ();
-			vkvgSurf = new vkvg.Surface (vkvgDev, (int)swapChain.Width, (int)swapChain.Height);
-			uiImage = new Image (dev, new VkImage ((ulong)vkvgSurf.VkImage.ToInt64 ()), VkFormat.B8g8r8a8Unorm,
-				VkImageUsageFlags.ColorAttachment, (uint)vkvgSurf.Width, (uint)vkvgSurf.Height);
-			uiImage.CreateView (VkImageViewType.ImageView2D, VkImageAspectFlags.Color);
-			uiImage.CreateSampler (VkFilter.Nearest, VkFilter.Nearest, VkSamplerMipmapMode.Nearest, VkSamplerAddressMode.ClampToBorder);
-			uiImage.Descriptor.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
-
-			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (dsVKVG, dsLayout.Bindings[1]);
-			uboUpdate.Write (dev, uiImage.Descriptor);
-		}
+#if WITH_VKVG
+		VkvgPipeline.VkvgPipeline vkvgPipeline;
 
 		void vkvgDraw () {
-			using (vkvg.Context ctx = new vkvg.Context (vkvgSurf)) {
+			using (vkvg.Context ctx = vkvgPipeline.CreateContext()) {
 				ctx.Operator = vkvg.Operator.Clear;
 				ctx.Paint ();
 				ctx.Operator = vkvg.Operator.Over;
-
-				drawResources (ctx);
+				vkvgPipeline.DrawResources (ctx, (int)swapChain.Width, (int)swapChain.Height);
 			}
 		}
 
-		void drawResources (vkvg.Context ctx) {
-			ResourceManager rm = dev.resourceManager;
 
-			int margin = 5, memPoolHeight=15;
-			int drawingWidth = (int)swapChain.Width - 4 * margin;
-			int drawingHeight = (memPoolHeight + margin) * (rm.memoryPools.Length) + margin;
-			int y = (int)swapChain.Height - drawingHeight - margin;
-			int x = 2 * margin;
-			ctx.LineWidth = 1;
-			ctx.SetSource (0.1, 0.1, 0.1, 0.8);
-			ctx.Rectangle (0.5+margin, 0.5+y, swapChain.Width - 2*margin, drawingHeight);
-			ctx.FillPreserve ();
-			ctx.Flush ();
-			ctx.SetSource (0.8, 0.8, 0.8);
-			ctx.Stroke ();
+#endif
 
 
-
-			foreach (MemoryPool mp in rm.memoryPools) {
-				float byteWidth = (float)drawingWidth / mp.Size;
-
-				y += margin;
-				ctx.Rectangle (x, y, drawingWidth, memPoolHeight);
-				ctx.SetSource (0.3, 0.3, 0.3, 0.4);
-				ctx.Fill ();
-
-				if (mp.Last == null)
-					return;
-
-				Resource r = mp.Last;
-				do {
-					float width = Math.Max (1f, byteWidth * r.AllocatedDeviceMemorySize);
-
-					Vector3 c = new Vector3 (0);
-					Image img = r as Image;
-					if (img != null) {
-						c.Z = 1f;
-						if (img.CreateInfo.usage.HasFlag (VkImageUsageFlags.InputAttachment))
-							c.Y += 0.3f;
-						if (img.CreateInfo.usage.HasFlag (VkImageUsageFlags.ColorAttachment))
-							c.Y += 0.1f;
-						if (img.CreateInfo.usage.HasFlag (VkImageUsageFlags.Sampled))
-							c.X += 0.3f;
-					} else {
-						CVKL.Buffer buff = r as CVKL.Buffer;
-						c.X = 1f;
-						if (buff.Infos.usage.HasFlag (VkBufferUsageFlags.IndexBuffer))
-							c.Y += 0.2f;
-						if (buff.Infos.usage.HasFlag (VkBufferUsageFlags.VertexBuffer))
-							c.Y += 0.4f;
-						if (buff.Infos.usage.HasFlag (VkBufferUsageFlags.UniformBuffer))
-							c.Z += 0.3f;
-					}
-					ctx.SetSource (c.X, c.Y, c.Z, 0.5);
-					ctx.Rectangle (0.5f + x + byteWidth * r.poolOffset, 0.5f + y, width, memPoolHeight);
-					ctx.FillPreserve ();
-					ctx.SetSource (0.01f, 0.01f, 0.01f);
-					ctx.Stroke ();
-					r = r.next;
-				} while (r != mp.Last && r != null);
-				y += memPoolHeight;
-			}
-		}
 
 		Program () : base () {
-			vkvgDev = new vkvg.Device (instance.Handle, phy.Handle, dev.VkDev.Handle, presentQueue.qFamIndex,
-				vkvg.SampleCount.Sample_4, presentQueue.index);
-				
 			vbo = new GPUBuffer<float> (presentQueue, cmdPool, VkBufferUsageFlags.VertexBuffer, g_vertex_buffer_data);
 
 			descriptorPool = new DescriptorPool (dev, 2,
-				new VkDescriptorPoolSize (VkDescriptorType.UniformBuffer,2),
-				new VkDescriptorPoolSize (VkDescriptorType.CombinedImageSampler,2)
+				new VkDescriptorPoolSize (VkDescriptorType.UniformBuffer, 2),
+				new VkDescriptorPoolSize (VkDescriptorType.CombinedImageSampler, 2)
 			);
 
 			dsLayout = new DescriptorSetLayout (dev, 0,
 				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Vertex, VkDescriptorType.UniformBuffer),
 				new VkDescriptorSetLayoutBinding (1, VkShaderStageFlags.Fragment, VkDescriptorType.CombinedImageSampler));
-				
+
 			GraphicPipelineConfig cfg = GraphicPipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, samples);
 
 			cfg.Layout = new PipelineLayout (dev, dsLayout);
 			cfg.RenderPass = new RenderPass (dev, swapChain.ColorFormat, dev.GetSuitableDepthFormat (), cfg.Samples);
 
-			cfg.AddVertexBinding (0, 5 * sizeof(float));
+			cfg.AddVertexBinding (0, 5 * sizeof (float));
 			cfg.AddVertexAttributes (0, VkFormat.R32g32b32Sfloat, VkFormat.R32g32Sfloat);
 
 			cfg.AddShader (VkShaderStageFlags.Vertex, "#TexturedCube.skybox.vert.spv");
@@ -216,33 +139,28 @@ namespace TextureCube {
 
 			pipeline = new GraphicPipeline (cfg);
 
-			cfg.ResetShadersAndVerticesInfos ();
-			cfg.AddShader (VkShaderStageFlags.Vertex, "#TexturedCube.FullScreenQuad.vert.spv");
-			cfg.AddShader (VkShaderStageFlags.Fragment, "#TexturedCube.simpletexture.frag.spv");
-
-			cfg.blendAttachments[0] = new VkPipelineColorBlendAttachmentState (true);
-
-			uiPipeline = new GraphicPipeline (cfg);
-
-
 			uboMats = new HostBuffer (dev, VkBufferUsageFlags.UniformBuffer, matrices);
 			uboMats.Map ();//permanent map
 
 			descriptorSet = descriptorPool.Allocate (dsLayout);
-			dsVKVG = descriptorPool.Allocate (dsLayout);
-
-			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (descriptorSet, dsLayout.Bindings[0]);				
+			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (descriptorSet, dsLayout.Bindings[0]);
 			uboUpdate.Write (dev, uboMats.Descriptor);
 
 			loadTexture (imgPathes[currentImgIndex]);
 			if (nextTexture != null)
 				updateTextureSet ();
 
-			initUISurface ();
+
+#if WITH_VKVG
+			dsVkvg = descriptorPool.Allocate (pipeline.Layout.DescriptorSetLayouts[0]);
+			vkvgPipeline = new VkvgPipeline.VkvgPipeline (instance, dev, presentQueue, pipeline);
 		}
+
 		public override void Update () {
 			vkvgDraw ();
+#endif
 		}
+
 		void buildCommandBuffers () {
 			for (int i = 0; i < swapChain.ImageCount; ++i) { 								
                   	cmds[i]?.Free ();
@@ -266,16 +184,10 @@ namespace TextureCube {
 			cmd.BindVertexBuffer (vbo, 0);
 			cmd.Draw (36);
 
-			uiPipeline.Bind (cmd);
-			cmd.BindDescriptorSet (pipeline.Layout, dsVKVG);
-
-			uiImage.SetLayout (cmd, VkImageAspectFlags.Color, VkImageLayout.ColorAttachmentOptimal, VkImageLayout.ShaderReadOnlyOptimal,
-				VkPipelineStageFlags.ColorAttachmentOutput, VkPipelineStageFlags.FragmentShader);
-
-			cmd.Draw (3, 1, 0, 0);
-
-			uiImage.SetLayout (cmd, VkImageAspectFlags.Color, VkImageLayout.ShaderReadOnlyOptimal, VkImageLayout.ColorAttachmentOptimal,
-				VkPipelineStageFlags.FragmentShader, VkPipelineStageFlags.BottomOfPipe);
+#if WITH_VKVG
+			cmd.BindDescriptorSet (pipeline.Layout, dsVkvg);
+			vkvgPipeline.RecordDraw (cmd);
+#endif
 
 			pipeline.RenderPass.End (cmd);
 		}
@@ -365,7 +277,9 @@ namespace TextureCube {
 		protected override void OnResize () {
 			dev.WaitIdle ();
 
-			initUISurface ();
+#if WITH_VKVG
+			vkvgPipeline.Resize ((int)swapChain.Width, (int)swapChain.Height, new DescriptorSetWrites (dsVkvg, dsLayout.Bindings[1]));
+#endif
 
 			updateMatrices ();
 
@@ -397,19 +311,16 @@ namespace TextureCube {
 				if (!isDisposed) {
 					dev.WaitIdle ();
 					pipeline.Dispose ();
-					uiPipeline.Dispose ();
-					dsLayout.Dispose ();
 					for (int i = 0; i < swapChain.ImageCount; i++)
 						frameBuffers[i].Dispose ();
 					descriptorPool.Dispose ();
 					texture.Dispose ();
 					uboMats.Dispose ();
-
 					vbo.Dispose ();
 
-					uiImage?.Dispose ();
-					vkvgSurf?.Dispose ();
-					vkvgDev.Dispose ();
+#if WITH_VKVG
+					vkvgPipeline.Dispose ();
+#endif
 				}
 			}
 

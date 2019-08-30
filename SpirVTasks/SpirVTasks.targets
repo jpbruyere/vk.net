@@ -11,19 +11,20 @@
 					 AdditionalIncludeDirectories="$(SpirVAdditionalIncludeDirectories)"
 					 TempDirectory="$(IntermediateOutputPath)"
 					 DestinationFile="$(IntermediateOutputPath)%(RelativeDir)%(Filename)%(Extension).spv" />		
-    <CreateItem
-        Include="$(IntermediateOutputPath)%(GLSLShader.RelativeDir)%(Filename)%(Extension).spv">			
+    <CreateItem  Condition=" '%(GLSLShader.LogicalName)'!='' "
+        Include="$(IntermediateOutputPath)%(RelativeDir)%(Filename)%(Extension).spv"			
+		AdditionalMetadata="LogicalName=%(GLSLShader.LogicalName)">
        	<Output				
-           TaskParameter="Include"
-           ItemName="EmbeddedResource"/>
+			TaskParameter="Include"			
+			ItemName="EmbeddedResource"/>	    
+    </CreateItem>
+    <CreateItem Condition=" '%(GLSLShader.LogicalName)'=='' "
+        Include="$(IntermediateOutputPath)%(RelativeDir)%(Filename)%(Extension).spv"			
+		AdditionalMetadata="LogicalName=$(AssemblyName).%(GLSLShader.Filename)%(Extension).spv">
+       	<Output				
+			TaskParameter="Include"			
+			ItemName="EmbeddedResource"/>	    
     </CreateItem>		
-    <Message Importance="High" Text="Embedding $(IntermediateOutputPath)%(GLSLShader.RelativeDir)%(Filename)%(Extension).spv" />
-  </Target>
-  <Target Name="ModifyEmbeddedResourceNames" AfterTargets="CompileShaders">
-    <ItemGroup>
-      <EmbeddedResource>
-        <LogicalName>$(AssemblyName).%(EmbeddedResource.Filename)%(Extension)</LogicalName>
-      </EmbeddedResource>
-    </ItemGroup>
+	<Message Importance="High" Text="%(GLSLShader.Identity) -> $(AssemblyName).%(Filename)%(Extension).spv (Embedded Resource)" />
   </Target>
 </Project>

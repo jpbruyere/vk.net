@@ -49,6 +49,10 @@ namespace CVKL {
 
 		public abstract void Bind (CommandBuffer cmd);
 		public abstract void BindDescriptorSet (CommandBuffer cmd, DescriptorSet dset, uint firstSet = 0);
+		public void PushConstant (CommandBuffer cmd, object obj, int rangeIndex = 0, uint offset = 0) {
+			cmd.PushConstant (layout, layout.PushConstantRanges[rangeIndex].stageFlags, obj, offset);
+		}
+
 
 		protected override void Dispose (bool disposing) {
 			if (state == ActivableState.Activated) {
