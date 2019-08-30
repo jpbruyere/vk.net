@@ -95,7 +95,7 @@ namespace CVKL {
 		/// </summary>
 		public void AddWriteInfo (VkDescriptorSetLayoutBinding[] bindings) {
 			foreach (VkDescriptorSetLayoutBinding binding in bindings)
-				AddWriteInfo (bindings);
+				AddWriteInfo (binding);
 		}
 		/// <summary>
 		/// Adds write info without specifying a destination descriptor set, this imply that on calling Write, you MUST

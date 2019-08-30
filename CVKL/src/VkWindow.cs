@@ -2,12 +2,11 @@
 //
 // This code is licensed under the MIT license (MIT) (http://opensource.org/licenses/MIT)
 using System;
-using System.Linq;
 using System.Diagnostics;
+using System.Linq;
 using Glfw;
 using VK;
 using static VK.Vk;
-using System.Collections.Generic;
 
 namespace CVKL {
 	/// <summary>
@@ -121,7 +120,7 @@ namespace CVKL {
 			//activate the device to have effective queues created accordingly to what's available
 			dev.Activate (enabledFeatures, EnabledDeviceExtensions);
 
-			swapChain = new SwapChain (presentQueue as PresentQueue, width, height, VkFormat.B8g8r8a8Unorm,
+			swapChain = new SwapChain (presentQueue as PresentQueue, width, height, SwapChain.PREFERED_FORMAT,
 				vSync ? VkPresentModeKHR.FifoKHR : VkPresentModeKHR.MailboxKHR);
 			swapChain.Create ();
 

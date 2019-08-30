@@ -29,6 +29,13 @@ using static VK.Vk;
 
 namespace CVKL {
     public class SwapChain : Activable {
+		/// <summary>
+		/// Set the default swapchain image format.
+		/// </summary>
+		public static VkFormat PREFERED_FORMAT = VkFormat.B8g8r8a8Srgb;
+		/// <summary>
+		/// Set additional usage flags for the swapchain images such as TransferDst.
+		/// </summary>
 		public static VkImageUsageFlags IMAGES_USAGE = VkImageUsageFlags.ColorAttachment;
 
 		internal VkSwapchainKHR handle;

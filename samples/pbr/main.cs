@@ -25,12 +25,12 @@ namespace pbrSample {
 				vke.Run ();
 			}
 		}
-		protected override void configureEnabledFeatures (VkPhysicalDeviceFeatures available_features, ref VkPhysicalDeviceFeatures features) {
-			base.configureEnabledFeatures (available_features, ref features);
+		protected override void configureEnabledFeatures (VkPhysicalDeviceFeatures available_features, ref VkPhysicalDeviceFeatures enabled_features) {
+			base.configureEnabledFeatures (available_features, ref enabled_features);
 #if PIPELINE_STATS
 			features.pipelineStatisticsQuery = true;
 #endif
-			features.samplerAnisotropy = available_features.samplerAnisotropy;
+			enabled_features.samplerAnisotropy = available_features.samplerAnisotropy;
 		}
 
 		VkSampleCountFlags samples = VkSampleCountFlags.SampleCount1;
@@ -55,9 +55,9 @@ namespace pbrSample {
 		TimestampQueryPool timestampQPool;
 		ulong[] results;
 #endif
-		bool queryUpdatePrefilCube, showDebugImg, showUI;
+		bool queryUpdatePrefilCube, showDebugImg;
 
-		#region ui
+#if WITH_VKVG
 		//DescriptorSet dsDebugImg;
 		//void initDebugImg () {
 		//	dsDebugImg = descriptorPool.Allocate (descLayoutMain);
@@ -65,38 +65,11 @@ namespace pbrSample {
 		//	DescriptorSetWrites uboUpdate = new DescriptorSetWrites (dsDebugImg, descLayoutMain);
 		//	uboUpdate.Write (dev, pbrPipeline.envCube.debugImg.Descriptor);
 		//}
-		vkvg.Device vkvgDev;
-        vkvg.Surface vkvgSurf;
 
-		Image uiImage;
-
-		Pipeline uiPipeline;
-
-		void initUIPipeline () {
-
-			GraphicPipelineConfig cfg = GraphicPipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, samples, false);
-			cfg.RenderPass = pbrPipeline.RenderPass;
-			cfg.Layout = pbrPipeline.Layout;
-			cfg.AddShader (VkShaderStageFlags.Vertex, "#pbr.FullScreenQuad.vert.spv");
-			cfg.AddShader (VkShaderStageFlags.Fragment, "#pbr.simpletexture.frag.spv");
-			cfg.blendAttachments[0] = new VkPipelineColorBlendAttachmentState (true);
-
-			uiPipeline = new GraphicPipeline (cfg);
-
-		}
-		void initUISurface () {
-			uiImage?.Dispose ();
-			vkvgSurf?.Dispose ();
-			vkvgSurf = new vkvg.Surface (vkvgDev, (int)swapChain.Width, (int)swapChain.Height);
-			uiImage = new Image (dev, new VkImage ((ulong)vkvgSurf.VkImage.ToInt64 ()), VkFormat.B8g8r8a8Unorm,
-				VkImageUsageFlags.ColorAttachment, (uint)vkvgSurf.Width, (uint)vkvgSurf.Height);
-			uiImage.CreateView (VkImageViewType.ImageView2D, VkImageAspectFlags.Color);
-			uiImage.CreateSampler (VkFilter.Nearest, VkFilter.Nearest, VkSamplerMipmapMode.Nearest, VkSamplerAddressMode.ClampToBorder);
-			uiImage.Descriptor.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
-		}
+		VkvgPipeline.VkvgPipeline vkvgPipeline;
 
 		void vkvgDraw () {
-            using (vkvg.Context ctx = new vkvg.Context (vkvgSurf)) {
+            using (vkvg.Context ctx = vkvgPipeline.CreateContext ()) {
 				ctx.Operator = vkvg.Operator.Clear;
 				ctx.Paint ();
 				ctx.Operator = vkvg.Operator.Over;
@@ -161,52 +134,27 @@ namespace pbrSample {
 				y += dy;
 				ctx.MoveTo (x, y);
 				ctx.ShowText (string.Format ($"{"Debug Prefil Mip: (m)",-30} : {pbrPipeline.envCube.debugMip.ToString ()} "));
+
+				vkvgPipeline.DrawResources (ctx, (int)Width, (int)Height);
 			}
 		}
-		void recordDrawOverlay (CommandBuffer cmd) {
-			uiPipeline.Bind (cmd);
-
-			uiImage.SetLayout (cmd, VkImageAspectFlags.Color, VkImageLayout.ColorAttachmentOptimal, VkImageLayout.ShaderReadOnlyOptimal,
-				VkPipelineStageFlags.ColorAttachmentOutput, VkPipelineStageFlags.FragmentShader);
-
-			cmd.Draw (3, 1, 0, 0);
-
-			uiImage.SetLayout (cmd, VkImageAspectFlags.Color, VkImageLayout.ShaderReadOnlyOptimal, VkImageLayout.ColorAttachmentOptimal,
-				VkPipelineStageFlags.FragmentShader, VkPipelineStageFlags.BottomOfPipe);
-
-			//if (!showDebugImg)
-			//	return;
-			//const uint debugImgSize = 256;
-			//const uint debugImgMargin = 10;
-
-			//cmd.BindDescriptorSet (uiPipeline.Layout, dsDebugImg);
-
-			//cmd.SetViewport (debugImgSize, debugImgSize, debugImgMargin, swapChain.Height - debugImgSize - debugImgMargin);
-			//cmd.SetScissor (debugImgSize, debugImgSize, (int)debugImgMargin, (int)(swapChain.Height - debugImgSize - debugImgMargin));
-
-			//cmd.Draw (3, 1, 0, 0);
-		}
-#endregion
+#endif
 
 
 		Vector4 lightPos = new Vector4 (1, 0, 0, 0);
 		BoundingBox modelAABB;
 
-		Program () {
+		Program () : base() {
 
 			//UpdateFrequency = 20;
 
 			camera.SetPosition (0, 0, 5);
 
-			vkvgDev = new vkvg.Device (instance.Handle, phy.Handle, dev.Handle, presentQueue.qFamIndex,
-				vkvg.SampleCount.Sample_4, presentQueue.index);
-
-			initUISurface ();
 
 			pbrPipeline = new PBRPipeline(presentQueue,
-				new RenderPass (dev, swapChain.ColorFormat, dev.GetSuitableDepthFormat (), samples), uiImage);
+				new RenderPass (dev, swapChain.ColorFormat, dev.GetSuitableDepthFormat (), samples));
 
-			initUIPipeline ();
+
 
 			modelAABB = pbrPipeline.model.DefaultScene.AABB;
 
@@ -221,6 +169,10 @@ namespace pbrSample {
 				VkQueryPipelineStatisticFlags.FragmentShaderInvocations);
 
 			timestampQPool = new TimestampQueryPool (dev);
+#endif
+
+#if WITH_VKVG
+			vkvgPipeline = new VkvgPipeline.VkvgPipeline (instance, dev, presentQueue, pbrPipeline);
 #endif
 		}
 
@@ -249,9 +201,9 @@ namespace pbrSample {
 
 			pbrPipeline.RecordDraw (cmd);
 
-			if (showUI)
-				recordDrawOverlay (cmd);
-
+#if WITH_VKVG
+			vkvgPipeline.RecordDraw (cmd);
+#endif						
 			pbrPipeline.RenderPass.End (cmd);
 		}
 
@@ -287,18 +239,19 @@ namespace pbrSample {
 				buildCommandBuffers ();
 				rebuildBuffers = false;
 			}
-			if (showUI)
-				vkvgDraw ();
+#if WITH_VKVG
+			vkvgDraw ();
+#endif
 		}
 #endregion
 
 		 
 		protected override void OnResize () {
-			initUISurface ();
-
-			uiImage.Descriptor.imageLayout = VkImageLayout.ShaderReadOnlyOptimal;
-			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (pbrPipeline.dsMain, pbrPipeline.Layout.DescriptorSetLayouts[0].Bindings[5]);
-			uboUpdate.Write (dev, uiImage.Descriptor);
+			dev.WaitIdle ();
+#if WITH_VKVG
+			vkvgPipeline.Resize ((int)swapChain.Width, (int)swapChain.Height,
+				new DescriptorSetWrites (pbrPipeline.dsMain, pbrPipeline.Layout.DescriptorSetLayouts[0].Bindings[5]));
+#endif
 
 			UpdateView ();
 
@@ -321,9 +274,10 @@ namespace pbrSample {
 			}
 
 			buildCommandBuffers ();
+			dev.WaitIdle ();
 		}
 
-#region Mouse and keyboard
+		#region Mouse and keyboard
 		protected override void onMouseMove (double xPos, double yPos) {
 			double diffX = lastMouseX - xPos;
 			double diffY = lastMouseY - yPos;
@@ -423,11 +377,7 @@ namespace pbrSample {
 						lightPos -= Vector4.UnitY;
 					else
 						camera.Move (0, -1, 0);
-					break;
-				case Key.F1:
-					showUI = !showUI;
-					rebuildBuffers = true;
-					break;
+					break;				
 				case Key.F2:
 					if (modifiers.HasFlag (Modifier.Shift))
 						pbrPipeline.matrices.exposure -= 0.3f;
@@ -453,9 +403,8 @@ namespace pbrSample {
 			}
 			updateViewRequested = true;
 		}
-#endregion
+		#endregion
 
-#region dispose
 		protected override void Dispose (bool disposing) {
 			if (disposing) {
 				if (!isDisposed) {
@@ -464,12 +413,9 @@ namespace pbrSample {
 						frameBuffers[i]?.Dispose ();
 
 					pbrPipeline.Dispose ();
-
-					uiPipeline.Dispose ();
-
-					uiImage?.Dispose ();
-					vkvgSurf?.Dispose ();
-					vkvgDev.Dispose ();
+#if WITH_VKVG
+					vkvgPipeline.Dispose ();
+#endif
 
 #if PIPELINE_STATS
 					timestampQPool?.Dispose ();
@@ -480,6 +426,5 @@ namespace pbrSample {
 
 			base.Dispose (disposing);
 		}
-#endregion
 	}
 }

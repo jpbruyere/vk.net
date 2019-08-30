@@ -14,6 +14,7 @@ namespace deferred {
 			Instance.DEBUG_UTILS = true;
 			Instance.RENDER_DOC_CAPTURE = false;
 #endif
+			SwapChain.PREFERED_FORMAT = VkFormat.B8g8r8a8Srgb;
 			DeferredPbrRenderer.TEXTURE_ARRAY = true;
 			DeferredPbrRenderer.NUM_SAMPLES = VkSampleCountFlags.SampleCount1;
 			DeferredPbrRenderer.HDR_FORMAT = VkFormat.R16g16b16a16Sfloat;

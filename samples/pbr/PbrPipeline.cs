@@ -44,7 +44,7 @@ namespace CVKL {
 		public PbrModel2 model;
 		public EnvironmentCube envCube;
 
-		public PBRPipeline (Queue staggingQ, RenderPass renderPass, Image uiImage, PipelineCache pipelineCache = null) :
+		public PBRPipeline (Queue staggingQ, RenderPass renderPass, PipelineCache pipelineCache = null) :
 			base (renderPass, pipelineCache, "pbr pipeline") {
 
 			descriptorPool = new DescriptorPool (Dev, 2,
@@ -120,15 +120,13 @@ namespace CVKL {
 				AttachmentType.Emissive);
 			//model = new Model (Dev, presentQueue, "../data/models/icosphere.gltf");
 			//model = new Model (Dev, presentQueue, cmdPool, "../data/models/cube.gltf");
-			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (descLayoutMain);
+			DescriptorSetWrites uboUpdate = new DescriptorSetWrites (descLayoutMain.Bindings.GetRange(0,5).ToArray());
 			uboUpdate.Write (Dev, dsMain,
 				uboMats.Descriptor,
 				envCube.irradianceCube.Descriptor,
 				envCube.prefilterCube.Descriptor,
 				envCube.lutBrdf.Descriptor,
-				model.materialUBO.Descriptor,
-				uiImage.Descriptor);
-
+				model.materialUBO.Descriptor);
 		}
 
 		public void RecordDraw (CommandBuffer cmd) {
