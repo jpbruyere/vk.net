@@ -4,18 +4,27 @@
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.InteropServices;
-
 using VK;
-using System.Collections.Generic;
 
 namespace CVKL.glTF {
-	using static VK.Utils;
-
 	/// <summary>
 	/// Indexed pbr model whith one descriptorSet per material with separate textures attachments
 	/// </summary>
 	public class PbrModelTexArray : PbrModel {
 		public static uint TEXTURE_DIM = 512;
+		public new struct Vertex {
+			[VertexAttribute (VertexAttributeType.Position, VkFormat.R32g32b32Sfloat)]
+			public Vector3 pos;
+			[VertexAttribute (VertexAttributeType.Normal, VkFormat.R32g32b32Sfloat)]
+			public Vector3 normal;
+			[VertexAttribute (VertexAttributeType.UVs, VkFormat.R32g32Sfloat)]
+			public Vector2 uv0;
+			[VertexAttribute (VertexAttributeType.UVs, VkFormat.R32g32Sfloat)]
+			public Vector2 uv1;
+			public override string ToString () {
+				return pos.ToString () + ";" + normal.ToString () + ";" + uv0.ToString () + ";" + uv1.ToString ();
+			}
+		};
 
 		/// <summary>
 		/// Material structure for ubo containing texture indices in tex array
@@ -49,20 +58,7 @@ namespace CVKL.glTF {
 			dev = transferQ.Dev;
 			using (CommandPool cmdPool = new CommandPool (dev, transferQ.index)) {
 				using (glTFLoader ctx = new glTFLoader (path, transferQ, cmdPool)) {
-					ulong vertexCount, indexCount;
-
-					ctx.GetVertexCount (out vertexCount, out indexCount, out IndexBufferType);
-					ulong vertSize = vertexCount * (ulong)Marshal.SizeOf<Vertex> ();
-					ulong idxSize = indexCount * (IndexBufferType == VkIndexType.Uint16 ? 2ul : 4ul);
-					ulong size = vertSize + idxSize;
-
-					vbo = new GPUBuffer (dev, VkBufferUsageFlags.VertexBuffer | VkBufferUsageFlags.TransferDst, vertSize);
-					ibo = new GPUBuffer (dev, VkBufferUsageFlags.IndexBuffer | VkBufferUsageFlags.TransferDst, idxSize);
-
-					vbo.SetName ("vbo gltf");
-					ibo.SetName ("ibo gltf");
-
-					Meshes = new List<Mesh> (ctx.LoadMeshes<Vertex> (IndexBufferType, vbo, 0, ibo, 0));
+					loadSolids<Vertex> (ctx);
 
 					if (ctx.ImageCount > 0) {
 						texArray = new Image (dev, Image.DefaultTextureFormat, VkImageUsageFlags.Sampled | VkImageUsageFlags.TransferDst | VkImageUsageFlags.TransferSrc,
@@ -78,10 +74,7 @@ namespace CVKL.glTF {
 					}
 
 					loadMaterials (ctx);
-
 					materialUBO = new HostBuffer<Material> (dev, VkBufferUsageFlags.UniformBuffer, materials);
-
-					Scenes = new List<Scene> (ctx.LoadScenes (out defaultSceneIndex));
 				}
 			}
 		}

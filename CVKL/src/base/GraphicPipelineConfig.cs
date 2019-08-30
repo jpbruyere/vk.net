@@ -25,6 +25,7 @@
 // THE SOFTWARE.
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using VK;
 using static VK.Vk;
@@ -112,8 +113,19 @@ namespace CVKL {
 		public void AddVertexBinding (uint binding, uint stride, VkVertexInputRate inputRate = VkVertexInputRate.Vertex) { 
 			vertexBindings.Add (new VkVertexInputBindingDescription (binding, stride, inputRate));
 		}
-		public void AddVertexBinding<T> (uint binding, VkVertexInputRate inputRate = VkVertexInputRate.Vertex) { 
+		public void AddVertexBinding<T> (uint binding = 0, VkVertexInputRate inputRate = VkVertexInputRate.Vertex) { 
 			vertexBindings.Add (new VkVertexInputBindingDescription (binding, (uint)Marshal.SizeOf<T> (), inputRate));
+		}
+		/// <summary>
+		/// Automatically configure Attribute for that binding.
+		/// </summary>
+		public void AddVertex<T> (uint binding = 0, VkVertexInputRate inputRate = VkVertexInputRate.Vertex) {
+			vertexBindings.Add (new VkVertexInputBindingDescription (binding, (uint)Marshal.SizeOf<T> (), inputRate));
+			FieldInfo[] fields = typeof (T).GetFields ();
+			VkFormat[] attribs = new VkFormat[fields.Length];
+			for (int i = 0; i < fields.Length; i++) 
+				attribs[i] = fields[i].GetCustomAttribute<VertexAttributeAttribute> ().Format;
+			AddVertexAttributes (binding, attribs);
 		}
 		public void AddShader (VkShaderStageFlags _stageFlags, string _spirvPath, SpecializationInfo specializationInfo = null, string _entryPoint = "main") {
 			shaders.Add (new ShaderInfo (_stageFlags, _spirvPath, specializationInfo, _entryPoint));

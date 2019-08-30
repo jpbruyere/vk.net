@@ -2,6 +2,7 @@
 using System.Numerics;
 using System.Runtime.InteropServices;
 using CVKL;
+using CVKL.glTF;
 using VK;
 
 namespace ModelSample {
@@ -185,9 +186,18 @@ namespace ModelSample {
 			buildCommandBuffers ();
 		}
 
-		class SimpleModel : Model {
-			public GPUBuffer vbo;
-			public GPUBuffer ibo;
+		class SimpleModel : PbrModel {
+			public new struct Vertex {
+				[VertexAttribute (VertexAttributeType.Position, VkFormat.R32g32b32Sfloat)]
+				public Vector3 pos;
+				[VertexAttribute (VertexAttributeType.Normal, VkFormat.R32g32b32Sfloat)]
+				public Vector3 normal;
+				[VertexAttribute (VertexAttributeType.UVs, VkFormat.R32g32Sfloat)]
+				public Vector2 uv;
+				public override string ToString () {
+					return pos.ToString () + ";" + normal.ToString () + ";" + uv.ToString ();
+				}
+			};
 			public Image[] textures;
 
 			public SimpleModel (Queue transferQ, string path) {
@@ -195,32 +205,12 @@ namespace ModelSample {
 
 				using (CommandPool cmdPool = new CommandPool (dev, transferQ.index)) {
 					using (CVKL.glTF.glTFLoader ctx = new CVKL.glTF.glTFLoader(path, transferQ, cmdPool)) {
-						ulong vertexCount, indexCount;
-
-						ctx.GetVertexCount (out vertexCount, out indexCount, out IndexBufferType);
-
-						ulong vertSize = vertexCount * (ulong)Marshal.SizeOf<Vertex> ();
-						ulong idxSize = indexCount * (IndexBufferType == VkIndexType.Uint16 ? 2ul : 4ul);
-						ulong size = vertSize + idxSize;
-
-						vbo = new GPUBuffer (dev, VkBufferUsageFlags.VertexBuffer | VkBufferUsageFlags.TransferDst, vertSize);
-						ibo = new GPUBuffer (dev, VkBufferUsageFlags.IndexBuffer | VkBufferUsageFlags.TransferDst, idxSize);
-
-						vbo.SetName ("vbo gltf");
-						ibo.SetName ("ibo gltf");
-
-						Meshes = new List<Mesh> (ctx.LoadMeshes<Vertex> (IndexBufferType, vbo, 0, ibo, 0));
-						Scenes = new List<Scene> (ctx.LoadScenes (out defaultSceneIndex));
-
+						loadSolids<Vertex> (ctx);
 						textures = ctx.LoadImages ();
 					}
 				}
 			}
-			/// <summary> bind vertex and index buffers </summary>
-			public virtual void Bind (CommandBuffer cmd) {
-				cmd.BindVertexBuffer (vbo);
-				cmd.BindIndexBuffer (ibo, IndexBufferType);
-			}
+
 			public void DrawAll (CommandBuffer cmd, PipelineLayout pipelineLayout) {
 				//helmet.Meshes
 				cmd.BindVertexBuffer (vbo);
@@ -235,6 +225,10 @@ namespace ModelSample {
 				//	foreach (Node node in sc.Root.Children)
 				//		RenderNode (cmd, pipelineLayout, node, sc.Root.localMatrix, shadowPass);
 				//}
+			}
+
+			public override void RenderNode (CommandBuffer cmd, PipelineLayout pipelineLayout, Node node, Matrix4x4 currentTransform, bool shadowPass = false) {
+				throw new System.NotImplementedException ();
 			}
 		}
 

@@ -11,50 +11,57 @@ using System.Collections.Generic;
 namespace CVKL.glTF {
 	//TODO:stride in buffer views?
 	public abstract class PbrModel : Model {        
-		public new struct Vertex {
-			[VertexAttribute (VertexAttributeType.Position, VkFormat.R32g32b32Sfloat)]
-			public Vector3 pos;
-			[VertexAttribute (VertexAttributeType.Normal, VkFormat.R32g32b32Sfloat)]
-			public Vector3 normal;
-			[VertexAttribute (VertexAttributeType.UVs, VkFormat.R32g32Sfloat)]
-			public Vector2 uv0;
-			[VertexAttribute (VertexAttributeType.UVs, VkFormat.R32g32Sfloat)]
-			public Vector2 uv1;
-			public override string ToString () {
-				return pos.ToString () + ";" + normal.ToString () + ";" + uv0.ToString () + ";" + uv1.ToString ();
-			}
-		};
+		//public new struct Vertex {
+		//	[VertexAttribute (VertexAttributeType.Position, VkFormat.R32g32b32Sfloat)]
+		//	public Vector3 pos;
+		//	[VertexAttribute (VertexAttributeType.Normal, VkFormat.R32g32b32Sfloat)]
+		//	public Vector3 normal;
+		//	[VertexAttribute (VertexAttributeType.UVs, VkFormat.R32g32Sfloat)]
+		//	public Vector2 uv0;
+		//	[VertexAttribute (VertexAttributeType.UVs, VkFormat.R32g32Sfloat)]
+		//	public Vector2 uv1;
+		//	public override string ToString () {
+		//		return pos.ToString () + ";" + normal.ToString () + ";" + uv0.ToString () + ";" + uv1.ToString ();
+		//	}
+		//};
 
 		protected DescriptorPool descriptorPool;
 		public GPUBuffer vbo;
 		public GPUBuffer ibo;
-		public HostBuffer materialUBO;
+		public Buffer materialUBO;
 
-        public PbrModel (Queue transferQ, string path) {
+		protected PbrModel () { }
+		public PbrModel (Queue transferQ, string path) {
 			dev = transferQ.Dev;
 			using (CommandPool cmdPool = new CommandPool (dev, transferQ.index)) {
 				using (glTFLoader ctx = new glTFLoader (path, transferQ, cmdPool)) {
-					ulong vertexCount, indexCount;
-
-					ctx.GetVertexCount (out vertexCount, out indexCount, out IndexBufferType);
-
-					ulong vertSize = vertexCount * (ulong)Marshal.SizeOf<Vertex> ();
-					ulong idxSize = indexCount * (IndexBufferType == VkIndexType.Uint16 ? 2ul : 4ul);
-					ulong size = vertSize + idxSize;
-
-					vbo = new GPUBuffer (dev, VkBufferUsageFlags.VertexBuffer | VkBufferUsageFlags.TransferDst, vertSize);
-					ibo = new GPUBuffer (dev, VkBufferUsageFlags.IndexBuffer | VkBufferUsageFlags.TransferDst, idxSize);
-
-					vbo.SetName ("vbo gltf");
-					ibo.SetName ("ibo gltf");
-
-					Meshes = new List<Mesh> (ctx.LoadMeshes<Vertex> (IndexBufferType, vbo, 0, ibo, 0));
-					Scenes = new List<Scene> (ctx.LoadScenes (out defaultSceneIndex));
+					loadSolids (ctx);
 				}
 			}
 		}
 
-		protected PbrModel() { }
+		protected void loadSolids (glTFLoader ctx) {
+			loadSolids<Vertex> (ctx);
+		}
+
+		protected void loadSolids<VX> (glTFLoader ctx) {
+			ulong vertexCount, indexCount;
+
+			ctx.GetVertexCount (out vertexCount, out indexCount, out IndexBufferType);
+
+			ulong vertSize = vertexCount * (ulong)Marshal.SizeOf<VX> ();
+			ulong idxSize = indexCount * (IndexBufferType == VkIndexType.Uint16 ? 2ul : 4ul);
+			ulong size = vertSize + idxSize;
+
+			vbo = new GPUBuffer (dev, VkBufferUsageFlags.VertexBuffer | VkBufferUsageFlags.TransferDst, vertSize);
+			ibo = new GPUBuffer (dev, VkBufferUsageFlags.IndexBuffer | VkBufferUsageFlags.TransferDst, idxSize);
+
+			vbo.SetName ("vbo gltf");
+			ibo.SetName ("ibo gltf");
+
+			Meshes = new List<Mesh> (ctx.LoadMeshes<VX> (IndexBufferType, vbo, 0, ibo, 0));
+			Scenes = new List<Scene> (ctx.LoadScenes (out defaultSceneIndex));
+		}
 
 		/// <summary> bind vertex and index buffers </summary>
 		public virtual void Bind (CommandBuffer cmd) {
