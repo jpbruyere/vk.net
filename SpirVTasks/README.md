@@ -12,9 +12,9 @@
 </h1>
 
 **SpirVTasks** package add **SpirV** compilation support to msbuild project. Error and warning
-are transmited to the **IDE**.
+are routed to the **IDE**.
 
-Add glsl files to your project with the **`<GLSLShader>`** tag.
+#### Usage
 
 ```xml
 <ItemGroup>    
@@ -22,9 +22,7 @@ Add glsl files to your project with the **`<GLSLShader>`** tag.
 </ItemGroup> 
 ```
 
-Resulting `.spv` files will be embedded with the resource ID = ProjectName.file.ext.spv.
-You can override the resource name by adding a **`<LogicalName>`** element.
-
+Resulting `.spv` files are embedded with resource ID = **ProjectName.file.ext.spv**. You can override the default resource id by adding a custom LogicalName.
 ```xml
 <ItemGroup>    
   <GLSLShader Include="shaders\skybox.vert">
@@ -32,24 +30,13 @@ You can override the resource name by adding a **`<LogicalName>`** element.
   </GLSLShader>
 </ItemGroup> 
 ```
-**glslc** executable is searched with the help of the **VULKAN_SDK** or **PATH** environments variables.
-You may also point to glslc with the **`<SpirVglslcPath>`** property (>= 0.1.7), but if the property is set.
-
+**VULKAN_SDK**/bin then **PATH** are searched for the **glslc** executable. You can also use **`SpirVglslcPath`** property.
 ```xml
 <PropertyGroup>
   <SpirVglslcPath>bin\glslc.exe</SpirVglslcPath>
 </PropertyGroup>
 ```
-
-I've added an **include** mechanism for glsl, file are searched from the location of the current parsed file,
-then in the **`<SpirVAdditionalIncludeDirectories>`** directories property.
-
-```xml
-<PropertyGroup>
-  <SpirVAdditionalIncludeDirectories>$(MSBuildThisFileDirectory)common\</SpirVAdditionalIncludeDirectories>
-</PropertyGroup>
-```
-
+#### Include in glsl
 ```glsl
 #include <preamble.inc>
 
@@ -62,6 +49,14 @@ void main()
 }
 ```
 
-TODO:
+Included files are searched from the location of the current parsed file, then in the **`<SpirVAdditionalIncludeDirectories>`** directories if present.
+
+```xml
+<PropertyGroup>
+  <SpirVAdditionalIncludeDirectories>$(MSBuildThisFileDirectory)common;testdir;../anotherdir</SpirVAdditionalIncludeDirectories>
+</PropertyGroup>
+```
+
+#### todo
 
 - Error source file and line with included files.
