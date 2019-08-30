@@ -1,16 +1,18 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <Import Project="$(RootDirectory)netfx.props" />
   <PropertyGroup>    
-    <EnableDefaultNoneItems>false</EnableDefaultNoneItems>     
-    <DefineConstants>_WITH_VKVG</DefineConstants>
+    <EnableDefaultNoneItems>false</EnableDefaultNoneItems>    
   </PropertyGroup>
                 
   <ItemGroup>
-    <PackageReference Include="vkvg.net" Version="0.2.2-beta" />
+    <GLSLShader Update="shaders/simpletexture.frag">
+		<LogicalName>CVKL.simpletexture.frag.spv</LogicalName>		
+	</GLSLShader>
   </ItemGroup>    
 	
   <ItemGroup>
     <ProjectReference Include="..\..\CVKL.Addons\gltfLoader\gltfLoader.csproj" />
+    <ProjectReference Include="..\..\CVKL.Addons\VkvgPipeline\VkvgPipeline.csproj" />
   </ItemGroup>    
   
   <ItemGroup>    

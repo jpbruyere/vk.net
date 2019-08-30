@@ -14,14 +14,13 @@
 **SpirVTasks** package add **SpirV** compilation support to msbuild project. Error and warning
 are routed to the **IDE**.
 
-#### Usage
 
+#### Usage
 ```xml
 <ItemGroup>    
   <GLSLShader Include="shaders\*.frag;shaders\*.vert;shaders\*.comp;shaders\*.geom" />
 </ItemGroup> 
 ```
-
 Resulting `.spv` files are embedded with resource ID = **ProjectName.file.ext.spv**. You can override the default resource id by adding a custom LogicalName.
 ```xml
 <ItemGroup>    
@@ -36,6 +35,8 @@ Resulting `.spv` files are embedded with resource ID = **ProjectName.file.ext.sp
   <SpirVglslcPath>bin\glslc.exe</SpirVglslcPath>
 </PropertyGroup>
 ```
+
+
 #### Include in glsl
 ```glsl
 #include <preamble.inc>
@@ -58,5 +59,4 @@ Included files are searched from the location of the current parsed file, then i
 ```
 
 #### todo
-
 - Error source file and line with included files.
