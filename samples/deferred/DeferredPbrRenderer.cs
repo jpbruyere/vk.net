@@ -265,8 +265,7 @@ namespace deferred {
 			cfg.blendAttachments.Add (new VkPipelineColorBlendAttachmentState (false));
 			//cfg.blendAttachments.Add (new VkPipelineColorBlendAttachmentState (false));
 
-			cfg.AddVertexBinding<PbrModel.Vertex> (0);
-			cfg.AddVertexAttributes (0, VkFormat.R32g32b32Sfloat, VkFormat.R32g32b32Sfloat, VkFormat.R32g32Sfloat, VkFormat.R32g32Sfloat);
+			cfg.AddVertex<PbrModelTexArray.Vertex> ();
 
 			using (SpecializationInfo constants = new SpecializationInfo (
 						new SpecializationConstant<float> (0, nearPlane),
