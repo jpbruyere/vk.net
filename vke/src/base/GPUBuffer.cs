@@ -41,8 +41,12 @@ namespace CVKL {
 	/// Device local Buffer
 	/// </summary>
 	public class GPUBuffer<T> : GPUBuffer {
-        public GPUBuffer (Device device, VkBufferUsageFlags usage, int elementCount)
+
+		public int ElementCount { get; private set; }
+
+		public GPUBuffer (Device device, VkBufferUsageFlags usage, int elementCount)
             : base (device, usage, (ulong)(Marshal.SizeOf<T> () * elementCount)) {
+			ElementCount = elementCount;
         }
         public GPUBuffer (Queue staggingQ, CommandPool staggingCmdPool, VkBufferUsageFlags usage, T[] elements)
             : base (staggingQ.Dev, usage | VkBufferUsageFlags.TransferDst, (ulong)(Marshal.SizeOf<T> () * elements.Length)) {

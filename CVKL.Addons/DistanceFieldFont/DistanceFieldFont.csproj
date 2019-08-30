@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <Import Project="$(RootDirectory)netfx.props" />
+  <PropertyGroup>
+    <AssemblyName>CVKL.DistanceFieldFont</AssemblyName>
+    <PackageId>CVKL.DistanceFieldFont</PackageId>
+    <AssemblyVersion>0.1.0</AssemblyVersion>
+    <Description>CVKL signed distance field font addons, BMFont file format</Description>
+    <PackageTags>C# vulkan CVKL gltf</PackageTags>    
+    <PackageVersion>$(AssemblyVersion)-beta</PackageVersion>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <PackageRequireLicenseAcceptance>False</PackageRequireLicenseAcceptance>
+    <PackageProjectUrl>https://github.com/jpbruyere/vk.net/blob/master/README.md</PackageProjectUrl>
+    <License>MIT</License>
+    <PackageReleaseNotes></PackageReleaseNotes>
+    <SynchReleaseVersion>false</SynchReleaseVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>    
+  </PropertyGroup>
+
+</Project>

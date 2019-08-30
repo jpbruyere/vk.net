@@ -11,8 +11,12 @@ namespace Textured {
 #if DEBUG
 			Instance.VALIDATION = true;
 			Instance.DEBUG_UTILS = true;
-			Instance.RENDER_DOC_CAPTURE = false;
+			Instance.RENDER_DOC_CAPTURE = true;
 #endif
+
+			foreach (string s in System.Reflection.Assembly.GetEntryAssembly ().GetManifestResourceNames ())
+				Console.WriteLine (s);
+
 			using (Program vke = new Program ()) {
 				vke.Run ();
 			}
@@ -59,7 +63,7 @@ namespace Textured {
 		string[] imgPathes = {
 			"/mnt/devel/vulkan/VulkanExamples/data/models/voyager/voyager_rgba_unorm.ktx",
 			"/mnt/devel/vulkan/vulkanExUpstream/data/models/voyager/voyager_astc_8x8_unorm.ktx",
-			"../data/textures/rgba-reference.ktx",
+			"../data/font.ktx",
 			"/mnt/devel/vulkan/vulkanExUpstream/data/textures/trail_astc_8x8_unorm.ktx",
 			"../data/textures/texturearray_rocks_bc3_unorm.ktx",
 			"../data/textures/texture.jpg",
@@ -108,8 +112,8 @@ namespace Textured {
 		}
 
 		void buildCommandBuffers () {
-			for (int i = 0; i < swapChain.ImageCount; ++i) { 								
-                  	cmds[i]?.Free ();
+			for (int i = 0; i < swapChain.ImageCount; ++i) {
+				cmds[i]?.Free ();
 				cmds[i] = cmdPool.AllocateAndStart ();
 
 				recordDraw (cmds[i], frameBuffers[i]);

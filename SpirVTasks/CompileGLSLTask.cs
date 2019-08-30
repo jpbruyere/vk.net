@@ -156,7 +156,7 @@ namespace SpirVTasks {
 			glslc.BeginErrorReadLine ();
 			glslc.BeginOutputReadLine ();
 
-			Log.LogMessage (MessageImportance.High, $"{SourceFile.ItemSpec} -> {DestinationFile.ItemSpec}");
+			DestinationFile.SetMetadata ("LogicalName", $"FromCS.{SourceFile.ItemSpec.Replace (Path.DirectorySeparatorChar, '.')}");
 
 			glslc.WaitForExit ();
 
@@ -175,8 +175,8 @@ namespace SpirVTasks {
 			Log.LogMessage (MessageImportance.High, $"glslc: {e.Data}");
 
 			if (tmp.Length == 5) {
-				string srcFile = BuildEngine.ProjectFileOfTaskNode;
-				int line = int.Parse (tmp[1]);
+				string srcFile = SourceFile.ItemSpec;
+				int line = Math.Max (0, int.Parse (tmp[1]) - 1);
 
 				BuildErrorEventArgs err = new BuildErrorEventArgs ("compile", tmp[2], srcFile, line, 0, 0, 0, $"{tmp[3]} {tmp[4]}", "no help", "SpirVTasks");
 				BuildEngine.LogErrorEvent (err);

@@ -12,7 +12,7 @@
 </h1>
 
 **SpirVTasks** package add **SpirV** compilation support to msbuild project. Error and warning
-are transmited to the **IDE**. Resulting `.spv` files will be embedded with the resource ID = ProjectName.file.ext.spv.
+are transmited to the **IDE**.
 
 Add glsl files to your project with the **`<GLSLShader>`** tag.
 
@@ -22,7 +22,17 @@ Add glsl files to your project with the **`<GLSLShader>`** tag.
 </ItemGroup> 
 ```
 
-The add-on will search for **glslc** executable with the **VULKAN_SDK** or **PATH** environments variables.
+Resulting `.spv` files will be embedded with the resource ID = ProjectName.file.ext.spv.
+You can override the resource name by adding a **`<LogicalName>`** element.
+
+```xml
+<ItemGroup>    
+  <GLSLShader Include="shaders\skybox.vert">
+	  <LogicalName>NewName.vert.spv</LogicalName>
+  </GLSLShader>
+</ItemGroup> 
+```
+**glslc** executable is searched with the help of the **VULKAN_SDK** or **PATH** environments variables.
 You may also point to glslc with the **`<SpirVglslcPath>`** property (>= 0.1.7), but if the property is set.
 
 ```xml

@@ -55,6 +55,10 @@ namespace CVKL {
 
 		}
 
+		/// <summary>
+		/// Create a default pipeline configuration with viewport and scissor as dynamic states. One blend attachment is
+		/// added automatically with blending disabled. (cfg.blendAttachments[0])
+		/// </summary>
 		public static GraphicPipelineConfig CreateDefault (VkPrimitiveTopology topology = VkPrimitiveTopology.TriangleList,
 			VkSampleCountFlags samples = VkSampleCountFlags.SampleCount1, bool depthTestEnabled = true)
 		{

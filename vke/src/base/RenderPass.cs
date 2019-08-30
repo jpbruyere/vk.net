@@ -57,8 +57,8 @@ namespace CVKL {
 			Samples = samples;
 
 			AddAttachment (colorFormat, (samples == VkSampleCountFlags.SampleCount1) ? VkImageLayout.PresentSrcKHR : VkImageLayout.ColorAttachmentOptimal, samples,
-				VkAttachmentLoadOp.Load, VkAttachmentStoreOp.Store, VkImageLayout.ColorAttachmentOptimal);
-            ClearValues.Add (new VkClearValue { color = new VkClearColorValue (0.0f, 0.0f, 0.0f) });
+				VkAttachmentLoadOp.Clear, VkAttachmentStoreOp.Store, VkImageLayout.ColorAttachmentOptimal);
+            ClearValues.Add (new VkClearValue { color = new VkClearColorValue (0.0f, 0.0f, 0.2f) });
 
 			SubPass subpass0 = new SubPass ();
 			subpass0.AddColorReference (0, VkImageLayout.ColorAttachmentOptimal);
@@ -80,7 +80,7 @@ namespace CVKL {
 
 		}
         /// <summary>
-        /// Create default renderpass with one color and one depth attachments
+        /// Create default renderpass with one color and one depth attachments.
         /// </summary>
         public RenderPass (Device device, VkFormat colorFormat, VkFormat depthFormat, VkSampleCountFlags samples = VkSampleCountFlags.SampleCount1)
             : this (device){

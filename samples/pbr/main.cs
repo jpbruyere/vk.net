@@ -55,14 +55,9 @@ namespace pbrSample {
 		TimestampQueryPool timestampQPool;
 		ulong[] results;
 #endif
-
-
 		bool queryUpdatePrefilCube, showDebugImg, showUI;
 
-
-		Image uiImage;
-
-#region ui
+		#region ui
 		//DescriptorSet dsDebugImg;
 		//void initDebugImg () {
 		//	dsDebugImg = descriptorPool.Allocate (descLayoutMain);
@@ -70,10 +65,11 @@ namespace pbrSample {
 		//	DescriptorSetWrites uboUpdate = new DescriptorSetWrites (dsDebugImg, descLayoutMain);
 		//	uboUpdate.Write (dev, pbrPipeline.envCube.debugImg.Descriptor);
 		//}
-
 		vkvg.Device vkvgDev;
         vkvg.Surface vkvgSurf;
-        
+
+		Image uiImage;
+
 		Pipeline uiPipeline;
 
 		void initUIPipeline () {
@@ -227,6 +223,8 @@ namespace pbrSample {
 			timestampQPool = new TimestampQueryPool (dev);
 #endif
 		}
+
+		bool rebuildBuffers;
 
 		void buildCommandBuffers () {
 			for (int i = 0; i < swapChain.ImageCount; ++i) {

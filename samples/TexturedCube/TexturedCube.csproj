@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="$(RootDirectory)netfx.props" />    
+  <Import Project="$(RootDirectory)netfx.props" />     
   <ItemGroup>
-    <PackageReference Include="vkvg.net" Version="0.2.2-beta" />
-  </ItemGroup>       
+    <ProjectReference Include="..\..\CVKL.Addons\VkvgPipeline\VkvgPipeline.csproj" />
+  </ItemGroup>
 </Project>
 
