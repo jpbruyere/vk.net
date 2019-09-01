@@ -52,13 +52,13 @@ namespace CVKL {
 		/// <summary>
 		/// Create renderpass with a single color attachment and a resolve one if needed
 		/// </summary>
-		public RenderPass (Device device, VkFormat colorFormat, VkSampleCountFlags samples = VkSampleCountFlags.SampleCount1)
+		public RenderPass (Device device, VkFormat colorFormat, VkSampleCountFlags samples = VkSampleCountFlags.SampleCount1, VkAttachmentLoadOp loadOp = VkAttachmentLoadOp.Clear)
 			: this (device) { 
 			Samples = samples;
 
 			AddAttachment (colorFormat, (samples == VkSampleCountFlags.SampleCount1) ? VkImageLayout.PresentSrcKHR : VkImageLayout.ColorAttachmentOptimal, samples,
-				VkAttachmentLoadOp.Clear, VkAttachmentStoreOp.Store, VkImageLayout.ColorAttachmentOptimal);
-            ClearValues.Add (new VkClearValue { color = new VkClearColorValue (0.0f, 0.0f, 0.2f) });
+				loadOp, VkAttachmentStoreOp.Store, VkImageLayout.Undefined);
+            ClearValues.Add (new VkClearValue { color = new VkClearColorValue (0.0f, 0.0f, 0.0f) });
 
 			SubPass subpass0 = new SubPass ();
 			subpass0.AddColorReference (0, VkImageLayout.ColorAttachmentOptimal);
