@@ -1,4 +1,8 @@
-﻿namespace Glfw
+﻿// Copyright (c) 2019 Andrew Armstrong/FacticiusVir
+// Copyright (c) 2019 Jean-Philippe Bruyère <jp_bruyere@hotmail.com>
+//
+// This code is licensed under the MIT license (MIT) (http://opensource.org/licenses/MIT)
+namespace Glfw
 {
     /// <summary>
     /// The index and name of mouse buttons for callbacks.

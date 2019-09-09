@@ -2,11 +2,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 <!--	<Import Project="$(RootDirectory)netfx.props" />-->
 	<PropertyGroup>
-		<AssemblyName>CVKL</AssemblyName>
-		<Product>CVKL</Product>
-		<PackageId>CVKL</PackageId>
-		<AssemblyVersion>0.1.7</AssemblyVersion>
+		<ReleaseVersion>0.1.7</ReleaseVersion>		
+		<AssemblyVersion>$(ReleaseVersion)</AssemblyVersion>
 		<Description>C# vulkan library with IDispose model and references counting</Description>
+		
 		<PackageTags>C# vulkan game library compute glfw</PackageTags>
 		<PackageVersion>$(AssemblyVersion)-beta</PackageVersion>
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
@@ -14,13 +13,17 @@
 		<PackageProjectUrl>https://github.com/jpbruyere/vk.net/blob/master/README.md</PackageProjectUrl>
 		<License>MIT</License>
 		<PackageReleaseNotes>
+			
 		</PackageReleaseNotes>
 		<!--<PackageIconUrl>https://github.com/KhronosGroup/glTF/blob/master/specification/figures/gltf.png</PackageIconUrl>-->
 		<SynchReleaseVersion>false</SynchReleaseVersion>
+		
 		<OutputPath>$(SolutionDir)build\$(Configuration)\</OutputPath>
+		<IntermediateOutputPath>$(SolutionDir)build\$(Configuration)\</IntermediateOutputPath>
+		
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		
-		<EnableDefaultNoneItems>false</EnableDefaultNoneItems>
+		<EnableDefaultNoneItems>false</EnableDefaultNoneItems>		
 	</PropertyGroup>
 	
 	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">

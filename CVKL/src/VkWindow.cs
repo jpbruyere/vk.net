@@ -2,6 +2,7 @@
 //
 // This code is licensed under the MIT license (MIT) (http://opensource.org/licenses/MIT)
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Glfw;
@@ -14,7 +15,7 @@ namespace CVKL {
 	/// Provide default swapchain with its command pool and buffers per image and the main present queue
 	/// </summary>
 	public abstract class VkWindow : IDisposable {
-		static VkWindow currentWindow;
+		static Dictionary<IntPtr,VkWindow> windows = new Dictionary<IntPtr, VkWindow>();
 
 		IntPtr hWin;
 
@@ -27,6 +28,7 @@ namespace CVKL {
 		protected CommandPool cmdPool;
 		protected CommandBuffer[] cmds;
 		protected VkSemaphore[] drawComplete;
+		protected VkFence[] drawFences;
 
 		DebugReport dbgRepport;
 
@@ -40,7 +42,6 @@ namespace CVKL {
 		/// </summary>
 		protected Camera camera = new Camera (Utils.DegreesToRadians (45f), 1f);
 
-		uint width, height;
 		bool[] buttons = new bool[10];
 		public Modifier KeyModifiers = 0;
 
@@ -57,21 +58,25 @@ namespace CVKL {
 		/// </summary>
 		public long UpdateFrequency = 200;
 
-		public uint Width => width;
-		public uint Height => height;
+		public uint Width { get; private set; }
+		public uint Height { get; private set; }
+		public string Title {
+			set {
+				Glfw3.SetWindowTitle (hWin, value);
+			}
+		}
 
 		public VkWindow (string name = "VkWindow", uint _width = 800, uint _height = 600, bool vSync = false) {
-			currentWindow = this;
 
-			width = _width;
-			height = _height;
+			Width = _width;
+			Height = _height;
 
 			Glfw3.Init ();
 
 			Glfw3.WindowHint (WindowAttribute.ClientApi, 0);
 			Glfw3.WindowHint (WindowAttribute.Resizable, 1);
 
-			hWin = Glfw3.CreateWindow ((int)width, (int)height, name, MonitorHandle.Zero, IntPtr.Zero);
+			hWin = Glfw3.CreateWindow ((int)Width, (int)Height, name, MonitorHandle.Zero, IntPtr.Zero);
 
 			if (hWin == IntPtr.Zero)
 				throw new Exception ("[GLFW3] Unable to create vulkan Window");
@@ -82,6 +87,8 @@ namespace CVKL {
 			Glfw3.SetWindowSizeCallback (hWin, HandleWindowSizeDelegate);
 			Glfw3.SetScrollCallback (hWin, HandleScrollDelegate);
 			Glfw3.SetCharCallback (hWin, HandleCharDelegate);
+
+			windows.Add (hWin, this);
 
 			initVulkan (vSync);
 		}
@@ -120,21 +127,26 @@ namespace CVKL {
 			//activate the device to have effective queues created accordingly to what's available
 			dev.Activate (enabledFeatures, EnabledDeviceExtensions);
 
-			swapChain = new SwapChain (presentQueue as PresentQueue, width, height, SwapChain.PREFERED_FORMAT,
+			swapChain = new SwapChain (presentQueue as PresentQueue, Width, Height, SwapChain.PREFERED_FORMAT,
 				vSync ? VkPresentModeKHR.FifoKHR : VkPresentModeKHR.MailboxKHR);
 			swapChain.Create ();
+
+			Width = swapChain.Width;
+			Height = swapChain.Height;
 
 			cmdPool = new CommandPool (dev, presentQueue.qFamIndex);
 
 			cmds = new CommandBuffer[swapChain.ImageCount];
 			drawComplete = new VkSemaphore[swapChain.ImageCount];
+			drawFences = new VkFence[swapChain.ImageCount];
 
-			for (int i = 0; i < swapChain.ImageCount; i++)
+			for (int i = 0; i < swapChain.ImageCount; i++) {
 				drawComplete[i] = dev.CreateSemaphore ();
+				drawComplete[i].SetDebugMarkerName (dev, "Semaphore DrawComplete" + i);
+				drawFences[i] = dev.CreateFence (true);
+			}
 
 			cmdPool.SetName ("main CmdPool");
-			for (int i = 0; i < swapChain.ImageCount; i++)
-				drawComplete[i].SetDebugMarkerName (dev, "Semaphore DrawComplete" + i);
 		}
 		/// <summary>
 		/// override this method to modify enabled features before device creation
@@ -164,10 +176,11 @@ namespace CVKL {
 			if (cmds[idx] == null)
 				return;
 
-			presentQueue.Submit (cmds[idx], swapChain.presentComplete, drawComplete[idx]);
-			presentQueue.Present (swapChain, drawComplete[idx]);
+			dev.WaitForFence (drawFences[idx]);
+			dev.ResetFence (drawFences[idx]);
 
-			presentQueue.WaitIdle ();
+			presentQueue.Submit (cmds[idx], swapChain.presentComplete, drawComplete[idx], drawFences[idx]);
+			presentQueue.Present (swapChain, drawComplete[idx]);
 		}
 
 		protected virtual void onScroll (double xOffset, double yOffset) { }
@@ -188,10 +201,10 @@ namespace CVKL {
 			switch (key) {
 				case Key.F4:
 					if (modifiers == Modifier.Alt)
-						Glfw3.SetWindowShouldClose (currentWindow.hWin, 1);
+						Glfw3.SetWindowShouldClose (hWin, 1);
 					break;
 				case Key.Escape:
-					Glfw3.SetWindowShouldClose (currentWindow.hWin, 1);
+					Glfw3.SetWindowShouldClose (hWin, 1);
 					break;
 				case Key.Up:
 					camera.Move (0, 0, 1);
@@ -226,32 +239,32 @@ namespace CVKL {
 		#region events delegates
 		static void HandleWindowSizeDelegate (IntPtr window, int width, int height) { }
 		static void HandleCursorPosDelegate (IntPtr window, double xPosition, double yPosition) {
-			currentWindow.onMouseMove (xPosition, yPosition);
-			currentWindow.lastMouseX = xPosition;
-			currentWindow.lastMouseY = yPosition;
+			windows[window].onMouseMove (xPosition, yPosition);
+			windows[window].lastMouseX = xPosition;
+			windows[window].lastMouseY = yPosition;
 		}
 		static void HandleMouseButtonDelegate (IntPtr window, Glfw.MouseButton button, InputAction action, Modifier mods) {
 			if (action == InputAction.Press) {
-				currentWindow.buttons[(int)button] = true;
-				currentWindow.onMouseButtonDown (button);
+				windows[window].buttons[(int)button] = true;
+				windows[window].onMouseButtonDown (button);
 			} else {
-				currentWindow.buttons[(int)button] = false;
-				currentWindow.onMouseButtonUp (button);
+				windows[window].buttons[(int)button] = false;
+				windows[window].onMouseButtonUp (button);
 			}
 		}
 		static void HandleScrollDelegate (IntPtr window, double xOffset, double yOffset) {
-			currentWindow.onScroll (xOffset, yOffset);
+			windows[window].onScroll (xOffset, yOffset);
 		}
 		static void HandleKeyDelegate (IntPtr window, Key key, int scanCode, InputAction action, Modifier modifiers) {
-			currentWindow.KeyModifiers = modifiers;
+			windows[window].KeyModifiers = modifiers;
 			if (action == InputAction.Press || action == InputAction.Repeat) {
-				currentWindow.onKeyDown (key, scanCode, modifiers);
+				windows[window].onKeyDown (key, scanCode, modifiers);
 			} else {
-				currentWindow.onKeyUp (key, scanCode, modifiers);
+				windows[window].onKeyUp (key, scanCode, modifiers);
 			}
 		}
 		static void HandleCharDelegate (IntPtr window, CodePoint codepoint) {
-			currentWindow.onChar (codepoint);
+			windows[window].onChar (codepoint);
 		}
 		#endregion
 
@@ -296,9 +309,13 @@ namespace CVKL {
 		public virtual void Update () { }
 
 		/// <summary>
-		/// called when swapchain has been resized, override this method to resize your framebuffers coupled to the swapchain
+		/// called when swapchain has been resized, override this method to resize your framebuffers coupled to the swapchain.
+		/// The base method will update Window width and height with new swapchain's dimensions.
 		/// </summary>
-		protected virtual void OnResize () { }
+		protected virtual void OnResize () {
+			Width = swapChain.Width;
+			Height = swapChain.Height;
+		}
 
 
 		#region IDisposable Support
@@ -310,6 +327,7 @@ namespace CVKL {
 
 				for (int i = 0; i < swapChain.ImageCount; i++) {
 					dev.DestroySemaphore (drawComplete[i]);
+					dev.DestroyFence (drawFences[i]);
 					cmds[i].Free ();
 				}
 

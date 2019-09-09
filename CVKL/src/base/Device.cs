@@ -133,6 +133,7 @@ namespace CVKL {
 		}
 		public void DestroySemaphore (VkSemaphore semaphore) {
 			vkDestroySemaphore (dev, semaphore, IntPtr.Zero);
+			semaphore = 0;
 		}
 		public VkFence CreateFence (bool signaled = false) {
 			VkFence tmp;
@@ -141,8 +142,11 @@ namespace CVKL {
 			Utils.CheckResult (vkCreateFence (dev, ref info, IntPtr.Zero, out tmp));
 			return tmp;
 		}
+		/// <summary>Destroy the fence.</summary>
+		/// <param name="fence">A valid fence handle.</param>
 		public void DestroyFence (VkFence fence) {
 			vkDestroyFence (dev, fence, IntPtr.Zero);
+			fence = 0;
 		}
 		public void WaitForFence (VkFence fence, ulong timeOut = UInt64.MaxValue) {
 			vkWaitForFences (dev, 1, ref fence, 1, timeOut);
@@ -161,6 +165,7 @@ namespace CVKL {
 
 		public void DestroyShaderModule (VkShaderModule module) {
 			vkDestroyShaderModule (VkDev, module, IntPtr.Zero);
+			module = 0;
 		}
 		public void WaitIdle () {
 			Utils.CheckResult (vkDeviceWaitIdle (dev));

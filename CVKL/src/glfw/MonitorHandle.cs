@@ -1,4 +1,8 @@
-﻿using System;
+﻿// Copyright (c) 2019 Andrew Armstrong/FacticiusVir
+// Copyright (c) 2019 Jean-Philippe Bruyère <jp_bruyere@hotmail.com>
+//
+// This code is licensed under the MIT license (MIT) (http://opensource.org/licenses/MIT)
+using System;
 
 namespace Glfw
 {
@@ -7,28 +11,20 @@ namespace Glfw
     /// </summary>
     public struct MonitorHandle
     {
-        internal MonitorHandle(System.IntPtr handle)
+		readonly IntPtr handle;
+
+		internal MonitorHandle(IntPtr handle)
         {
             this.handle = handle;
         }
-
-        private System.IntPtr handle;
-
-        /// <summary>
-        /// Gets the underlying native pointer to the monitor object.
-        /// </summary>
-        public IntPtr RawHandle
-        {
-            get
-            {
-                return this.handle;
-            }
-        }
-
+		/// <summary>
+		/// Gets the underlying native pointer to the monitor object.
+		/// </summary>
+		public IntPtr RawHandle => handle;
         /// <summary>
         /// A read-only field that represents a MonitorHandle that has been
         /// inititalised to zero.
         /// </summary>
-        public static readonly MonitorHandle Zero = new MonitorHandle (System.IntPtr.Zero);
+        public static readonly MonitorHandle Zero = new MonitorHandle (IntPtr.Zero);
     }
 }

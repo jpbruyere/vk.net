@@ -23,7 +23,7 @@ namespace Crow {
 		protected Interface crow;
 		protected vkvg.Device vkvgDev;
 		protected CVKL.Image uiImage;
-		protected bool isRunning;
+		protected bool isRunning, rebuildBuffers;
 
 		protected CrowWin (string name = "CrowWin", uint _width = 1024, uint _height = 768, bool vSync = false) :
 			base (name, _width, _height, vSync) {

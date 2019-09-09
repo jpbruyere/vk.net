@@ -65,7 +65,7 @@ namespace CVKL {
             VkPresentInfoKHR present = VkPresentInfoKHR.New();
 
             uint idx = swapChain.currentImageIndex;
-            VkSwapchainKHR sc = swapChain.handle;
+            VkSwapchainKHR sc = swapChain.Handle;
             present.swapchainCount = 1;
             present.pSwapchains = sc.Pin();
             present.waitSemaphoreCount = 1;

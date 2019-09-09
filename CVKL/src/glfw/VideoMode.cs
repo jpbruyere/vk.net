@@ -8,15 +8,11 @@ namespace Glfw
     [StructLayout(LayoutKind.Sequential)]
     public struct VideoMode
     {
-        private int width;
-
-        private int height;
-
-        private int redBits;
-
-        private int greenBits;
-
-        private int blueBits;
+        private readonly int width;
+        private readonly int height;
+        private readonly int redBits;
+        private readonly int greenBits;
+        private readonly int blueBits;
 
         /// <summary>
         /// The resolution, in screen coordinates, of the video mode.

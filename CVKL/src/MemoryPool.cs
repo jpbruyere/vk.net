@@ -1,6 +1,7 @@
-﻿using System;
-using System.IO;
-using System.Runtime.InteropServices;
+﻿// Copyright (c) 2019 Jean-Philippe Bruyère <jp_bruyere@hotmail.com>
+//
+// This code is licensed under the MIT license (MIT) (http://opensource.org/licenses/MIT)
+using System;
 using VK;
 
 using static VK.Vk;
@@ -11,6 +12,9 @@ namespace CVKL {
 		Random,
 		Linear 
 	}
+	/// <summary>
+	/// A memory pool is a single chunck of memory of a kind shared among multiple resources.
+	/// </summary>
 	public class MemoryPool : IDisposable {
 		Device dev;
 		internal VkDeviceMemory vkMemory;
@@ -30,6 +34,12 @@ namespace CVKL {
 		public IntPtr MappedData => mappedPointer;
 		public Resource Last => lastResource;
 
+		/// <summary>
+		/// Initializes a new instance of the <see cref="T:CVKL.MemoryPool"/> class.
+		/// </summary>
+		/// <param name="dev">device</param>
+		/// <param name="memoryTypeIndex">Memory type index.</param>
+		/// <param name="size">Size</param>
 		public MemoryPool (Device dev, uint memoryTypeIndex, UInt64 size) {
 			this.dev = dev;
 			memInfo.allocationSize = size;
@@ -94,10 +104,8 @@ namespace CVKL {
 			resource.bindMemory ();
 		}
 
-
-
-		public void Defrag () { 
-
+		public void Defrag () {
+			throw new NotImplementedException ();
 		}
 
 		public void Remove (Resource resource) {
@@ -113,7 +121,6 @@ namespace CVKL {
 			}
  			resource.next = resource.previous = null;
 		}
-
 		public void Map (ulong size = Vk.WholeSize, ulong offset = 0) {
 			Utils.CheckResult (vkMapMemory (dev.VkDev, vkMemory, offset, size, 0, ref mappedPointer));
 		}
@@ -127,8 +134,11 @@ namespace CVKL {
 
 		protected virtual void Dispose (bool disposing) {
 			if (!disposedValue) {
-				if (!disposing)
+				if (disposing) {
+					//TODO:should automatically free resources here
+				} else
 					System.Diagnostics.Debug.WriteLine ("MemoryPool disposed by Finalizer.");
+
 				vkFreeMemory (dev.VkDev, vkMemory, IntPtr.Zero);
 				disposedValue = true;
 			}

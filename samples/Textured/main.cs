@@ -219,6 +219,7 @@ namespace Textured {
 		}
 
 		protected override void OnResize () {
+			base.OnResize ();
 
 			updateMatrices ();
 

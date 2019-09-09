@@ -67,10 +67,10 @@ namespace Triangle {
 			dsLayout = new DescriptorSetLayout (dev,
 				new VkDescriptorSetLayoutBinding (0, VkShaderStageFlags.Vertex | VkShaderStageFlags.Fragment, VkDescriptorType.UniformBuffer));
 
-			GraphicPipelineConfig cfg = GraphicPipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, VkSampleCountFlags.SampleCount1);
+			GraphicPipelineConfig cfg = GraphicPipelineConfig.CreateDefault (VkPrimitiveTopology.TriangleList, VkSampleCountFlags.SampleCount1,false);
 
 			cfg.Layout = new PipelineLayout (dev, dsLayout);
-			cfg.RenderPass = new RenderPass (dev, swapChain.ColorFormat, dev.GetSuitableDepthFormat (), cfg.Samples);
+			cfg.RenderPass = new RenderPass (dev, swapChain.ColorFormat, cfg.Samples);
 			cfg.AddVertexBinding<Vertex> (0);
 			cfg.AddVertexAttributes (0, VkFormat.R32g32b32Sfloat, VkFormat.R32g32b32Sfloat);
 
@@ -141,7 +141,7 @@ namespace Triangle {
 		}
 
 		protected override void OnResize () {
-			dev.WaitIdle ();
+			base.OnResize ();
 
 			if (frameBuffers != null)
 				for (int i = 0; i < swapChain.ImageCount; ++i)
@@ -152,16 +152,12 @@ namespace Triangle {
 				frameBuffers[i] = new Framebuffer (pipeline.RenderPass, swapChain.Width, swapChain.Height,
 					(pipeline.Samples == VkSampleCountFlags.SampleCount1) ? new Image[] {
 						swapChain.images[i],
-						null
 					} : new Image[] {
-						null,
 						null,
 						swapChain.images[i]
 					});
 
 			buildCommandBuffers ();
-
-			dev.WaitIdle ();
 		}
 
 		protected override void Dispose (bool disposing) {		

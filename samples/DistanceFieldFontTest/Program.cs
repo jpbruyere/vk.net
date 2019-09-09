@@ -13,6 +13,7 @@ namespace DistanceFieldFontTest {
 
 	class Program : VkWindow {
 		static void Main (string[] args) {
+			SwapChain.PREFERED_FORMAT = VkFormat.B8g8r8a8Unorm;
 #if DEBUG
 			Instance.VALIDATION = true;
 			Instance.DEBUG_UTILS = true;
@@ -25,6 +26,8 @@ namespace DistanceFieldFontTest {
 
 		float rotSpeed = 0.01f, zoomSpeed = 0.01f;
 		float rotX, rotY, rotZ = 0f, zoom = 1f;
+
+		float rotAnim = 1f;
 
 		struct Matrices {
 			public Matrix4x4 projection;
@@ -118,6 +121,8 @@ namespace DistanceFieldFontTest {
 
 			staggingVbo.Dispose ();
 			staggingIbo.Dispose ();
+
+			UpdateFrequency = 10;
 		}
 
 
@@ -184,6 +189,11 @@ namespace DistanceFieldFontTest {
 				buildCommandBuffers ();
 				rebuildBuffers = false;
 			}
+			if (rotAnim < 0.000001f)
+				return;
+			rotY += rotAnim;
+			rotAnim *= 0.95f;
+			updateViewRequested = true;
 		}
 
 		void buildCommandBuffers () {
@@ -244,6 +254,9 @@ namespace DistanceFieldFontTest {
 
 		protected override void onKeyDown (Key key, int scanCode, Modifier modifiers) {
 			switch (key) {
+				case Key.Space:
+					rotAnim += 0.1f;
+					break;
 				case Key.F2:
 					if (modifiers.HasFlag (Modifier.Shift))
 						outlineColor.W -= 0.01f;
@@ -257,6 +270,7 @@ namespace DistanceFieldFontTest {
 			}					
 		}
 		protected override void OnResize () {
+			base.OnResize ();
 
 			updateViewRequested = true;
 

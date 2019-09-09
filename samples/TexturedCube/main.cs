@@ -275,10 +275,10 @@ namespace TextureCube {
 		}
 
 		protected override void OnResize () {
-			dev.WaitIdle ();
+			base.OnResize ();
 
 #if WITH_VKVG
-			vkvgPipeline.Resize ((int)swapChain.Width, (int)swapChain.Height, new DescriptorSetWrites (dsVkvg, dsLayout.Bindings[1]));
+			vkvgPipeline.Resize ((int)Width, (int)Height, new DescriptorSetWrites (dsVkvg, dsLayout.Bindings[1]));
 #endif
 
 			updateMatrices ();

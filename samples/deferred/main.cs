@@ -10,8 +10,8 @@ namespace deferred {
 	class Deferred : VkWindow {
 		static void Main (string[] args) {
 #if DEBUG
-			Instance.VALIDATION = true;
-			Instance.DEBUG_UTILS = true;
+			//Instance.VALIDATION = true;
+			//Instance.DEBUG_UTILS = true;
 			Instance.RENDER_DOC_CAPTURE = false;
 #endif
 			SwapChain.PREFERED_FORMAT = VkFormat.B8g8r8a8Srgb;
@@ -55,7 +55,6 @@ namespace deferred {
 			"../data/textures/uffizi_cube.ktx",
 		};
 		string[] modelPathes = {
-				//"/mnt/devel/gts/vkChess.net/data/models/chess.glb",
 				"../data/models/DamagedHelmet/glTF/DamagedHelmet.gltf",
 				"../data/models/shadow.glb",
 				"../data/models/Hubble.glb",
@@ -211,24 +210,25 @@ namespace deferred {
 		float finalDebug = -1.0f;
 
 		void buildCommandBuffers () {
-			cmdPbr?.Free ();
-			cmdPbr = cmdPool.AllocateAndStart ();
-			renderer.buildCommandBuffers (cmdPbr);
-			cmdPbr.End ();
+			//cmdPbr?.Free ();
+			//cmdPbr = cmdPool.AllocateAndStart ();
+			//renderer.buildCommandBuffers (cmdPbr);
+			//cmdPbr.End ();
 
-			cmdBlur?.Free ();
-			cmdBlur = computeCmdPool.AllocateAndStart ();
-			buildBlurCmd (cmdBlur);
+			//cmdBlur?.Free ();
+			//cmdBlur = computeCmdPool.AllocateAndStart ();
+			//buildBlurCmd (cmdBlur);
 
 
 			for (int i = 0; i < swapChain.ImageCount; ++i) {
 				cmds[i]?.Free ();
 				cmds[i] = cmdPool.AllocateAndStart ();
 
+				renderer.buildCommandBuffers (cmds[i]);
 				//renderer.hdrImgResolved.SetLayout (cmds[i], VkImageAspectFlags.Color,
-					//VkAccessFlags.TransferRead, VkAccessFlags.ShaderRead,
-					//VkImageLayout.TransferSrcOptimal, VkImageLayout.ShaderReadOnlyOptimal,
-					//VkPipelineStageFlags.Transfer, VkPipelineStageFlags.FragmentShader);
+				//VkAccessFlags.TransferRead, VkAccessFlags.ShaderRead,
+				//VkImageLayout.TransferSrcOptimal, VkImageLayout.ShaderReadOnlyOptimal,
+				//VkPipelineStageFlags.Transfer, VkPipelineStageFlags.FragmentShader);
 
 				plToneMap.RenderPass.Begin (cmds[i], frameBuffers[i]);
 
@@ -283,8 +283,10 @@ namespace deferred {
 
 
 		protected override void render () {
-			int idx = swapChain.GetNextImage ();
+			VkFence fence = dev.CreateFence();
+			int idx = swapChain.GetNextImage (fence);
 			if (idx < 0) {
+				dev.DestroyFence (fence);
 				OnResize ();
 				return;
 			}
@@ -292,19 +294,19 @@ namespace deferred {
 			if (cmds[idx] == null)
 				return;
 
-			presentQueue.Submit (cmdPbr, swapChain.presentComplete, renderer.DrawComplete);
+			dev.WaitForFence (drawFences[idx]);
+			dev.ResetFence (drawFences[idx]);
 
-			computeQ.Submit (cmdBlur, renderer.DrawComplete, blurComplete);
-
-			presentQueue.Submit (cmds[idx], blurComplete, drawComplete[idx]);
+			presentQueue.Submit (cmds[idx], swapChain.presentComplete, drawComplete[idx], drawFences[idx]);
 			presentQueue.Present (swapChain, drawComplete[idx]);
-
-			presentQueue.WaitIdle ();
 		}
+
 		protected override void OnResize () {
+			base.OnResize ();
+
 			dev.WaitIdle ();
 
-			renderer.Resize (swapChain.Width, swapChain.Height);
+			renderer.Resize (Width, Height);
 
 			UpdateView ();
 

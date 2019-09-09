@@ -1,9 +1,11 @@
-﻿using System;
-using System.Text;
+﻿// Copyright (c) 2019 Andrew Armstrong/FacticiusVir
+// Copyright (c) 2019 Jean-Philippe Bruyère <jp_bruyere@hotmail.com>
+//
+// This code is licensed under the MIT license (MIT) (http://opensource.org/licenses/MIT)
+using System;
 using System.Runtime.InteropServices;
 
-namespace Glfw
-{
+namespace Glfw {
 	public enum CursorShape
 	{
 		Arrow		= 0x00036001,
@@ -16,7 +18,7 @@ namespace Glfw
 	/// <summary>
 	/// Interop functions for the GLFW3 API.
 	/// </summary>
-	public unsafe static class Glfw3
+	public static class Glfw3
     {
         /// <summary>
         /// The base name for the GLFW3 library.
@@ -185,7 +187,7 @@ namespace Glfw
         /// An array of extension names, or Null if an error occurred.
         /// </returns>
         [DllImport(GlfwDll, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwGetRequiredInstanceExtensions")]
-        public static extern byte** GetRequiredInstanceExtensions(out int count);
+        public static extern IntPtr GetRequiredInstanceExtensions(out int count);
 
         /// <summary>
         /// Sets the size callback of the specified window, which is called
@@ -229,7 +231,7 @@ namespace Glfw
         /// if an error occurred.
         /// </returns>
         [DllImport(GlfwDll, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwGetMonitors")]
-        public static extern MonitorHandle* GetMonitors(out int count);
+        public static extern IntPtr GetMonitors(out int count);
 
         /// <summary>
         /// Returns the primary monitor. This is usually the monitor where
@@ -320,7 +322,7 @@ namespace Glfw
         /// An array of video modes, or Null if an error occurred.
         /// </returns>
         [DllImport(GlfwDll, CallingConvention = CallingConvention.Cdecl, EntryPoint = "glfwGetVideoModes")]
-        public static extern VideoMode* GetVideoModes(MonitorHandle monitor, out int count);
+        public static extern IntPtr GetVideoModes(MonitorHandle monitor, out int count);
 
         /// <summary>
         /// Returns the current video mode of the specified monitor. If you
@@ -448,13 +450,14 @@ namespace Glfw
         /// </returns>
         public static string[] GetRequiredInstanceExtensions()
         {
-            byte** namePointer = GetRequiredInstanceExtensions(out int count);
+            IntPtr names = GetRequiredInstanceExtensions(out int count);
 
             var result = new string[count];
 
             for (int nameIndex = 0; nameIndex < count; nameIndex++)
             {
-                result[nameIndex] = Marshal.PtrToStringAnsi(new System.IntPtr (namePointer[nameIndex]));
+				IntPtr name = Marshal.ReadIntPtr (names, nameIndex);
+                result[nameIndex] = Marshal.PtrToStringAnsi(name);
             }
 
             return result;
@@ -471,14 +474,12 @@ namespace Glfw
         /// </returns>
         public static MonitorHandle[] GetMonitors()
         {
-            MonitorHandle* monitorPointer = GetMonitors(out int count);
+            IntPtr monitors = GetMonitors(out int count);
 
             var result = new MonitorHandle[count];
 
-            for (int i = 0; i < count; i++)
-            {
-                result[i] = monitorPointer[i];
-            }
+            for (int i = 0; i < count; i++)            
+                result[i] = new MonitorHandle(Marshal.ReadIntPtr(monitors, i));            
 
             return result;
         }
@@ -497,14 +498,12 @@ namespace Glfw
         /// </returns>
         public static VideoMode[] GetVideoModes(MonitorHandle monitor)
         {
-            VideoMode* videoModePointer = GetVideoModes(monitor, out int count);
+            IntPtr videoModes = GetVideoModes(monitor, out int count);
 
             var result = new VideoMode[count];
 
-            for (int i = 0; i < count; i++)
-            {
-                result[i] = videoModePointer[i];
-            }
+            for (int i = 0; i < count; i++)            
+                result[i] = Marshal.PtrToStructure<VideoMode>(Marshal.ReadIntPtr(videoModes, i));            
 
             return result;
         }

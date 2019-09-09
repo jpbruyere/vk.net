@@ -5,6 +5,9 @@ using System;
 using VK;
 
 namespace CVKL {
+	/// <summary>
+	/// This class is a helper class for VkPipelineShaderStageCreateInfo creation.
+	/// </summary>
 	public class ShaderInfo : IDisposable {
 		public VkShaderStageFlags StageFlags;
 		public string SpirvPath;
@@ -15,9 +18,11 @@ namespace CVKL {
 			StageFlags = _stageFlags;
 			SpirvPath = _spirvPath;
 			EntryPoint = new FixedUtf8String (_entryPoint);
-			this.SpecializationInfo = specializationInfo;
+			SpecializationInfo = specializationInfo;
 		}
-
+		/// <summary>
+		/// Create the VkPipelineShaderStageCreateInfo structure. Note that the ShaderModule is created here and has to be destroy after the pipeline creation
+		/// </summary>
 		public VkPipelineShaderStageCreateInfo GetStageCreateInfo (Device dev) {
 			return new VkPipelineShaderStageCreateInfo {
 				sType = VkStructureType.PipelineShaderStageCreateInfo,
@@ -33,9 +38,9 @@ namespace CVKL {
 
 		protected virtual void Dispose (bool disposing) {
 			if (!disposedValue) {
-				if (disposing)
+				if (disposing) {
 					EntryPoint.Dispose ();
-
+				}
 				disposedValue = true;
 			}
 		}

@@ -38,7 +38,7 @@ namespace CVKL {
 		/// </summary>
 		public static VkImageUsageFlags IMAGES_USAGE = VkImageUsageFlags.ColorAttachment;
 
-		internal VkSwapchainKHR handle;
+		public VkSwapchainKHR Handle { get; private set; }
 
 		internal uint currentImageIndex;
 		VkSwapchainCreateInfoKHR createInfos;
@@ -48,11 +48,11 @@ namespace CVKL {
         public Image[] images;
 
 		protected override VkDebugMarkerObjectNameInfoEXT DebugMarkerInfo
-			=> new VkDebugMarkerObjectNameInfoEXT (VkDebugReportObjectTypeEXT.SwapchainKhrEXT, handle.Handle);
+			=> new VkDebugMarkerObjectNameInfoEXT (VkDebugReportObjectTypeEXT.SwapchainKhrEXT, Handle.Handle);
 
-
+		/// <summary>Swapchain images count.</summary>
 		public uint ImageCount => (uint)images?.Length;
-        public uint Width => createInfos.imageExtent.width;
+		public uint Width => createInfos.imageExtent.width;
         public uint Height => createInfos.imageExtent.height;
         public VkFormat ColorFormat => createInfos.imageFormat;
         public VkImageUsageFlags ImageUsage => createInfos.imageUsage;
@@ -101,7 +101,9 @@ namespace CVKL {
 			}
 			base.Activate ();
 		}
-
+		/// <summary>
+		/// Create swapchain and populate images array
+		/// </summary>
 		public void Create () {
 			if (state != ActivableState.Activated)
 				Activate ();
@@ -112,7 +114,7 @@ namespace CVKL {
 
             createInfos.minImageCount = capabilities.minImageCount;
             createInfos.preTransform = capabilities.currentTransform;
-            createInfos.oldSwapchain = handle;
+            createInfos.oldSwapchain = Handle;
 
             if (capabilities.currentExtent.width == 0xFFFFFFFF) {
                 if (createInfos.imageExtent.width < capabilities.minImageExtent.width)
@@ -128,11 +130,11 @@ namespace CVKL {
                 createInfos.imageExtent = capabilities.currentExtent;
 
             VkSwapchainKHR newSwapChain = Dev.CreateSwapChain (createInfos);
-            if (handle.Handle != 0)
+            if (Handle.Handle != 0)
                 _destroy ();
-            handle = newSwapChain;
+            Handle = newSwapChain;
 
-            VkImage[] tmp = Dev.GetSwapChainImages (handle);
+            VkImage[] tmp = Dev.GetSwapChainImages (Handle);
             images = new Image[tmp.Length];
             for (int i = 0; i < tmp.Length; i++) {
                 images[i] = new Image (Dev, tmp[i], ColorFormat, ImageUsage, Width, Height);
@@ -141,9 +143,13 @@ namespace CVKL {
 				images[i].Descriptor.imageView.SetDebugMarkerName (Dev, "SwapChain Img" + i + " view");
             }
         }
-
-        public int GetNextImage () {
-            VkResult res = vkAcquireNextImageKHR (Dev.VkDev, handle, UInt64.MaxValue, presentComplete, VkFence.Null, out currentImageIndex);
+		/// <summary>
+		/// Acquire next image, recreate swapchain if out of date or suboptimal error.
+		/// </summary>
+		/// <returns>Swapchain image index or -1 if failed</returns>
+		/// <param name="fence">Fence param of 'vkAcquireNextImageKHR'</param>
+        public int GetNextImage (VkFence fence = default(VkFence)) {
+            VkResult res = vkAcquireNextImageKHR (Dev.VkDev, Handle, UInt64.MaxValue, presentComplete, fence, out currentImageIndex);
             if (res == VkResult.ErrorOutOfDateKHR || res == VkResult.SuboptimalKHR) {
                 Create ();
                 return -1;
@@ -156,11 +162,11 @@ namespace CVKL {
             for (int i = 0; i < ImageCount; i++) 
                 images[i].Dispose ();
 
-            Dev.DestroySwapChain (handle);
+            Dev.DestroySwapChain (Handle);
         }
 
 		public override string ToString () {
-			return string.Format ($"{base.ToString ()}[0x{handle.Handle.ToString ("x")}]");
+			return string.Format ($"{base.ToString ()}[0x{Handle.Handle.ToString ("x")}]");
 		}
 
 		#region IDisposable Support

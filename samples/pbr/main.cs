@@ -247,6 +247,8 @@ namespace pbrSample {
 
 		 
 		protected override void OnResize () {
+			base.OnResize ();
+
 			dev.WaitIdle ();
 #if WITH_VKVG
 			vkvgPipeline.Resize ((int)swapChain.Width, (int)swapChain.Height,

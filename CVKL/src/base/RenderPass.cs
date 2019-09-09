@@ -57,7 +57,7 @@ namespace CVKL {
 			Samples = samples;
 
 			AddAttachment (colorFormat, (samples == VkSampleCountFlags.SampleCount1) ? VkImageLayout.PresentSrcKHR : VkImageLayout.ColorAttachmentOptimal, samples,
-				loadOp, VkAttachmentStoreOp.Store, VkImageLayout.Undefined);
+				loadOp, VkAttachmentStoreOp.Store);
             ClearValues.Add (new VkClearValue { color = new VkClearColorValue (0.0f, 0.0f, 0.0f) });
 
 			SubPass subpass0 = new SubPass ();
@@ -73,10 +73,10 @@ namespace CVKL {
 
             AddDependency (Vk.SubpassExternal, 0,
                 VkPipelineStageFlags.BottomOfPipe, VkPipelineStageFlags.ColorAttachmentOutput,
-                VkAccessFlags.MemoryRead, VkAccessFlags.ColorAttachmentRead | VkAccessFlags.ColorAttachmentWrite);
+                VkAccessFlags.MemoryRead, VkAccessFlags.ColorAttachmentWrite);
             AddDependency (0, Vk.SubpassExternal,
                 VkPipelineStageFlags.ColorAttachmentOutput, VkPipelineStageFlags.BottomOfPipe,
-                VkAccessFlags.ColorAttachmentRead | VkAccessFlags.ColorAttachmentWrite, VkAccessFlags.MemoryRead);
+                VkAccessFlags.ColorAttachmentWrite, VkAccessFlags.MemoryRead);
 
 		}
         /// <summary>

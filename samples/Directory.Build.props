@@ -25,14 +25,9 @@
 		<DefineConstants>NETSTANDARD;NETSTANDARD2_0;WITH_SHADOWS;_WITH_VKVG</DefineConstants>    
 	</PropertyGroup>
 	
-	<ItemGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">		
-		<ProjectReference Include="$(RootDirectory)CVKL\CVKL.csproj" />
-	</ItemGroup>	
-	<ItemGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">		
-		<PackageReference Include="CVKL" Version="0.1.7-beta" />
-	</ItemGroup>   
 	
 	<ItemGroup>
+		<PackageReference Include="CVKL" Version="0.1.7-beta" />
 		<PackageReference Include="SpirVTasks" Version="0.1.9-beta" />     
 		<PackageReference Include="Vulkan" Version="0.1.4" />        
 	</ItemGroup>    

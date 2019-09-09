@@ -166,6 +166,7 @@ namespace ModelSample {
 		}
 
 		protected override void OnResize () {
+			base.OnResize ();
 
 			if (frameBuffers != null)
 				for (int i = 0; i < swapChain.ImageCount; ++i)
