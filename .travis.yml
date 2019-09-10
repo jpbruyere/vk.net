@@ -1,7 +1,7 @@
 language: csharp
-dist: xenial
+dist: bionic
  
-dotnet: 2.1.502
+dotnet: 2.2.401-1
 mono: latest
 
 script:

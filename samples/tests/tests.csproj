@@ -1,6 +1,0 @@
-<Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="$(RootDirectory)netfx.props" />
-  <ItemGroup>
-    <Folder Include="shaders\" />
-  </ItemGroup>
-</Project>
