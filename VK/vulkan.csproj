@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="$(RootDirectory)netfx.props" />
   <PropertyGroup>   
     <Copyright></Copyright>
     <AssemblyVersion>0.1.5</AssemblyVersion>

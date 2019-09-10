@@ -1,4 +1,6 @@
-﻿/* credit to https://github.com/mellinoe */
+﻿// Copyright (c) 2017 Eric Mellino
+//
+// This code is licensed under the MIT license (MIT) (http://opensource.org/licenses/MIT)
 using System;
 using System.Collections.Generic;
 using System.Text;

@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="$(RootDirectory)netfx.props" />
   <PropertyGroup>    
     <OutputType>Exe</OutputType>        
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>

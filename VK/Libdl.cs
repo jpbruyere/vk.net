@@ -1,4 +1,7 @@
-﻿using System;
+﻿// Copyright (c) 2017 Eric Mellino
+//
+// This code is licensed under the MIT license (MIT) (http://opensource.org/licenses/MIT)
+using System;
 using System.Runtime.InteropServices;
 
 namespace VK
