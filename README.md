@@ -2,11 +2,7 @@
   <br>
   <a href="http://www.amitmerchant.com/electron-markdownify">
     <img src="https://github.com/jpbruyere/vk.net/blob/master/vk.net-128.png" alt="vk.net" width="128">
-  </a>
-  <br>  
-    <br>
-  Vulkan.net
-  <br>  
+  </a> 
 <p align="center">
   <a href="https://www.nuget.org/packages/Vulkan"><img src="https://buildstats.info/nuget/Vulkan"></a>
   <a href="https://travis-ci.org/jpbruyere/vk.net">
