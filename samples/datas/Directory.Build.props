@@ -1,5 +1,0 @@
-<Project>
-    <PropertyGroup>    
-	    <OutputPath>$(SolutionDir)build\$(Configuration)\</OutputPath>
-    </PropertyGroup>    
-</Project>
