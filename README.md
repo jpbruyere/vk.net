@@ -8,7 +8,7 @@
   <a href="https://travis-ci.org/jpbruyere/vk.net">
       <img src="https://travis-ci.org/jpbruyere/vk.net.svg?branch=master">
   </a>
-  <a href="https://ci.appveyor.com/project/jpbruyere/vk.net">
+  <a href="https://ci.appveyor.com/project/jpbruyere/vk-net">
     <img src="https://ci.appveyor.com/api/projects/status/j387lo59vnov8jbc?svg=true">
   </a>
   <a href="https://www.paypal.me/GrandTetraSoftware">

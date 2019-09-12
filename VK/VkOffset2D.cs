@@ -1,14 +1,13 @@
-﻿/* credit to https://github.com/mellinoe */
+﻿// Copyright (c) 2017 Eric Mellino
+//
+// This code is licensed under the MIT license (MIT) (http://opensource.org/licenses/MIT)
 using System;
-using System.Collections.Generic;
-using System.Text;
 
-namespace VK
-{
-    /// <summary>
-    /// Structure specifying a two-dimensional offset.
-    /// </summary>
-    public partial struct VkOffset2D : IEquatable<VkOffset2D>
+namespace VK {
+	/// <summary>
+	/// Structure specifying a two-dimensional offset.
+	/// </summary>
+	public partial struct VkOffset2D : IEquatable<VkOffset2D>
     {
         /// <summary>
         /// An <see cref="VkOffset2D"/> with all of its components set to zero.

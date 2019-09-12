@@ -6,13 +6,13 @@
     <Description>C# vulkan binding</Description>
     <Company></Company>
     <Product>VK</Product>
-        
+    <Licence>MIT</Licence>
     <PackageId>Vulkan</PackageId>
     <PackageTags>C# vulkan net binding</PackageTags>    
     <PackageVersion>$(AssemblyVersion)-beta</PackageVersion>        
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <PackageProjectUrl>https://github.com/jpbruyere/vk.net/blob/master/README.md</PackageProjectUrl>
-    <PackageIconUrl>https://github.com/jpbruyere/vk.net/blob/master/vk.net-32.png</PackageIconUrl>
+    <PackageIconUrl>https://github.com/jpbruyere/vk.net/blob/master/vk.net-128.png</PackageIconUrl>
     <SynchReleaseVersion>false</SynchReleaseVersion>
     <OutputPath>$(SolutionDir)build\$(Configuration)\</OutputPath>
   </PropertyGroup>
