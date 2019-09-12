@@ -4,7 +4,7 @@
 using System;
 using System.Runtime.InteropServices;
 
-namespace VK {
+namespace Vulkan {
 	internal static class LoadingUtils {
 		public static IntPtr GetDelegate (VkInstance inst, string name) {
 			byte[] n = System.Text.Encoding.UTF8.GetBytes (name + '\0');

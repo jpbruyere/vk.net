@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace VK
+namespace Vulkan
 {
     /// <summary>
     /// Structure specifying a two-dimensional subregion.

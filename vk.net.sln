@@ -34,28 +34,16 @@ Global
 		Policies = $0
 		$0.TextStylePolicy = $1
 		$1.FileWidth = 80
-		$1.NoTabsAfterNonTabs = True
-		$1.EolMarker = Unix
 		$1.scope = text/x-csharp
+		$1.TabsToSpaces = True
 		$0.CSharpFormattingPolicy = $2
-		$2.LabelPositioning = LeftMost
-		$2.NewLinesForBracesInTypes = False
-		$2.NewLinesForBracesInMethods = False
-		$2.NewLinesForBracesInProperties = False
-		$2.NewLinesForBracesInAccessors = False
-		$2.NewLinesForBracesInControlBlocks = False
-		$2.NewLinesForBracesInObjectCollectionArrayInitializers = False
-		$2.NewLineForElse = False
-		$2.NewLineForCatch = False
-		$2.NewLineForFinally = False
-		$2.SpacingAfterMethodDeclarationName = True
-		$2.SpaceAfterMethodCallName = True
 		$2.scope = text/x-csharp
 		$0.DotNetNamingPolicy = $3
 		$3.DirectoryNamespaceAssociation = PrefixedHierarchical
 		$0.TextStylePolicy = $4
 		$4.FileWidth = 80
 		$4.scope = text/plain
+		$4.TabsToSpaces = True
 		$0.TextStylePolicy = $5
 		$5.inheritsSet = null
 		$5.scope = application/config+xml
@@ -70,5 +58,11 @@ Global
 		$0.XmlFormattingPolicy = $9
 		$9.inheritsSet = null
 		$9.scope = application/x-msbuild
+		$0.TextStylePolicy = $10
+		$10.FileWidth = 80
+		$10.TabsToSpaces = True
+		$10.scope = application/xml
+		$0.XmlFormattingPolicy = $11
+		$11.scope = application/xml
 	EndGlobalSection
 EndGlobal

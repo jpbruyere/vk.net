@@ -4,7 +4,7 @@
 // This code is licensed under the MIT license (MIT) (http://opensource.org/licenses/MIT)
 using System;
 
-namespace VK.Generator
+namespace Vulkan.Generator
 {
     public class CalliRewriteAttribute : Attribute
     {

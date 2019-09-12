@@ -4,7 +4,7 @@
 using System;
 using System.Runtime.InteropServices;
 
-namespace VK
+namespace Vulkan
 {
     internal static class Libdl
     {

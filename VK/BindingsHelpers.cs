@@ -7,7 +7,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace VK {
+namespace Vulkan {
 	public static class BindingsHelpers
     {
         public static unsafe StringHandle StringToHGlobalUtf8(string s)

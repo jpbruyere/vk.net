@@ -3,7 +3,7 @@
 // This code is licensed under the MIT license (MIT) (http://opensource.org/licenses/MIT)
 using System;
 
-namespace VK {
+namespace Vulkan {
 	/// <summary>
 	/// Structure specifying a two-dimensional extent.
 	/// </summary>

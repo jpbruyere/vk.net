@@ -15,7 +15,7 @@ namespace Vk.Rewrite
 {
     public class Program
     {
-		const string mainVkNamespace = "VK";
+		const string mainVkNamespace = "Vulkan";
 
         static TypeReference s_calliRewriteRef;
         static MethodReference s_stringToHGlobalUtf8Ref;

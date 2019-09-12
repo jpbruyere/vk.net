@@ -5,7 +5,7 @@
 using System;
 using System.Runtime.InteropServices;
 
-namespace VK {
+namespace Vulkan {
 	[StructLayout (LayoutKind.Explicit)]
 	public struct VkClearValue {
 		[FieldOffset (0)]

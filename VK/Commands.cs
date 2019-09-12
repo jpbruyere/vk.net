@@ -7,7 +7,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 
-namespace VK
+namespace Vulkan
 {
     public static partial class Vk
     {
