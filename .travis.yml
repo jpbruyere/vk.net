@@ -5,8 +5,5 @@ dotnet: 2.2.401-1
 mono: latest
 
 script:
-    - nuget restore 
-    - msbuild 
-    - dotnet restore
-    - dotnet build 
+    - msbuild /t:restore;build 
     
