@@ -6,28 +6,15 @@ using System;
 using System.Runtime.InteropServices;
 
 namespace Vulkan {
-	[StructLayout (LayoutKind.Explicit)]
-	public struct VkClearValue {
-		[FieldOffset (0)]
-		public VkClearColorValue color;
-		[FieldOffset (0)]
-		public VkClearDepthStencilValue depthStencil;
 
+	public partial struct VkClearValue {
 		public VkClearValue (float r, float g, float b) {
 			depthStencil = default (VkClearDepthStencilValue);
 			color = new VkClearColorValue (r, g, b);
 		}
 	}
 
-	[StructLayout (LayoutKind.Explicit)]
-	public unsafe struct VkClearColorValue {
-		[FieldOffset (0)]
-		public fixed float float32[4];
-		[FieldOffset (0)]
-		public fixed int int32[4];
-		[FieldOffset (0)]
-		public fixed uint uint32[4];
-
+	public unsafe partial struct VkClearColorValue {
 		public VkClearColorValue (float r, float g, float b, float a = 1.0f) : this () {
 			fixed (float* tmp = float32) {
 				tmp[0] = r;
@@ -194,7 +181,5 @@ namespace Vulkan {
 			this.layout = layout;
 		}
     }
-
-
 }
 

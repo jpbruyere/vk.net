@@ -2,17 +2,19 @@
   <PropertyGroup>   
     <TargetFrameworks>netstandard2.0</TargetFrameworks>
     <Copyright></Copyright>
-    <AssemblyVersion>0.1.6</AssemblyVersion>
+    <AssemblyVersion>0.1.7</AssemblyVersion>
     <AssemblyName>VK</AssemblyName>
     <Description>C# vulkan binding</Description>
     <Company></Company>
     <Product>VK</Product>
     <Licence>MIT</Licence>
+    <PackageLicence>MIT</PackageLicence>
     <PackageId>Vulkan</PackageId>
     <PackageTags>C# vulkan net binding</PackageTags>    
-    <PackageVersion>$(AssemblyVersion)-beta</PackageVersion>        
+    <PackageVersion>$(AssemblyVersion)</PackageVersion>        
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <PackageProjectUrl>https://github.com/jpbruyere/vk.net/blob/master/README.md</PackageProjectUrl>
+    <Icon>vk.net-64.png</Icon>
     <PackageIcon>vk.net-64.png</PackageIcon>
     <SynchReleaseVersion>false</SynchReleaseVersion>
     <OutputPath>$(SolutionDir)build\$(Configuration)\</OutputPath>
@@ -26,9 +28,7 @@
     <ProjectReference Include="..\vk.rewrite\vk.rewrite.csproj" PrivateAssets="All" />
   </ItemGroup>
   <ItemGroup>
-    <None Update="vk.net-64.png">
-      <IncludeInPackage>true</IncludeInPackage>
-    </None>
+    <Content Include="vk.net-64.png" Pack="true" PackagePath=""/>
   </ItemGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -39,22 +39,28 @@
   </PropertyGroup>
     
   <Target Name="generate" BeforeTargets="BeforeCompile">
-    <Exec Condition="$(OS) == 'Windows_NT'" Command="$(SolutionDir)vk.generator/bin/$(Configuration)/net471/vk.generator.exe" WorkingDirectory="$(SolutionDir)vk.generator/bin/$(Configuration)/$(TargetFramework)/" ConsoleToMSBuild="true" EchoOff="true">
+    <Exec Condition="$(OS) == 'Windows_NT'" ConsoleToMSBuild="true" EchoOff="true"
+          Command="$(SolutionDir)vk.generator/bin/$(Configuration)/net471/vk.generator.exe"
+          WorkingDirectory="$(SolutionDir)vk.generator/bin/$(Configuration)/net471/">
         <Output TaskParameter="ConsoleOutput" PropertyName="OutputOfExec" />
     </Exec>
-    <Exec Condition="$(OS) != 'Windows_NT'" Command="mono $(SolutionDir)vk.generator/bin/$(Configuration)/net471/vk.generator.exe" WorkingDirectory="$(SolutionDir)vk.generator/bin/$(Configuration)/$(TargetFramework)/" ConsoleToMSBuild="true" EchoOff="true">
+    <Exec Condition="$(OS) != 'Windows_NT'" ConsoleToMSBuild="true" EchoOff="true"
+          Command="mono $(SolutionDir)vk.generator/bin/$(Configuration)/net471/vk.generator.exe"
+          WorkingDirectory="$(SolutionDir)vk.generator/bin/$(Configuration)/net471/">
         <Output TaskParameter="ConsoleOutput" PropertyName="OutputOfExec" />
     </Exec>
-    <CreateItem Include="../vk.generator/bin/$(Configuration)/$(TargetFramework)/*.cs">            
+    <CreateItem Include="../vk.generator/bin/$(Configuration)/net471/*.cs">            
         <Output TaskParameter="Include" ItemName="Compile" />
     </CreateItem>        
   </Target>
         
   <Target Name="rewrite" AfterTargets="CoreBuild">
-    <Exec Condition="$(OS) == 'Windows_NT'" Command="$(SolutionDir)vk.rewrite/bin/$(Configuration)/net471/vk.rewrite.exe $(OutputPath)VK.dll" ConsoleToMSBuild="true" EchoOff="true">
+    <Exec Condition="$(OS) == 'Windows_NT'" Command="$(SolutionDir)vk.rewrite/bin/$(Configuration)/net471/vk.rewrite.exe $(OutputPath)VK.dll"
+          ConsoleToMSBuild="true" EchoOff="true">
         <Output TaskParameter="ConsoleOutput" PropertyName="OutputOfExec" />
     </Exec>
-    <Exec Condition="$(OS) != 'Windows_NT'" Command="mono $(SolutionDir)vk.rewrite/bin/$(Configuration)/net471/vk.rewrite.exe $(OutputPath)VK.dll" ConsoleToMSBuild="true" EchoOff="true">
+    <Exec Condition="$(OS) != 'Windows_NT'" Command="mono $(SolutionDir)vk.rewrite/bin/$(Configuration)/net471/vk.rewrite.exe $(OutputPath)VK.dll"
+          ConsoleToMSBuild="true" EchoOff="true">
         <Output TaskParameter="ConsoleOutput" PropertyName="OutputOfExec" />
     </Exec>        
   </Target>
