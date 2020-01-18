@@ -5,11 +5,12 @@
 		
 		<AssemblyVersion>0.2.0</AssemblyVersion>
 		<AssemblyName>VK</AssemblyName>
-		<Description>C# vulkan binding</Description>
+		<Description>Low level vulkan bindings for .net</Description>
 		<Product>VK</Product>
 		<PackageLicence>MIT</PackageLicence>
 		<PackageId>Vulkan</PackageId>
 		<PackageTags>C# vulkan net binding</PackageTags>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<PackageVersion>$(AssemblyVersion)-beta</PackageVersion>
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 		<PackageProjectUrl>https://github.com/jpbruyere/vk.net/blob/master/README.md</PackageProjectUrl>
