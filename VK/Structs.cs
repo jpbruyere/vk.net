@@ -169,6 +169,16 @@ namespace Vulkan {
 			pObjectName = IntPtr.Zero;
 		}
 	}
+	public partial struct VkDebugUtilsObjectNameInfoEXT {
+		public VkDebugUtilsObjectNameInfoEXT(VkObjectType objectType, ulong handle)
+		{
+			sType = VkStructureType.DebugUtilsObjectNameInfoEXT;
+			pNext = IntPtr.Zero;
+			this.objectType = objectType;
+			objectHandle = handle;
+			pObjectName = IntPtr.Zero;
+		}
+	}
 	public partial struct VkDescriptorPoolSize {
 		public VkDescriptorPoolSize (VkDescriptorType descriptorType, uint count = 1) {
 			type = descriptorType;

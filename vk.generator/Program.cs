@@ -152,7 +152,7 @@ namespace vk.generator {
 
         };
 
-		static string[] skipEnums = { "VK_STRUCTURE_TYPE_SURFACE_CAPABILITIES2_EXT" };
+		static string[] skipEnums = { "VK_STRUCTURE_TYPE_SURFACE_CAPABILITIES2_EXT", "VK_PIPELINE_CREATE_DISPATCH_BASE" };
 
 		static Dictionary<string, string[]> paramTypeAliases = new Dictionary<string, string[]> {
 			{ "void*", new string[] {"IntPtr"} },
@@ -311,7 +311,7 @@ namespace vk.generator {
 			public static string GetCSName (string value, string containingType) {
 				string ccValue = value.ConvertUnderscoredUpperCasedNameToCamelCase();
 				string cType = containingType?.RemoveTagsAndFlagsSuffix();					
-				return containingType == null || cType != ccValue.Substring(0, cType.Length) ?
+				return containingType == null || (ccValue.Length > cType.Length && cType != ccValue.Substring(0, cType.Length)) ?
 					ccValue.StartsWith("Vk", StringComparison.Ordinal) ? ccValue.Substring(2) : ccValue :
 					ccValue.RemoveCommonLeadingPart (containingType);
 			}
@@ -483,9 +483,6 @@ namespace vk.generator {
 				tw.WriteLine ($"/// <summary> {ev.comment} </summary>");
 			if (!string.IsNullOrEmpty (ev.unusedComment))
 				tw.WriteLine ($"[Obsolete(\"{ev.unusedComment}\"]");
-
-			if (enumName == "VkResult")
-				Debugger.Break();
 
 			uint v;
 			string vName = ev.GetCSName (enumName);

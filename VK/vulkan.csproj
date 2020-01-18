@@ -1,67 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>   
-    <TargetFrameworks>netstandard2.0</TargetFrameworks>
-    <Copyright></Copyright>
-    <AssemblyVersion>0.1.7</AssemblyVersion>
-    <AssemblyName>VK</AssemblyName>
-    <Description>C# vulkan binding</Description>
-    <Company></Company>
-    <Product>VK</Product>
-    <Licence>MIT</Licence>
-    <PackageLicence>MIT</PackageLicence>
-    <PackageId>Vulkan</PackageId>
-    <PackageTags>C# vulkan net binding</PackageTags>    
-    <PackageVersion>$(AssemblyVersion)</PackageVersion>        
-    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-    <PackageProjectUrl>https://github.com/jpbruyere/vk.net/blob/master/README.md</PackageProjectUrl>
-    <Icon>vk.net-64.png</Icon>
-    <PackageIcon>vk.net-64.png</PackageIcon>
-    <SynchReleaseVersion>false</SynchReleaseVersion>
-    <OutputPath>$(SolutionDir)build\$(Configuration)\</OutputPath>
-  </PropertyGroup>
-  <ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">
-    <Reference Include="System" />    
-  </ItemGroup>
-    
-  <ItemGroup>
-    <ProjectReference Include="..\vk.generator\vk.generator.csproj" PrivateAssets="All" />
-    <ProjectReference Include="..\vk.rewrite\vk.rewrite.csproj" PrivateAssets="All" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="vk.net-64.png" Pack="true" PackagePath=""/>
-  </ItemGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <DefineConstants>TRACE;NETSTANDARD;NETSTANDARD2_0;DEBUG;NETFRAMEWORK;NET471</DefineConstants>    
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-  </PropertyGroup>
-    
-  <Target Name="generate" BeforeTargets="BeforeCompile">
-    <Exec Condition="$(OS) == 'Windows_NT'" ConsoleToMSBuild="true" EchoOff="true"
-          Command="$(SolutionDir)vk.generator/bin/$(Configuration)/net471/vk.generator.exe"
-          WorkingDirectory="$(SolutionDir)vk.generator/bin/$(Configuration)/net471/">
-        <Output TaskParameter="ConsoleOutput" PropertyName="OutputOfExec" />
-    </Exec>
-    <Exec Condition="$(OS) != 'Windows_NT'" ConsoleToMSBuild="true" EchoOff="true"
-          Command="mono $(SolutionDir)vk.generator/bin/$(Configuration)/net471/vk.generator.exe"
-          WorkingDirectory="$(SolutionDir)vk.generator/bin/$(Configuration)/net471/">
-        <Output TaskParameter="ConsoleOutput" PropertyName="OutputOfExec" />
-    </Exec>
-    <CreateItem Include="../vk.generator/bin/$(Configuration)/net471/*.cs">            
-        <Output TaskParameter="Include" ItemName="Compile" />
-    </CreateItem>        
-  </Target>
-        
-  <Target Name="rewrite" AfterTargets="CoreBuild">
-    <Exec Condition="$(OS) == 'Windows_NT'" Command="$(SolutionDir)vk.rewrite/bin/$(Configuration)/net471/vk.rewrite.exe $(OutputPath)VK.dll"
-          ConsoleToMSBuild="true" EchoOff="true">
-        <Output TaskParameter="ConsoleOutput" PropertyName="OutputOfExec" />
-    </Exec>
-    <Exec Condition="$(OS) != 'Windows_NT'" Command="mono $(SolutionDir)vk.rewrite/bin/$(Configuration)/net471/vk.rewrite.exe $(OutputPath)VK.dll"
-          ConsoleToMSBuild="true" EchoOff="true">
-        <Output TaskParameter="ConsoleOutput" PropertyName="OutputOfExec" />
-    </Exec>        
-  </Target>
+	<PropertyGroup>
+		<TargetFrameworks>netstandard2.0</TargetFrameworks>
+		
+		<AssemblyVersion>0.2.0</AssemblyVersion>
+		<AssemblyName>VK</AssemblyName>
+		<Description>C# vulkan binding</Description>
+		<Product>VK</Product>
+		<PackageLicence>MIT</PackageLicence>
+		<PackageId>Vulkan</PackageId>
+		<PackageTags>C# vulkan net binding</PackageTags>
+		<PackageVersion>$(AssemblyVersion)-beta</PackageVersion>
+		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+		<PackageProjectUrl>https://github.com/jpbruyere/vk.net/blob/master/README.md</PackageProjectUrl>
+		<Icon>vk.net-64.png</Icon>
+		<PackageIcon>vk.net-64.png</PackageIcon>
+		<SynchReleaseVersion>false</SynchReleaseVersion>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<Content Include="vk.net-64.png" Pack="true" PackagePath="" />
+		<Compile Include="$(SolutionDir)build/generated/*.cs" />
+	</ItemGroup>
+	
+	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<DefineConstants>TRACE;NETSTANDARD;NETSTANDARD2_0;DEBUG</DefineConstants>
+	</PropertyGroup>
+	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<DefineConstants>NETSTANDARD;NETSTANDARD2_0</DefineConstants>
+	</PropertyGroup>
+	
+	<Target Name="rewrite" AfterTargets="CoreBuild">
+		<Exec Condition="$(OS) == 'Windows_NT'" Command="$(SolutionDir)build/$(Configuration)/net471/vk.rewrite.exe $(TargetPath)" ConsoleToMSBuild="true" EchoOff="true">
+			<Output TaskParameter="ConsoleOutput" PropertyName="OutputOfExec" />
+		</Exec>
+		<Exec Condition="$(OS) != 'Windows_NT'" Command="mono $(SolutionDir)build/$(Configuration)/net471/vk.rewrite.exe $(TargetPath)" ConsoleToMSBuild="true" EchoOff="true">
+			<Output TaskParameter="ConsoleOutput" PropertyName="OutputOfExec" />
+		</Exec>
+	</Target>	
+
 </Project>

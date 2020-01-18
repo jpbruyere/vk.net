@@ -3,13 +3,16 @@
 		<RootDirectory>$(MSBuildThisFileDirectory)</RootDirectory>
 		<Deterministic>true</Deterministic>
 
-		<!--<TargetFrameworks>net471;netcoreapp2.2</TargetFrameworks>-->
-
 		<RepositoryUrl>https://github.com/jpbruyere/vk.net</RepositoryUrl>
 		<License>MIT</License>
 		<Authors>Jean-Philippe Bruyère</Authors>
+		<Copyright></Copyright>
+		<Company></Company>
+		
+		<IntermediateOutputPath>$(SolutionDir)build\obj\$(Configuration)\</IntermediateOutputPath>
+		<OutputPath>$(SolutionDir)build\$(Configuration)\</OutputPath>		
 
 		<LangVersion>7.2</LangVersion>
-
+		
 	</PropertyGroup>
 </Project>

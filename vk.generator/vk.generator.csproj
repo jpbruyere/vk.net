@@ -1,16 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>    
-    <TargetFrameworks>net471;netstandard2.0</TargetFrameworks>
-    <OutputType>Exe</OutputType>        
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-  </PropertyGroup>
-    
-  <ItemGroup Condition="$(TargetFramework.StartsWith('net4'))"> 
-    <Reference Include="System" />
-  </ItemGroup>          
-  <ItemGroup>
-    <None Update="vk.xml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
+	<PropertyGroup>
+		<TargetFrameworks>net471</TargetFrameworks>
+		<OutputType>Exe</OutputType>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+	</PropertyGroup>
+	<ItemGroup>
+		<None Update="vk.xml">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
+	<Target Name="generate" AfterTargets="CoreBuild">
+		<MakeDir Directories="$(SolutionDir)build/generated" />
+		<Exec Condition="$(OS) == 'Windows_NT'" Command="$(TargetPath)" WorkingDirectory="$(SolutionDir)build/generated">
+			<Output TaskParameter="ConsoleOutput" PropertyName="OutputOfExec" />
+		</Exec>
+		<Exec Condition="$(OS) != 'Windows_NT'" Command="mono $(TargetPath)" WorkingDirectory="$(SolutionDir)build/generated">
+			<Output TaskParameter="ConsoleOutput" PropertyName="OutputOfExec" />
+		</Exec>
+	</Target>
 </Project>
