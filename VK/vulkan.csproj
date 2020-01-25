@@ -22,6 +22,12 @@
 	<ItemGroup>
 		<Content Include="vk.net-64.png" Pack="true" PackagePath="" />
 		<Compile Include="$(SolutionDir)build/generated/*.cs" />
+		<ProjectReference Include="../vk.generator/vk.generator.csproj">
+			<ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+		</ProjectReference>
+		<ProjectReference Include="../vk.rewrite/vk.rewrite.csproj">
+			<ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+		</ProjectReference>	
 	</ItemGroup>
 	
 	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -32,6 +38,19 @@
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<DefineConstants>NETSTANDARD;NETSTANDARD2_0</DefineConstants>
 	</PropertyGroup>
+	
+	<Target Name="generate" BeforeTargets="BeforeCompile">
+		<MakeDir Directories="$(SolutionDir)build/generated" />
+		<Exec Condition="$(OS) == 'Windows_NT'" Command="$(SolutionDir)build/$(Configuration)/net471/vk.generator.exe" WorkingDirectory="$(SolutionDir)build/generated">
+			<Output TaskParameter="ConsoleOutput" PropertyName="OutputOfExec" />
+		</Exec>
+		<Exec Condition="$(OS) != 'Windows_NT'" Command="mono $(SolutionDir)build/$(Configuration)/net471/vk.generator.exe" WorkingDirectory="$(SolutionDir)build/generated">
+			<Output TaskParameter="ConsoleOutput" PropertyName="OutputOfExec" />
+		</Exec>
+		<CreateItem Include="$(SolutionDir)build/generated/*.cs">            
+			<Output TaskParameter="Include" ItemName="Compile" />
+		</CreateItem>		
+	</Target>	
 	
 	<Target Name="rewrite" AfterTargets="CoreBuild">
 		<Exec Condition="$(OS) == 'Windows_NT'" Command="$(SolutionDir)build/$(Configuration)/net471/vk.rewrite.exe $(TargetPath)" ConsoleToMSBuild="true" EchoOff="true">
