@@ -10,13 +10,4 @@
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
 	</ItemGroup>
-	<Target Name="generate" AfterTargets="CoreBuild">
-		<MakeDir Directories="$(SolutionDir)build/generated" />
-		<Exec Condition="$(OS) == 'Windows_NT'" Command="$(TargetPath)" WorkingDirectory="$(SolutionDir)build/generated">
-			<Output TaskParameter="ConsoleOutput" PropertyName="OutputOfExec" />
-		</Exec>
-		<Exec Condition="$(OS) != 'Windows_NT'" Command="mono $(TargetPath)" WorkingDirectory="$(SolutionDir)build/generated">
-			<Output TaskParameter="ConsoleOutput" PropertyName="OutputOfExec" />
-		</Exec>
-	</Target>
 </Project>

@@ -1,0 +1,42 @@
+version: 1.0.{build}
+
+image:
+  - Visual Studio 2019
+  - Ubuntu
+
+
+build:
+  verbosity: minimal
+
+for:
+  -
+    matrix:
+      only:
+        - image: Visual Studio 2019
+    environment:
+      VULKAN_SDK: C:/VulkanSDK/1.1.130.0
+      APPVEYOR_SAVE_CACHE_ON_ERROR: true
+    cache:
+      - VulkanSDK.exe
+      - c:\VulkanSDK\
+    install:
+      - if not exist VulkanSDK.exe curl -L --silent --show-error --output VulkanSDK.exe https://vulkan.lunarg.com/sdk/download/1.1.130.0/windows/VulkanSDK-1.1.130.0-Installer.exe?Human=true && VulkanSDK.exe /S
+    build_script:
+      - msbuild /p:Configuration=Release /t:restore
+      - msbuild /p:Configuration=Release
+
+  -
+    matrix:
+      only:
+        - image: Ubuntu
+    environment:
+      FrameworkPathOverride: /usr/lib/mono/4.5/
+    install:
+      - wget -qO - http://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add -
+      - sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-bionic.list https://packages.lunarg.com/vulkan/lunarg-vulkan-bionic.list 
+      - sudo apt -qq update
+      - sudo apt -y install vulkan-sdk
+      - glslc --version
+    build_script:
+      - dotnet build /p:Configuration=Release
+
