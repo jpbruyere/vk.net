@@ -1,10 +1,12 @@
 language: csharp
+
 dist: bionic
  
-dotnet: 2.2.401-1
-mono: latest
+dotnet: 3.1 
+
+env:
+    - FrameworkPathOverride=/usr/lib/mono/4.5/
 
 script:
-    - msbuild /t:restore
-    - msbuild 
+    - dotnet build vk.net.sln
     
