@@ -21,7 +21,6 @@
 
 	<ItemGroup>
 		<Content Include="vk.net-64.png" Pack="true" PackagePath="" />
-		<Compile Include="$(SolutionDir)build/generated/*.cs" />
 		<ProjectReference Include="../vk.generator/vk.generator.csproj">
 			<ReferenceOutputAssembly>false</ReferenceOutputAssembly>
 		</ProjectReference>
