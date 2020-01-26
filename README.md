@@ -6,7 +6,7 @@
 <p align="center">
   <a href="https://www.nuget.org/packages/Vulkan"><img src="https://buildstats.info/nuget/Vulkan"></a>
   <a href="https://travis-ci.org/jpbruyere/vk.net">
-      <img src="https://img.shields.io/travis/jpbruyere/vk.net.svg?&logo=travis&logoColor=white>
+      <img src="https://img.shields.io/travis/jpbruyere/vk.net.svg?&logo=travis&logoColor=white">
   </a>
   <a href="https://ci.appveyor.com/project/jpbruyere/vk-net">
     <img src="https://img.shields.io/appveyor/ci/jpbruyere/vk-net?logo=appveyor&logoColor=lightgrey">
