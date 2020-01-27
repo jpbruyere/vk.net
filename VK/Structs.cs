@@ -79,7 +79,7 @@ namespace Vulkan {
 	public partial struct VkDescriptorSetLayoutBinding {
 		public VkDescriptorSetLayoutBinding (uint _binding, VkShaderStageFlags _stageFlags, VkDescriptorType _descriptorType, uint _descriptorCount = 1) {
 			binding = _binding;
-			descriptorType = _descriptorType;
+			this._descriptorType = (int)_descriptorType;
 			descriptorCount = _descriptorCount;
 			stageFlags = _stageFlags;
 			pImmutableSamplers = (IntPtr)0;
@@ -87,7 +87,7 @@ namespace Vulkan {
 	}
 	public partial struct VkDescriptorSetLayoutCreateInfo {
 		public VkDescriptorSetLayoutCreateInfo (VkDescriptorSetLayoutCreateFlags flags, uint bindingCount, IntPtr pBindings) {
-			sType = VkStructureType.DescriptorSetLayoutCreateInfo;
+			this._sType = (int)VkStructureType.DescriptorSetLayoutCreateInfo;
 			pNext = IntPtr.Zero;
 			this.flags = flags;
 			this.bindingCount = bindingCount;
@@ -98,7 +98,7 @@ namespace Vulkan {
 		public VkVertexInputBindingDescription (uint _binding, uint _stride, VkVertexInputRate _inputRate = VkVertexInputRate.Vertex) {
 			binding = _binding;
 			stride = _stride;
-			inputRate = _inputRate;
+			this._inputRate = (int)_inputRate;
 		}
 	}
 
@@ -106,13 +106,13 @@ namespace Vulkan {
 		public VkVertexInputAttributeDescription (uint _binding, uint _location, VkFormat _format, uint _offset = 0) {
 			location = _location;
 			binding = _binding;
-			format = _format;
+			this._format = (int)_format;
 			offset = _offset;
 		}
 		public VkVertexInputAttributeDescription (uint _location, VkFormat _format, uint _offset = 0) {
 			location = _location;
 			binding = 0;
-			format = _format;
+			this._format = (int)_format;
 			offset = _offset;
 		}
 	}
@@ -126,12 +126,12 @@ namespace Vulkan {
 			VkBlendOp alphaBlendOp = VkBlendOp.Add,
 			VkColorComponentFlags colorWriteMask = VkColorComponentFlags.R | VkColorComponentFlags.G | VkColorComponentFlags.B | VkColorComponentFlags.A) {
 			this.blendEnable = blendEnable;
-			this.srcColorBlendFactor = srcColorBlendFactor;
-			this.dstColorBlendFactor = dstColorBlendFactor;
-			this.colorBlendOp = colorBlendOp;
-			this.srcAlphaBlendFactor = srcAlphaBlendFactor;
-			this.dstAlphaBlendFactor = dstAlphaBlendFactor;
-			this.alphaBlendOp = alphaBlendOp;
+			this._srcColorBlendFactor = (int)srcColorBlendFactor;
+			this._dstColorBlendFactor = (int)dstColorBlendFactor;
+			this._colorBlendOp = (int)colorBlendOp;
+			this._srcAlphaBlendFactor = (int)srcAlphaBlendFactor;
+			this._dstAlphaBlendFactor = (int)dstAlphaBlendFactor;
+			this._alphaBlendOp = (int)alphaBlendOp;
 			this.colorWriteMask = colorWriteMask;
 		}
 	}
@@ -144,7 +144,7 @@ namespace Vulkan {
 	}
 	public partial struct VkCommandBufferBeginInfo {
 		public VkCommandBufferBeginInfo (VkCommandBufferUsageFlags usage = (VkCommandBufferUsageFlags)0) {
-			sType = VkStructureType.CommandBufferBeginInfo;
+			this._sType = (int)VkStructureType.CommandBufferBeginInfo;
 			pNext = pInheritanceInfo = IntPtr.Zero;
 			flags = usage;
 		}
@@ -162,9 +162,9 @@ namespace Vulkan {
 	}
 	public partial struct VkDebugMarkerObjectNameInfoEXT {
 		public VkDebugMarkerObjectNameInfoEXT (VkDebugReportObjectTypeEXT objectType, ulong handle) {
-			sType = VkStructureType.DebugMarkerObjectNameInfoEXT;
+			this._sType = (int)VkStructureType.DebugMarkerObjectNameInfoEXT;
 			pNext = IntPtr.Zero;
-			this.objectType = objectType;
+			this._objectType = (int)objectType;
 			_object = handle;
 			pObjectName = IntPtr.Zero;
 		}
@@ -172,23 +172,23 @@ namespace Vulkan {
 	public partial struct VkDebugUtilsObjectNameInfoEXT {
 		public VkDebugUtilsObjectNameInfoEXT(VkObjectType objectType, ulong handle)
 		{
-			sType = VkStructureType.DebugUtilsObjectNameInfoEXT;
+			this._sType = (int)VkStructureType.DebugUtilsObjectNameInfoEXT;
 			pNext = IntPtr.Zero;
-			this.objectType = objectType;
+			this._objectType = (int)objectType;
 			objectHandle = handle;
 			pObjectName = IntPtr.Zero;
 		}
 	}
 	public partial struct VkDescriptorPoolSize {
 		public VkDescriptorPoolSize (VkDescriptorType descriptorType, uint count = 1) {
-			type = descriptorType;
+			this._type = (int)descriptorType;
 			descriptorCount = count;
 		}
 	}
     public unsafe partial struct VkAttachmentReference {
 		public VkAttachmentReference (uint attachment, VkImageLayout layout) {
 			this.attachment = attachment;
-			this.layout = layout;
+			this._layout = (int)layout;
 		}
     }
 }
