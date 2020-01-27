@@ -11,7 +11,7 @@
 		<PackageId>Vulkan</PackageId>
 		<PackageTags>C# vulkan net binding</PackageTags>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
-		<PackageVersion>$(AssemblyVersion)-beta</PackageVersion>
+		<PackageVersion>$(AssemblyVersion)</PackageVersion>
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 		<PackageProjectUrl>https://github.com/jpbruyere/vk.net/blob/master/README.md</PackageProjectUrl>
 		<Icon>vk.net-64.png</Icon>
