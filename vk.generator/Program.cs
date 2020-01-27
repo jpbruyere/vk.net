@@ -400,9 +400,24 @@ namespace vk.generator {
 					tw.WriteLine ($"/// <summary> {mb.comment} </summary>");
 
 				string typeStr;
+
+				EnumDef ed = enums.FirstOrDefault (e => e.Name == mb.typedef.Name);
+
 				if (mb.typedef.IndirectionLevel > 0 || mb.typedef.Name.StartsWith ("PFN_", StringComparison.Ordinal))
 					typeStr = "IntPtr";
-				else
+				else if (ed != null) {
+					//enums has to be stored in struct as int or uint for enums are not yet blittable in ms .NET
+					typeStr = ed.type == EnumTypes.@enum ? "int" : "uint";
+					tw.WriteLine ($"{typeStr} _{mb.Name};");
+					tw.WriteLine ($"public {mb.typedef.CSName} {mb.Name} {{");
+					tw.Indent++;
+					tw.WriteLine ($"get => ({mb.typedef.CSName})_{mb.Name};");
+					tw.WriteLine ($"set {{ _{mb.Name} = ({typeStr})value; }}");
+					tw.Indent--;
+					tw.WriteLine (@"}");
+
+					continue;
+				} else
 					typeStr = mb.typedef.CSName;
 
 				if (sd.category == TypeCategories.union)
@@ -1130,8 +1145,8 @@ namespace vk.generator {
 				} else if (f.Name == "remove") {
 					Console.ForegroundColor = ConsoleColor.DarkBlue;
 					Console.WriteLine ($"feature remove: {f.OuterXml}");
-				} else
-					Debugger.Break ();
+				}// else
+					//Debugger.Break ();
 			}
 
 			features.Add (fd);

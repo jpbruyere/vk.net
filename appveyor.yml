@@ -4,7 +4,6 @@ image:
   - Visual Studio 2019
   - Ubuntu
 
-
 build:
   verbosity: minimal
 
@@ -35,8 +34,7 @@ for:
       - wget -qO - http://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add -
       - sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-bionic.list https://packages.lunarg.com/vulkan/lunarg-vulkan-bionic.list 
       - sudo apt -qq update
-      - sudo apt -y install vulkan-sdk
-      - glslc --version
+      - sudo apt -y install vulkan-sdk      
     build_script:
       - dotnet build /p:Configuration=Release
 
