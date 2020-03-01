@@ -184,7 +184,8 @@ namespace vk.generator {
 										"vkGetDeviceProcAddr",
 										"vkGetInstanceProcAddr",
 										"vkEnumerateInstanceExtensionProperties",
-										"vkEnumerateInstanceLayerProperties"};
+										"vkEnumerateInstanceLayerProperties",
+										"vkEnumerateInstanceVersion"};
 
         static string[] reservedNames = { "event", "object" };
 
