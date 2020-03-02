@@ -178,16 +178,9 @@ namespace vk.generator {
 
 		//function pointers to retrieve before any other vulkan api call.
 		//those command should not move in other iface than common to be preload by normal dyn load
-		static string[] preloadedCommands  = {
-										"vkCreateInstance",
-										"vkDestroyInstance",
-										"vkGetDeviceProcAddr",
-										"vkGetInstanceProcAddr",
-										"vkEnumerateInstanceExtensionProperties",
-										"vkEnumerateInstanceLayerProperties",
-										"vkEnumerateInstanceVersion"};
+		static List<string> preloadedCommands  = new List<string> {"vkGetDeviceProcAddr","vkGetInstanceProcAddr"};
 
-        static string[] reservedNames = { "event", "object" };
+		static string [] reservedNames = { "event", "object" };
 
 		static Dictionary<string, ParamDef> paramsDefs = new Dictionary<string, ParamDef> ();
 
@@ -773,6 +766,12 @@ namespace vk.generator {
 			tw.WriteLine ();
 		}
 		static void gen_commands (string englobingStaticClass) {
+
+			string [] firstParamPreloadExclusion = { "VkInstance", "VkDevice", "VkPhysicalDevice", "VkQueue", "VkCommandBuffer" };
+			preloadedCommands.AddRange (
+				commands.Where (c => string.IsNullOrEmpty (c.alias) && c.parameters.Count > 0 &&
+					!firstParamPreloadExclusion.Contains (c.parameters [0].typedef.Name)).Select (c => c.Name));
+
 			using (StreamWriter sr = new StreamWriter ($"commands_{englobingStaticClass}_gen.cs", false, System.Text.Encoding.UTF8)) {
 				using (IndentedTextWriter tw = new IndentedTextWriter (sr)) {
 					writePreamble (tw, vknamespace + ".Generator");
