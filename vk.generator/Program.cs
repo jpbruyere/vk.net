@@ -427,12 +427,24 @@ namespace vk.generator {
 
 				if (!string.IsNullOrEmpty (mb.fixedArray)) {
 					int dim = 0;
-					if (valueTypes.Contains (typeStr)) { 
-						if (int.TryParse (mb.fixedArray, out dim)) {
-							tw.WriteLine ($"public fixed {typeStr} {mb.Name}[{dim}];");
-						} else { 
-							tw.WriteLine ($"public fixed {typeStr} {mb.Name}[(int)Vk.{EnumerantValue.GetCSName(mb.fixedArray,null)}];");
-						}
+					if (valueTypes.Contains (typeStr)) {
+						string strSize = int.TryParse (mb.fixedArray, out dim) ? dim.ToString() : $"(int)Vk.{EnumerantValue.GetCSName (mb.fixedArray, null)}";
+						if (mb.typedef.Name == "char") {
+							tw.WriteLine ($"fixed {typeStr} _{mb.Name}[{strSize}];");
+							tw.WriteLine ($"public string {mb.Name} {{");
+							tw.Indent++;
+							tw.WriteLine ($"get {{");
+							tw.Indent++;
+							tw.WriteLine ($"fixed ({typeStr}* tmp = _{mb.Name})");
+							tw.Indent++;
+							tw.WriteLine ($"return System.Text.Encoding.UTF8.GetString (tmp, {strSize});");
+							//tw.WriteLine ($"set {{ _{mb.Name} = ({typeStr})value; }}");
+							tw.Indent-=2;
+							tw.WriteLine (@"}");
+							tw.Indent--;
+							tw.WriteLine (@"}");
+						} else
+							tw.WriteLine ($"public fixed {typeStr} {mb.Name}[{strSize}];");
 						continue;
 					}
 					if (int.TryParse (mb.fixedArray, out dim)) {
