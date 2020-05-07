@@ -153,6 +153,7 @@ namespace vk.generator {
         };
 
 		static string[] skipEnums = { "VK_STRUCTURE_TYPE_SURFACE_CAPABILITIES2_EXT", "VK_PIPELINE_CREATE_DISPATCH_BASE" };
+		static string[] skipStruct = { "VkTransformMatrixKHR" };
 
 		static Dictionary<string, string[]> paramTypeAliases = new Dictionary<string, string[]> {
 			{ "void*", new string[] {"IntPtr"} },
@@ -390,11 +391,22 @@ namespace vk.generator {
 			tw.WriteLine (@"};");
 			tw.Indent--;
 			tw.WriteLine (@"}");
+
+			tw.WriteLine ($"public {sd.Name} (IntPtr pNext) : this () {{");
+			tw.Indent++;
+
+			tw.WriteLine ($"sType = {sType.CSName}.{EnumerantValue.GetCSName (md.defaultValue, sType.CSName)};");
+			tw.WriteLine ($"this.pNext = pNext;");
+
+			tw.Indent--;
+			tw.WriteLine (@"}");
 		}
 		static string[] valueTypes = { "byte", "int", "uint", "float", "ushort", "ulong" };
 		static void gen_struct (IndentedTextWriter tw, StructDef sd) {
 			if (sd.category == TypeCategories.union)
 				tw.WriteLine($"[StructLayout(LayoutKind.Explicit)]");
+			else
+				tw.WriteLine ($"[StructLayout(LayoutKind.Sequential)]");
 			tw.WriteLine ($"public unsafe partial struct {sd.Name} {{");
 			tw.Indent++;
 			foreach (MemberDef mb in sd.members) {
@@ -473,8 +485,11 @@ namespace vk.generator {
 					writePreamble (tw, "System.Runtime.InteropServices");
 					tw.Indent++;
 
-					foreach (StructDef sd in types.OfType<StructDef> ())//.Where(t=>t.definedBy.Count == 0))
+					foreach (StructDef sd in types.OfType<StructDef> ()) {
+						if (skipStruct.Contains (sd.Name))
+							continue;
 						gen_struct (tw, sd);
+					}
 
 					tw.Indent--;
 					tw.WriteLine (@"}");
@@ -855,7 +870,7 @@ namespace vk.generator {
 					types.Add (new TypeDef {
 						category = category,
 						Name = nType["name"].InnerText,
-						baseType = nType["type"].InnerText
+						baseType = nType["type"]?.InnerText
 					});
 					break;
 				case TypeCategories.bitmask:
@@ -973,7 +988,7 @@ namespace vk.generator {
 
 			EnumerantValue ev = new EnumerantValue ();
 			foreach (XmlNode p in nEnum.ChildNodes) {
-				if (p.Name == "comment") {
+				if (p.Name == "comment" || p.NodeType == XmlNodeType.Comment) {
 					ev.comment = p.InnerXml;
 					continue;
 				} 

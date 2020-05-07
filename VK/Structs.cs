@@ -191,5 +191,16 @@ namespace Vulkan {
 			this._layout = (int)layout;
 		}
     }
+	/// <summary>
+	/// 3X4 ROW Major affine transformation matrix
+	/// </summary>
+	[StructLayout (LayoutKind.Sequential)]
+	public struct VkTransformMatrixKHR {
+		[MarshalAs (UnmanagedType.ByValArray, SizeConst = 48)] float[] values;
+		public float this[int row, int col] {
+			get => values[row * 3 + col];
+			set => values[row * 3 + col] = value;
+		}
+	}
 }
 

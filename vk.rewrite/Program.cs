@@ -88,13 +88,9 @@ namespace Vk.Rewrite
             List<VariableDefinition> stringParams = new List<VariableDefinition>();
             for (int i = 0; i < method.Parameters.Count; i++)
             {
-                EmitLoadArgument (il, i, method.Parameters);
-                TypeReference parameterType = method.Parameters[i].ParameterType;
 
-				if (parameterType.IsGenericInstance) {
-					if (parameterType.Name == "Nullable`1")
-						System.Diagnostics.Debugger.Break ();
-				}
+				EmitLoadArgument (il, i, method.Parameters);
+				TypeReference parameterType = method.Parameters[i].ParameterType;
 
                 if (parameterType.FullName == "System.String")
                 {
@@ -104,15 +100,7 @@ namespace Vk.Rewrite
                     il.Emit(OpCodes.Stloc, variableDef);
                     il.Emit(OpCodes.Ldloc, variableDef);
                     stringParams.Add(variableDef);
-                }
-                else if (parameterType.IsByReference)
-                {
-                    VariableDefinition byRefVariable = new VariableDefinition(new PinnedType(parameterType));
-                    method.Body.Variables.Add(byRefVariable);
-                    il.Emit(OpCodes.Stloc, byRefVariable);
-                    il.Emit(OpCodes.Ldloc, byRefVariable);
-                    il.Emit(OpCodes.Conv_I);
-                }
+                }                
             }
 				            
             FieldDefinition field = method.DeclaringType.Fields.SingleOrDefault(fd => fd.Name == method.Name + "_ptr");
@@ -123,22 +111,16 @@ namespace Vk.Rewrite
             il.Emit(OpCodes.Ldsfld, field);
 
             CallSite callSite = new CallSite(method.ReturnType) {CallingConvention = MethodCallingConvention.StdCall};
-            
+
 			foreach (ParameterDefinition pd in method.Parameters)
             {
-                TypeReference parameterType;
 
-                if (pd.ParameterType.IsByReference)
-                    parameterType = new PointerType(pd.ParameterType.GetElementType());
-                else if (pd.ParameterType.FullName == "System.String")
-                    parameterType = s_stringHandleRef;
-                else
-                    parameterType = pd.ParameterType;
-
-                ParameterDefinition calliPD = new ParameterDefinition(pd.Name, pd.Attributes, parameterType);
-
-                callSite.Parameters.Add(calliPD);
+				if (pd.ParameterType.FullName == "System.String")
+					callSite.Parameters.Add (new ParameterDefinition (pd.Name, pd.Attributes, s_stringHandleRef));
+				else
+					callSite.Parameters.Add (pd);
             }
+
             il.Emit(OpCodes.Calli, callSite);
 
             foreach (VariableDefinition stringVar in stringParams)
