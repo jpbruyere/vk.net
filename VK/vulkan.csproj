@@ -43,10 +43,10 @@
 	
 	<Target Name="generate" BeforeTargets="BeforeCompile">
 		<MakeDir Directories="$(SolutionDir)build/generated" />
-		<Exec Condition="$(OS) == 'Windows_NT'" Command="$(SolutionDir)build/$(Configuration)/net471/vk.generator.exe" WorkingDirectory="$(SolutionDir)build/generated">
+		<Exec Condition="$(OS) == 'Windows_NT'" Command="$(SolutionDir)build/$(Configuration)/$(ToolsFramework)/vk.generator.exe" WorkingDirectory="$(SolutionDir)build/generated">
 			<Output TaskParameter="ConsoleOutput" PropertyName="OutputOfExec" />
 		</Exec>
-		<Exec Condition="$(OS) != 'Windows_NT'" Command="mono $(SolutionDir)build/$(Configuration)/net471/vk.generator.exe" WorkingDirectory="$(SolutionDir)build/generated">
+		<Exec Condition="$(OS) != 'Windows_NT'" Command="mono $(SolutionDir)build/$(Configuration)/$(ToolsFramework)/vk.generator.exe" WorkingDirectory="$(SolutionDir)build/generated">
 			<Output TaskParameter="ConsoleOutput" PropertyName="OutputOfExec" />
 		</Exec>
 		<CreateItem Include="$(SolutionDir)build/generated/*.cs">            
@@ -55,10 +55,10 @@
 	</Target>	
 	
 	<Target Name="rewrite" AfterTargets="CoreBuild">
-		<Exec Condition="$(OS) == 'Windows_NT'" Command="$(SolutionDir)build/$(Configuration)/net471/vk.rewrite.exe $(TargetPath)" ConsoleToMSBuild="true" EchoOff="true">
+		<Exec Condition="$(OS) == 'Windows_NT'" Command="$(SolutionDir)build/$(Configuration)/$(ToolsFramework)/vk.rewrite.exe $(TargetPath)" ConsoleToMSBuild="true" EchoOff="true">
 			<Output TaskParameter="ConsoleOutput" PropertyName="OutputOfExec" />
 		</Exec>
-		<Exec Condition="$(OS) != 'Windows_NT'" Command="mono $(SolutionDir)build/$(Configuration)/net471/vk.rewrite.exe $(TargetPath)" ConsoleToMSBuild="true" EchoOff="true">
+		<Exec Condition="$(OS) != 'Windows_NT'" Command="mono $(SolutionDir)build/$(Configuration)/$(ToolsFramework)/vk.rewrite.exe $(TargetPath)" ConsoleToMSBuild="true" EchoOff="true">
 			<Output TaskParameter="ConsoleOutput" PropertyName="OutputOfExec" />
 		</Exec>
 	</Target>	
