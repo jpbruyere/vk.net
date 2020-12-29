@@ -3,7 +3,7 @@
 	<PropertyGroup>
 		<TargetFrameworks>netstandard2.0</TargetFrameworks>
 		
-		<AssemblyVersion>0.2.3</AssemblyVersion>
+		<AssemblyVersion>0.2.5</AssemblyVersion>
 		<AssemblyName>VK</AssemblyName>
 		<Description>Low level vulkan bindings for .net</Description>
 		<Product>VK</Product>

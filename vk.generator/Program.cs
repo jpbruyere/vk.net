@@ -150,10 +150,12 @@ namespace vk.generator {
 			{ "PFN_vkVoidFunction","IntPtr" },
 			{ "AHardwareBuffer", "Android.ANativeWindow" },//must be corrected
 
-        };
+			{ "IDirectFB","IntPtr" },
+			{ "IDirectFBSurface","IntPtr" },
+			
+		};
 
-		static string[] skipEnums = { "VK_STRUCTURE_TYPE_SURFACE_CAPABILITIES2_EXT", "VK_PIPELINE_CREATE_DISPATCH_BASE" };
-		static string[] skipStruct = { "VkTransformMatrixKHR" };
+		static string[] skipEnums = { "VK_STRUCTURE_TYPE_SURFACE_CAPABILITIES2_EXT", "VK_PIPELINE_CREATE_DISPATCH_BASE" };		
 
 		static Dictionary<string, string[]> paramTypeAliases = new Dictionary<string, string[]> {
 			{ "void*", new string[] {"IntPtr"} },
@@ -258,9 +260,7 @@ namespace vk.generator {
 				return tmp;
 			}
 
-			public string FullCTypeDecl {
-				get { return txtbefore + name + txtafter; }
-			}
+			public string FullCTypeDecl => txtbefore + name + txtafter;			
 			public int IndirectionLevel {
 				get {
 					if (string.IsNullOrEmpty (txtafter))
@@ -273,15 +273,9 @@ namespace vk.generator {
 					return i;
 				}
 			}
-			public bool IsStruct {
-				get { return string.IsNullOrEmpty (txtbefore) ? false : txtbefore.Contains ("struct"); }
-			}
-			public bool IsConst {
-				get { return string.IsNullOrEmpty (txtbefore) ? false : txtbefore.Contains ("const"); }
-			}
-			public override string ToString () {
-				return FullCTypeDecl;
-			}
+			public bool IsStruct => string.IsNullOrEmpty (txtbefore) ? false : txtbefore.Contains ("struct");			
+			public bool IsConst => string.IsNullOrEmpty (txtbefore) ? false : txtbefore.Contains ("const");
+			public override string ToString () => FullCTypeDecl;
 		}
 		class MemberDef : Definition {
 			public ParamDef typedef;
@@ -294,9 +288,7 @@ namespace vk.generator {
 			public string defaultValue;
 			public string fixedArray;
 
-			public override string ToString () {
-				return string.Format ($"memberdef: {typedef.FullCTypeDecl} {name}");
-			}
+			public override string ToString () => string.Format ($"memberdef: {typedef.FullCTypeDecl} {name}");
 		}
 
 		class EnumerantValue : Definition, IEquatable<EnumerantValue>{//name is not yet converted to csname!!
@@ -439,9 +431,12 @@ namespace vk.generator {
 
 				if (!string.IsNullOrEmpty (mb.fixedArray)) {
 					int dim = 0;
+					string[] dims = mb.fixedArray.Split (new char[] { '[', ']' }, StringSplitOptions.RemoveEmptyEntries); 
 					if (valueTypes.Contains (typeStr)) {
-						string strSize = int.TryParse (mb.fixedArray, out dim) ? dim.ToString() : $"(int)Vk.{EnumerantValue.GetCSName (mb.fixedArray, null)}";
 						if (mb.typedef.Name == "char") {
+							if (dims.Length != 1)
+								throw new NotImplementedException ("multi dimentional char* array not implemented");
+							string strSize = int.TryParse (dims[0], out dim) ? dim.ToString () : $"(int)Vk.{EnumerantValue.GetCSName (dims[0], null)}";
 							tw.WriteLine ($"fixed {typeStr} _{mb.Name}[{strSize}];");
 							tw.WriteLine ($"public string {mb.Name} {{");
 							tw.Indent++;
@@ -451,20 +446,33 @@ namespace vk.generator {
 							tw.Indent++;
 							tw.WriteLine ($"return System.Text.Encoding.UTF8.GetString (tmp, {strSize});");
 							//tw.WriteLine ($"set {{ _{mb.Name} = ({typeStr})value; }}");
-							tw.Indent-=2;
+							tw.Indent -= 2;
 							tw.WriteLine (@"}");
 							tw.Indent--;
 							tw.WriteLine (@"}");
-						} else
+						} else if (dims.Length == 1) {
+							string strSize = int.TryParse (dims[0], out dim) ? dim.ToString () : $"(int)Vk.{EnumerantValue.GetCSName (dims[0], null)}";
 							tw.WriteLine ($"public fixed {typeStr} {mb.Name}[{strSize}];");
+						} else {
+							int totSize = 1;
+							for (int i = 0; i < dims.Length; i++) {
+								if (!int.TryParse (dims[i], out dim))
+									throw new NotImplementedException ("Only integer value accepted for multi dimentional arrays");
+								totSize *= dim;
+							}
+							tw.WriteLine ($"fixed {typeStr} _{mb.Name}[{totSize}];");
+
+						}
 						continue;
 					}
-					if (int.TryParse (mb.fixedArray, out dim)) {
+					if (dims.Length != 1)
+						throw new NotImplementedException ("multi dimentional array not implemented");
+					if (int.TryParse (dims[0], out dim)) {
 						for (int i = 0; i < dim; i++) {
 							tw.WriteLine ($"public {typeStr} {mb.Name}_{i};");
 						}
 					} else { 
-						tw.WriteLine ($"[MarshalAs (UnmanagedType.ByValArray, SizeConst = (int)Vk.{EnumerantValue.GetCSName(mb.fixedArray,null)})]");
+						tw.WriteLine ($"[MarshalAs (UnmanagedType.ByValArray, SizeConst = (int)Vk.{EnumerantValue.GetCSName(dims[0], null)})]");
 						tw.WriteLine ($"public {typeStr}[] {mb.Name};");
 					}
 					continue;
@@ -485,11 +493,8 @@ namespace vk.generator {
 					writePreamble (tw, "System.Runtime.InteropServices");
 					tw.Indent++;
 
-					foreach (StructDef sd in types.OfType<StructDef> ()) {
-						if (skipStruct.Contains (sd.Name))
-							continue;
-						gen_struct (tw, sd);
-					}
+					foreach (StructDef sd in types.OfType<StructDef> ())
+						gen_struct (tw, sd);					
 
 					tw.Indent--;
 					tw.WriteLine (@"}");
@@ -1201,7 +1206,7 @@ namespace vk.generator {
 				if (np["enum"] != null) {
 					md.fixedArray = np["enum"].InnerXml;
 				} else
-					md.fixedArray = ns.Value.Substring(1, ns.InnerText.Length-2);
+					md.fixedArray = ns.Value;
 			}
 
 
