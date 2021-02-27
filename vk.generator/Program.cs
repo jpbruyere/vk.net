@@ -10,1301 +10,1343 @@ using System.Xml;
 using System.Linq;
 using System.Net;
 
-namespace vk.generator {
+namespace vk.generator
+{
 
 
-	#region ExtensionsMethods
-	public static class ExtensionsMethods {
-		public static string RemoveTagsAndFlagsSuffix(this string s) {
-			if (string.IsNullOrEmpty(s))
-				return s;
-			string tmp = s.Replace("Flags", "");
-			foreach (string tag in Generator.tags) {
-				if (tmp.EndsWith(tag, StringComparison.Ordinal)) {
-					tmp = tmp.Remove(tmp.Length - tag.Length);
-					break;
-				}
-			}
-			return tmp;
-		}
-		public static string RemoveCommonLeadingPart (this string s, string other) {
-			string tmp = "";
-			string tmp2 = other.Replace ("Flags", "");
+    #region ExtensionsMethods
+    public static class ExtensionsMethods
+    {
+        public static string RemoveTagsAndFlagsSuffix (this string s) {
+            if (string.IsNullOrEmpty (s))
+                return s;
+            string tmp = s.Replace ("Flags", "");
+            foreach (string tag in Generator.tags) {
+                if (tmp.EndsWith (tag, StringComparison.Ordinal)) {
+                    tmp = tmp.Remove (tmp.Length - tag.Length);
+                    break;
+                }
+            }
+            return tmp;
+        }
+        public static string RemoveCommonLeadingPart (this string s, string other) {
+            string tmp = "";
+            string tmp2 = other.Replace ("Flags", "");
 
-			foreach (string tag in Generator.tags) {
-				if (tmp2.EndsWith (tag, StringComparison.Ordinal)) {
-					tmp2 = tmp2.Remove (tmp2.Length - tag.Length);
-					break;
-				}
-			}
+            foreach (string tag in Generator.tags) {
+                if (tmp2.EndsWith (tag, StringComparison.Ordinal)) {
+                    tmp2 = tmp2.Remove (tmp2.Length - tag.Length);
+                    break;
+                }
+            }
 
-			for (int i = 0; i < tmp2.Length; i++) {
-				if (s[i] != tmp2[i]) {
-					tmp = s.Substring (i);
-					break;
-				}
-			}
-			if (string.IsNullOrEmpty (tmp))
-				tmp = s.Substring (tmp2.Length);
-			if (char.IsNumber (tmp[0])) {
-				tmp2 = tmp2.Replace ("Type", "");
-				return 
-					tmp2.Substring (2) + tmp;
-			}
-			return tmp;
-		}
+            for (int i = 0; i < tmp2.Length; i++) {
+                if (s[i] != tmp2[i]) {
+                    tmp = s.Substring (i);
+                    break;
+                }
+            }
+            if (string.IsNullOrEmpty (tmp))
+                tmp = s.Substring (tmp2.Length);
+            if (char.IsNumber (tmp[0])) {
+                tmp2 = tmp2.Replace ("Type", "");
+                return
+                    tmp2.Substring (2) + tmp;
+            }
+            return tmp;
+        }
 
-		public static string ConvertUnderscoredUpperCasedNameToCamelCase (this string name) {
-			string[] tmp = name.Split ('_');
-			List<string> result = new List<string> ();
-			for (int i = 0; i < tmp.Length; i++) {
-				string s = tmp[i];
-				if (s == "BIT")
-					continue;
-				if ((i == tmp.Length - 1 && Generator.tags.Contains (s)) || (char.IsDigit (s[0]) && s.Substring (1) == "D"))
-					result.Add (s);
-				else
-					result.Add (s[0] + s.Substring (1).ToLower ());
-			}
-			return result.Aggregate ((a, b) => a + b);
-		}
-		public static string[] SplitCamelCased (this string cc) {
-			List<string> result = new List<string> ();
+        public static string ConvertUnderscoredUpperCasedNameToCamelCase (this string name) {
+            string[] tmp = name.Split ('_');
+            List<string> result = new List<string> ();
+            for (int i = 0; i < tmp.Length; i++) {
+                string s = tmp[i];
+                if (s == "BIT")
+                    continue;
+                if ((i == tmp.Length - 1 && Generator.tags.Contains (s)) || (char.IsDigit (s[0]) && s.Substring (1) == "D"))
+                    result.Add (s);
+                else
+                    result.Add (s[0] + s.Substring (1).ToLower ());
+            }
+            return result.Aggregate ((a, b) => a + b);
+        }
+        public static string[] SplitCamelCased (this string cc) {
+            List<string> result = new List<string> ();
 
-			string tmp = "";
-			for (int i = 0; i < cc.Length; i++) {
-				if (char.IsUpper (cc[i])) {
-					if (!string.IsNullOrEmpty (tmp))
-						result.Add (tmp);
-					tmp = "" + cc[i];
-				} else
-					tmp += cc[i];
-			}
-			if (!string.IsNullOrEmpty (tmp))
-				result.Add (tmp);
-			return result.ToArray ();
-		}
-	}
-	#endregion
-	/// <summary>
-	/// Code produced by this generator is greatly inspired from the work of https://github.com/mellinoe, but the generator
-	/// has been recreated from scratch to be more like a simple functional parser easyer to tweak.
-	/// </summary>
-	public class Generator {
-		const int extBase = 1000000000;
-		const int extBlockSize = 1000;
-		/// <summary> Main namespace for generated code. </summary>
-		public const string vknamespace = "Vulkan";
-		/// <summary> Static class encapsulating constants and methods </summary>
-		public const string vkCommonCmdClassName = "Vk";
-		/// <summary> Headers for generated c# files</summary>
-		public const string heading = "/* autogenerated with http://github.com/jpbruyere/vk.net */";
-		/// <summary> using to include in every generated c# files</summary>
-		public static string[] defaultUsings = { "System" };
-		/* credit to https://github.com/mellinoe for this list*/
-		public static Dictionary<string, string> knownTypes = new Dictionary<string, string> {
-			{"uint8_t",             "byte"},
-			{"char",                "byte"},
-			{"uint16_t",            "ushort"},
-			{"uint32_t",            "uint"},
-			{"uint64_t",            "ulong"},
-			{"int16_t",             "short"},
-			{"int32_t",             "int"},
-			{"int64_t",             "long"},
-			{"size_t",              "UIntPtr"},
-			{"VkSampleMask",        "uint"},
-			{"VkDeviceSize",        "ulong"},
-			{"VkDeviceAddress",     "ulong"},
+            string tmp = "";
+            for (int i = 0; i < cc.Length; i++) {
+                if (char.IsUpper (cc[i])) {
+                    if (!string.IsNullOrEmpty (tmp))
+                        result.Add (tmp);
+                    tmp = "" + cc[i];
+                } else
+                    tmp += cc[i];
+            }
+            if (!string.IsNullOrEmpty (tmp))
+                result.Add (tmp);
+            return result.ToArray ();
+        }
+    }
+    #endregion
+    /// <summary>
+    /// Code produced by this generator is greatly inspired from the work of https://github.com/mellinoe, but the generator
+    /// has been recreated from scratch to be more like a simple functional parser easyer to tweak.
+    /// </summary>
+    public class Generator
+    {
+        const int extBase = 1000000000;
+        const int extBlockSize = 1000;
+        /// <summary> Main namespace for generated code. </summary>
+        public const string vknamespace = "Vulkan";
+        /// <summary> Static class encapsulating constants and methods </summary>
+        public const string vkCommonCmdClassName = "Vk";
+        /// <summary> Headers for generated c# files</summary>
+        public const string heading = "/* autogenerated with http://github.com/jpbruyere/vk.net */";
+        /// <summary> using to include in every generated c# files</summary>
+        public static string[] defaultUsings = { "System" };
+        /* credit to https://github.com/mellinoe for this list*/
+        public static Dictionary<string, string> knownTypes = new Dictionary<string, string> {
+            {"uint8_t",             "byte"},
+            {"char",                "byte"},
+            {"uint16_t",            "ushort"},
+            {"uint32_t",            "uint"},
+            {"uint64_t",            "ulong"},
+            {"int16_t",             "short"},
+            {"int32_t",             "int"},
+            {"int64_t",             "long"},
+            {"size_t",              "UIntPtr"},
+            {"VkSampleMask",        "uint"},
+            {"VkDeviceSize",        "ulong"},
+            {"VkDeviceAddress",     "ulong"},
 
-			{"HMONITOR",            "IntPtr"},
+            {"HMONITOR",            "IntPtr"},
 
-			{ "DWORD", "uint" },
+            { "DWORD", "uint" },
 
-			{ "ANativeWindow", "Android.ANativeWindow" },
+            { "ANativeWindow", "Android.ANativeWindow" },
 
-			{ "MirConnection", "Mir.MirConnection" },
-			{ "MirSurface", "Mir.MirSurface" },
+            { "MirConnection", "Mir.MirConnection" },
+            { "MirSurface", "Mir.MirSurface" },
 
-			{ "wl_display", "Wayland.wl_display" },
-			{ "wl_surface", "Wayland.wl_surface" },
+            { "wl_display", "Wayland.wl_display" },
+            { "wl_surface", "Wayland.wl_surface" },
 
-			{ "Display", "Xlib.Display" },
-			{ "Window", "Xlib.Window" },
-			{ "VisualID", "Xlib.VisualID" },
-			{ "RROutput", "IntPtr" },
+            { "Display", "Xlib.Display" },
+            { "Window", "Xlib.Window" },
+            { "VisualID", "Xlib.VisualID" },
+            { "RROutput", "IntPtr" },
 
-			{ "HINSTANCE", "Win32.HINSTANCE" },
-			{ "HWND", "Win32.HWND" },
-			{ "HANDLE", "Win32.HANDLE" },
-			{ "SECURITY_ATTRIBUTES", "Win32.SECURITY_ATTRIBUTES" },
-			{ "LPCWSTR", "IntPtr" },
+            { "HINSTANCE", "Win32.HINSTANCE" },
+            { "HWND", "Win32.HWND" },
+            { "HANDLE", "Win32.HANDLE" },
+            { "SECURITY_ATTRIBUTES", "Win32.SECURITY_ATTRIBUTES" },
+            { "LPCWSTR", "IntPtr" },
 
-			{ "xcb_connection_t", "Xcb.xcb_connection_t" },
-			{ "xcb_window_t", "Xcb.xcb_window_t" },
-			{ "xcb_visualid_t", "Xcb.xcb_visualid_t" },
+            { "xcb_connection_t", "Xcb.xcb_connection_t" },
+            { "xcb_window_t", "Xcb.xcb_window_t" },
+            { "xcb_visualid_t", "Xcb.xcb_visualid_t" },
 
 			//those are not checked, just putted there for compiling
             { "GgpFrameToken", "uint" },	//cant find header to check length
 			{ "zx_handle_t", "ulong" },
-			{ "GgpStreamDescriptor", "ulong" },
-			{ "PFN_vkVoidFunction","IntPtr" },
-			{ "AHardwareBuffer", "Android.ANativeWindow" },//must be corrected
+            { "GgpStreamDescriptor", "ulong" },
+            { "PFN_vkVoidFunction","IntPtr" },
+            { "AHardwareBuffer", "Android.ANativeWindow" },//must be corrected
 
 			{ "IDirectFB","IntPtr" },
-			{ "IDirectFBSurface","IntPtr" },
-			
-		};
+            { "IDirectFBSurface","IntPtr" },
 
-		static string[] skipEnums = { "VK_STRUCTURE_TYPE_SURFACE_CAPABILITIES2_EXT", "VK_PIPELINE_CREATE_DISPATCH_BASE" };		
+        };
 
-		static Dictionary<string, string[]> paramTypeAliases = new Dictionary<string, string[]> {
-			{ "void*", new string[] {"IntPtr"} },
-			{ "char*", new string[] {"string"} }
-		};
+        static string[] skipEnums = { "VK_STRUCTURE_TYPE_SURFACE_CAPABILITIES2_EXT", "VK_PIPELINE_CREATE_DISPATCH_BASE" };
 
-		public static Dictionary<string, string> aliases = new Dictionary<string, string> ();
-		static void AddAlias (string from, string to) {
-			if (to == "VkFlags")//dont alias to VkFlags
-				return;
-			if (aliases.ContainsKey (from))
-				Console.WriteLine ($"aliases list constains already an alias for: {from}");
-			else
-				aliases.Add (from, to);
-			Console.ForegroundColor = ConsoleColor.Green;
-			Console.WriteLine ($"adding alias {from} -> {to}");
-			Console.ForegroundColor = ConsoleColor.Gray;
-		}
+        static Dictionary<string, string[]> paramTypeAliases = new Dictionary<string, string[]> {
+            { "void*", new string[] {"IntPtr"} },
+            { "char*", new string[] {"string"} }
+        };
 
-		enum EnumTypes { bitmask, @enum };
-		enum ExtensionType { None, Device, Instance }
-		enum TypeCategories {none, basetype, bitmask, define, @enum, funcpointer, group, handle, include, @struct, @union };
+        public static Dictionary<string, string> aliases = new Dictionary<string, string> ();
+        static void AddAlias (string from, string to) {
+            if (to == "VkFlags")//dont alias to VkFlags
+                return;
+            if (aliases.ContainsKey (from))
+                Console.WriteLine ($"aliases list constains already an alias for: {from}");
+            else
+                aliases.Add (from, to);
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine ($"adding alias {from} -> {to}");
+            Console.ForegroundColor = ConsoleColor.Gray;
+        }
 
-		//function pointers to retrieve before any other vulkan api call.
-		//those command should not move in other iface than common to be preload by normal dyn load
-		static string[] preloadedCommands  = {
-										"vkCreateInstance",
-										"vkDestroyInstance",
-										"vkGetDeviceProcAddr",
-										"vkGetInstanceProcAddr",
-										"vkEnumerateInstanceExtensionProperties",
-										"vkEnumerateInstanceLayerProperties",
-										"vkEnumerateInstanceVersion"};
+        enum EnumTypes { bitmask, @enum };
+        enum ExtensionType { None, Device, Instance }
+        enum TypeCategories { none, basetype, bitmask, define, @enum, funcpointer, group, handle, include, @struct, @union };
+
+        //function pointers to retrieve before any other vulkan api call.
+        //those command should not move in other iface than common to be preload by normal dyn load
+        static string[] preloadedCommands = {
+                                        "vkCreateInstance",
+                                        "vkDestroyInstance",
+                                        "vkGetDeviceProcAddr",
+                                        "vkGetInstanceProcAddr",
+                                        "vkEnumerateInstanceExtensionProperties",
+                                        "vkEnumerateInstanceLayerProperties",
+                                        "vkEnumerateInstanceVersion"};
 
         static string[] reservedNames = { "event", "object" };
 
-		static Dictionary<string, ParamDef> paramsDefs = new Dictionary<string, ParamDef> ();
-
-		public static List<string> tags = new List<string> ();
-
-
-		class Definition {
-			public List<string> definedBy = new List<string>();
-			protected string name;
-			public string comment;
-			public override string ToString () => this.GetType ().Name + ":" + name;
-
-			public string Name {
-				get { return reservedNames.Contains (name) ? "_" + name : name; }
-				set { name = value; }
-			}
-			public virtual string CSName {
-				get {
-					string tmp = name.Replace ("FlagBits", "Flags");
-					while (Generator.aliases.ContainsKey (tmp)) //recurse in aliases
-						tmp = Generator.aliases[tmp];
-
-					return (Generator.knownTypes.ContainsKey (tmp) ? Generator.knownTypes[tmp] : tmp);
-				}
-			}
-		}
-
-		class StructDef : TypeDef {
-			public List<MemberDef> members = new List<MemberDef> ();
-		}
-		class TypeDef : Definition {
-			public TypeCategories category;
-			public string baseType;
-			public string require;
-		}
-		class EnumDef : Definition {
-			//public string require;
-			public EnumTypes type;
-			public int start;
-			public int end;
-			public string vendor;
-
-			public List<EnumerantValue> values = new List<EnumerantValue> ();
-		}
-		class HandleDef : TypeDef {
-			public string parent;
-			public bool nonDispatchable => baseType == "VK_DEFINE_NON_DISPATCHABLE_HANDLE";
-		}
-		class ParamDef : Definition {
-			public string txtbefore;
-			public string txtafter;
-
-			public static ParamDef parse (XmlNode n) {
-				XmlNode t = n["type"];
-				ParamDef tmp = new ParamDef ();
-				tmp.name = t.InnerText;
-				if (t.PreviousSibling?.NodeType == XmlNodeType.Text)
-					tmp.txtbefore = t.PreviousSibling.Value;
-				if (t.NextSibling?.NodeType == XmlNodeType.Text)
-					tmp.txtafter = t.NextSibling.Value;
-
-				if (paramsDefs.ContainsKey (tmp.FullCTypeDecl))
-					return paramsDefs[tmp.FullCTypeDecl];
-
-				paramsDefs.Add (tmp.FullCTypeDecl, tmp);
-
-				return tmp;
-			}
-
-			public string FullCTypeDecl => txtbefore + name + txtafter;			
-			public int IndirectionLevel {
-				get {
-					if (string.IsNullOrEmpty (txtafter))
-						return 0;
-					int i = 0;
-					foreach (char c in txtafter) {
-						if (c == '*')
-							i++;
-					}
-					return i;
-				}
-			}
-			public bool IsStruct => string.IsNullOrEmpty (txtbefore) ? false : txtbefore.Contains ("struct");			
-			public bool IsConst => string.IsNullOrEmpty (txtbefore) ? false : txtbefore.Contains ("const");
-			public override string ToString () => FullCTypeDecl;
-		}
-		class MemberDef : Definition {
-			public ParamDef typedef;
-
-			public bool isReadOnly;
-			public bool optional;
-			public bool externsync;
-			public bool nullTerminated;
-			public string lenMember;
-			public string defaultValue;
-			public string fixedArray;
-
-			public override string ToString () => string.Format ($"memberdef: {typedef.FullCTypeDecl} {name}");
-		}
-
-		class EnumerantValue : Definition, IEquatable<EnumerantValue>{//name is not yet converted to csname!!
-			public string unusedComment;
-			public string extends;
-			public string value;
-			public bool isAlias;
-			public override string ToString () => string.Format ($"{name} = {value}");
-			public override string CSName => throw new NotImplementedException (); //name.ConvertUnderscoredUpperCasedNameToCamelCase ();
-
-			public string GetCSName (string containingType = null) {
-				return GetCSName (name, containingType);
-				// name.ConvertUnderscoredUpperCasedNameToCamelCase ().RemoveCommonLeadingPart (containingType.CSName);
-			}
-			public static string GetCSName (string value, string containingType) {
-				string ccValue = value.ConvertUnderscoredUpperCasedNameToCamelCase();
-				string cType = containingType?.RemoveTagsAndFlagsSuffix();					
-				return containingType == null || (ccValue.Length > cType.Length && cType != ccValue.Substring(0, cType.Length)) ?
-					ccValue.StartsWith("Vk", StringComparison.Ordinal) ? ccValue.Substring(2) : ccValue :
-					ccValue.RemoveCommonLeadingPart (containingType);
-			}
-
-			public bool Equals (EnumerantValue other) {
-				return name == other.name;
-			}
-			public override bool Equals(object obj){
-			     if(obj == null) return false;
-				return name == (obj as EnumerantValue).name;
-			}
-			public override int GetHashCode(){
-			     return value.GetHashCode();
-			}
-		}
-
-		class FuncpointerDef : TypeDef {
-			public ParamDef returnType;
-			public List<MemberDef> parameters = new List<MemberDef> ();
-		}
-		class CommandDef : FuncpointerDef {
-			public string alias;
-			public string successCodes;
-			public string errorcodes;
-		}
-
-		static List<TypeDef> types = new List<TypeDef> ();
-		static List<EnumDef> enums = new List<EnumDef> ();
-		static List<CommandDef> commands = new List<CommandDef> ();
-		static List<EnumerantValue> extends = new List<EnumerantValue> ();
-		static List<EnumerantValue> Constants = new List<EnumerantValue> ();
-
-		class InterfaceDef : Definition {
-			public int number;
-		}
-		class FeatureDef : InterfaceDef {
-			public string api;
-			public int major;
-			public int minor;
-		}
-		class ExtensionDef : InterfaceDef {
-			public ExtensionType type;
-			public string supported;
-			public string[] requires;
-		}
-
-		static List<FeatureDef> features = new List<FeatureDef> ();
-		static List<ExtensionDef> extensions = new List<ExtensionDef> ();
-
-		#region code generation
-		static void writePreamble (IndentedTextWriter tw, params string[] additionalUsings) {
-			tw.WriteLine (heading);
-			foreach (string @using in defaultUsings)
-				tw.WriteLine ($"using {@using};");
-			foreach (string @using in additionalUsings)
-				tw.WriteLine ($"using {@using};");
-			tw.WriteLine ($"namespace {vknamespace} {{");
-		}
-
-		static void writeStructNew (IndentedTextWriter tw, StructDef sd) {
-			MemberDef md = sd.members.Where (mb => mb.Name == "sType").First ();
-			TypeDef sType = types.Where (
-				edd => edd.category == TypeCategories.@enum && edd.Name == md.typedef.Name).First ();				
-
-			tw.WriteLine ($"public static {sd.Name} New () {{");
-			tw.Indent++;
-
-			tw.WriteLine ($"return new {sd.Name} {{");
-			tw.Indent++;
-
-			tw.WriteLine ($"sType = {sType.CSName}.{EnumerantValue.GetCSName (md.defaultValue, sType.CSName)},");
-			tw.WriteLine ($"pNext = IntPtr.Zero");
-			tw.Indent--;
-			tw.WriteLine (@"};");
-			tw.Indent--;
-			tw.WriteLine (@"}");
-
-			tw.WriteLine ($"public {sd.Name} (IntPtr pNext) : this () {{");
-			tw.Indent++;
-
-			tw.WriteLine ($"sType = {sType.CSName}.{EnumerantValue.GetCSName (md.defaultValue, sType.CSName)};");
-			tw.WriteLine ($"this.pNext = pNext;");
-
-			tw.Indent--;
-			tw.WriteLine (@"}");
-		}
-		static string[] valueTypes = { "byte", "int", "uint", "float", "ushort", "ulong" };
-		static void gen_struct (IndentedTextWriter tw, StructDef sd) {
-			if (sd.category == TypeCategories.union)
-				tw.WriteLine($"[StructLayout(LayoutKind.Explicit)]");
-			else
-				tw.WriteLine ($"[StructLayout(LayoutKind.Sequential)]");
-			tw.WriteLine ($"public unsafe partial struct {sd.Name} {{");
-			tw.Indent++;
-			foreach (MemberDef mb in sd.members) {
-				if (!string.IsNullOrEmpty (mb.comment))
-					tw.WriteLine ($"/// <summary> {mb.comment} </summary>");
-
-				string typeStr;
-
-				EnumDef ed = enums.FirstOrDefault (e => e.Name == mb.typedef.Name);
-
-				if (mb.typedef.IndirectionLevel > 0 || mb.typedef.Name.StartsWith ("PFN_", StringComparison.Ordinal))
-					typeStr = "IntPtr";
-				else if (ed != null) {
-					//enums has to be stored in struct as int or uint for enums are not yet blittable in ms .NET
-					typeStr = ed.type == EnumTypes.@enum ? "int" : "uint";
-					tw.WriteLine ($"{typeStr} _{mb.Name};");
-					tw.WriteLine ($"public {mb.typedef.CSName} {mb.Name} {{");
-					tw.Indent++;
-					tw.WriteLine ($"get => ({mb.typedef.CSName})_{mb.Name};");
-					tw.WriteLine ($"set {{ _{mb.Name} = ({typeStr})value; }}");
-					tw.Indent--;
-					tw.WriteLine (@"}");
-
-					continue;
-				} else
-					typeStr = mb.typedef.CSName;
-
-				if (sd.category == TypeCategories.union)
-					tw.WriteLine($"[FieldOffset(0)]");
-
-				if (!string.IsNullOrEmpty (mb.fixedArray)) {
-					int dim = 0;
-					string[] dims = mb.fixedArray.Split (new char[] { '[', ']' }, StringSplitOptions.RemoveEmptyEntries); 
-					if (valueTypes.Contains (typeStr)) {
-						if (mb.typedef.Name == "char") {
-							if (dims.Length != 1)
-								throw new NotImplementedException ("multi dimentional char* array not implemented");
-							string strSize = int.TryParse (dims[0], out dim) ? dim.ToString () : $"(int)Vk.{EnumerantValue.GetCSName (dims[0], null)}";
-							tw.WriteLine ($"fixed {typeStr} _{mb.Name}[{strSize}];");
-							tw.WriteLine ($"public string {mb.Name} {{");
-							tw.Indent++;
-							tw.WriteLine ($"get {{");
-							tw.Indent++;
-							tw.WriteLine ($"fixed ({typeStr}* tmp = _{mb.Name})");
-							tw.Indent++;
-							tw.WriteLine ($"return System.Text.Encoding.UTF8.GetString (tmp, {strSize});");
-							//tw.WriteLine ($"set {{ _{mb.Name} = ({typeStr})value; }}");
-							tw.Indent -= 2;
-							tw.WriteLine (@"}");
-							tw.Indent--;
-							tw.WriteLine (@"}");
-						} else if (dims.Length == 1) {
-							string strSize = int.TryParse (dims[0], out dim) ? dim.ToString () : $"(int)Vk.{EnumerantValue.GetCSName (dims[0], null)}";
-							tw.WriteLine ($"public fixed {typeStr} {mb.Name}[{strSize}];");
-						} else {
-							int totSize = 1;
-							for (int i = 0; i < dims.Length; i++) {
-								if (!int.TryParse (dims[i], out dim))
-									throw new NotImplementedException ("Only integer value accepted for multi dimentional arrays");
-								totSize *= dim;
-							}
-							tw.WriteLine ($"fixed {typeStr} _{mb.Name}[{totSize}];");
-
-						}
-						continue;
-					}
-					if (dims.Length != 1)
-						throw new NotImplementedException ("multi dimentional array not implemented");
-					if (int.TryParse (dims[0], out dim)) {
-						for (int i = 0; i < dim; i++) {
-							tw.WriteLine ($"public {typeStr} {mb.Name}_{i};");
-						}
-					} else { 
-						tw.WriteLine ($"[MarshalAs (UnmanagedType.ByValArray, SizeConst = (int)Vk.{EnumerantValue.GetCSName(dims[0], null)})]");
-						tw.WriteLine ($"public {typeStr}[] {mb.Name};");
-					}
-					continue;
-				}
-				tw.WriteLine ($"public {typeStr} {mb.Name};");
-			}
-
-			if (sd.members.Any (mb => mb.Name == "sType" && !string.IsNullOrEmpty (mb.defaultValue)))
-				writeStructNew (tw, sd); ;
-
-			tw.Indent--;
-			tw.WriteLine (@"}");
-		}
-
-		static void gen_structs (string englobingStaticClass) {
-			using (StreamWriter sr = new StreamWriter ($"structs_{englobingStaticClass}_gen.cs", false, System.Text.Encoding.UTF8)) {
-				using (IndentedTextWriter tw = new IndentedTextWriter (sr)) {
-					writePreamble (tw, "System.Runtime.InteropServices");
-					tw.Indent++;
-
-					foreach (StructDef sd in types.OfType<StructDef> ())
-						gen_struct (tw, sd);					
-
-					tw.Indent--;
-					tw.WriteLine (@"}");
-				}
-			}
-		}
-		/* credit to https://github.com/mellinoe for the handle structs*/
-		static void write_empty_enum_as_struct (IndentedTextWriter tw, EnumDef enumType) { 
-			tw.WriteLine (@"[DebuggerDisplay(""{DebuggerDisplay,nq}"")]");
-			tw.WriteLine ($"public struct {enumType.CSName} : IEquatable<{enumType.CSName}>");
-			tw.WriteLine (@"{");
-			tw.Indent++;
-
-			string hType = "uint";
-
-			tw.WriteLine ($"public readonly {hType} Value;");
-			tw.WriteLine ($"public {enumType.CSName}({hType} existingHandle) {{ Value = existingHandle; }}");
-			tw.WriteLine ($"public static {enumType.CSName} Null => new {enumType.CSName}(0);");
-			tw.WriteLine ($"public static implicit operator {enumType.CSName}({hType} flags) => new {enumType.CSName}(flags);");
-			tw.WriteLine ($"public static bool operator ==({enumType.CSName} left, {enumType.CSName} right) => left.Value == right.Value;");
-			tw.WriteLine ($"public static bool operator !=({enumType.CSName} left, {enumType.CSName} right) => left.Value != right.Value;");
-			tw.WriteLine ($"public static bool operator ==({enumType.CSName} left, {hType} right) => left.Value == right;");
-			tw.WriteLine ($"public static bool operator !=({enumType.CSName} left, {hType} right) => left.Value != right;");
-			tw.WriteLine ($"public bool Equals({enumType.CSName} h) => Value == h.Value;");
-			tw.WriteLine ($"public override bool Equals(object obj) => obj is {enumType.CSName} h && Equals(h);");
-			tw.WriteLine ($"public override int GetHashCode() => Value.GetHashCode();");
-			tw.WriteLine ($"private string DebuggerDisplay => string.Format(\"{enumType.CSName} [0x{{0}}]\", Value.ToString(\"X\"));");
-
-			tw.Indent--;
-			tw.WriteLine (@"}");
-		}
-
-		static void gen_enum_value (IndentedTextWriter tw, string enumName, EnumerantValue ev) {
-			if (!string.IsNullOrEmpty (ev.comment))
-				tw.WriteLine ($"/// <summary> {ev.comment} </summary>");
-			if (!string.IsNullOrEmpty (ev.unusedComment))
-				tw.WriteLine ($"[Obsolete(\"{ev.unusedComment}\"]");
-
-			uint v;
-			string vName = ev.GetCSName (enumName);
-
-			if (uint.TryParse (ev.value, out v))
-				tw.WriteLine ($"{vName,-50} = 0x{v.ToString ("X8")},");
-			else if (ev.isAlias) {
-				string alias = EnumerantValue.GetCSName (ev.value, enumName);
-				tw.WriteLine ($"{vName,-50} = {alias,10},");
-			} else
-				tw.WriteLine ($"{vName,-50} = {ev.value,10},");
-		}
-		static void gen_enums (string englobingStaticClass) {
-			using (StreamWriter sr = new StreamWriter ($"enums_{englobingStaticClass}_gen.cs", false, System.Text.Encoding.UTF8)) {
-				using (IndentedTextWriter tw = new IndentedTextWriter (sr)) {
-					writePreamble (tw, "System.Diagnostics");
-					tw.Indent++;
-
-					//add uint alias for all type bitmask without flagbits enum
-					foreach (TypeDef tdbm in types.Where (t => t.category == TypeCategories.bitmask && string.IsNullOrEmpty (t.require)))
-						AddAlias (tdbm.Name, "uint");
-
-					foreach (EnumDef ed in enums.Where(e=>e.definedBy.Count()==0)) {
-						//search type
-						TypeDef td = ed.type == EnumTypes.@enum ?
-							types.Where(t=>t.Name == ed.Name).FirstOrDefault() :
-						 	types.Where(t=>t.require == ed.Name).FirstOrDefault();
-
-						if (td == null) {
-							AddAlias (ed.Name, "uint");
-							continue;
-						}
-
-						if (!string.IsNullOrEmpty (ed?.comment))
-							tw.WriteLine ($"/// <summary> {ed.comment} </summary>");
-						if (ed?.type == EnumTypes.bitmask) {
-							tw.WriteLine (@"[Flags]");
-							tw.WriteLine ($"public enum {td.CSName} : uint {{");
-						} else
-							tw.WriteLine ($"public enum {td.CSName} {{");
-							
-						tw.Indent++;
-
-						foreach (EnumerantValue ev in ed.values.OrderBy(aa => aa.isAlias)) 
-							gen_enum_value (tw, td.CSName, ev);
-
-						IEnumerable<EnumerantValue> ext = extends.Where (e => e.extends == ed.Name);
-						foreach (EnumerantValue ev in ext.OrderBy(aa => aa.isAlias)) 
-							gen_enum_value (tw, td.CSName, ev);
-
-
-						tw.Indent--;
-						tw.WriteLine (@"}");
-					}
-			
-					tw.Indent--;
-					tw.WriteLine (@"}");
-				}
-			}
-		}
-		static void gen_extensions () {
-			using (StreamWriter sr = new StreamWriter ("extensions_gen.cs", false, System.Text.Encoding.UTF8)) {
-				using (IndentedTextWriter tw = new IndentedTextWriter (sr)) {
-					writePreamble (tw);
-					tw.Indent++;
-
-					tw.WriteLine (@"public static class Ext {");
-					tw.Indent++;
-
-					tw.WriteLine (@"public static class I {");
-					tw.Indent++;
-					foreach (ExtensionDef ed in extensions.Where (e => e.type == ExtensionType.Instance)) {
-						tw.WriteLine ($"public static readonly string {ed.Name,-50} = \"{ed.Name}\";");
-					}
-					tw.Indent--;
-					tw.WriteLine (@"}");
-
-					tw.WriteLine (@"public static class D {");
-					tw.Indent++;
-					foreach (ExtensionDef ed in extensions.Where (e => e.type == ExtensionType.Device)) {
-						tw.WriteLine ($"public static readonly string {ed.Name,-50} = \"{ed.Name}\";");
-					}
-					tw.Indent--;
-					tw.WriteLine (@"}");
-
-					tw.Indent--;
-					tw.WriteLine (@"}");
-
-					tw.Indent--;
-					tw.WriteLine (@"}");
-				}
-			}
-		}
-		static void gen_funcptrs (string englobingStaticClass) {
-			using (StreamWriter sr = new StreamWriter ($"funcptrs_{englobingStaticClass}_gen.cs", false, System.Text.Encoding.UTF8)) {
-				using (IndentedTextWriter tw = new IndentedTextWriter (sr)) {
-					writePreamble (tw);
-					tw.Indent++;
-
-					foreach (FuncpointerDef fp in types.OfType<FuncpointerDef>())
-						tw.WriteLine ($"public delegate {fp.returnType.CSName} {fp.Name} ();");					
-
-					tw.Indent--;
-					tw.WriteLine (@"}");
-				}
-			}
-		}
-		static void gen_handle (IndentedTextWriter tw, HandleDef hd) { 
-			tw.WriteLine (@"[DebuggerDisplay(""{DebuggerDisplay,nq}"")]");
-			tw.WriteLine ($"public struct {hd.CSName} : IEquatable<{hd.CSName}>");
-			tw.WriteLine (@"{");
-			tw.Indent++;
-			string hType = hd.nonDispatchable ? "ulong" : "IntPtr";
-
-			tw.WriteLine ($"public readonly {hType} Handle;");
-			tw.WriteLine ($"public {hd.CSName}({hType} existingHandle) {{ Handle = existingHandle; }}");
-			tw.WriteLine ($"public static {hd.CSName} Null => new {hd.CSName}({(hd.nonDispatchable ? "0" : "IntPtr.Zero")});");
-			tw.WriteLine ($"public static implicit operator {hd.CSName}({hType} handle) => new {hd.CSName}(handle);");
-			tw.WriteLine ($"public static bool operator ==({hd.CSName} left, {hd.CSName} right) => left.Handle == right.Handle;");
-			tw.WriteLine ($"public static bool operator !=({hd.CSName} left, {hd.CSName} right) => left.Handle != right.Handle;");
-			tw.WriteLine ($"public static bool operator ==({hd.CSName} left, {hType} right) => left.Handle == right;");
-			tw.WriteLine ($"public static bool operator !=({hd.CSName} left, {hType} right) => left.Handle != right;");
-			tw.WriteLine ($"public bool Equals({hd.CSName} h) => Handle == h.Handle;");
-			tw.WriteLine ($"public override bool Equals(object obj) => obj is {hd.CSName} h && Equals(h);");
-			tw.WriteLine ($"public override int GetHashCode() => Handle.GetHashCode();");
-			tw.WriteLine ($"private string DebuggerDisplay => string.Format(\"{hd.CSName} [0x{{0}}]\", Handle.ToString(\"X\"));");
-
-			tw.Indent--;
-			tw.WriteLine (@"}");
-		}
-		static void gen_handles (string englobingStaticClass) {
-			using (StreamWriter sr = new StreamWriter ($"handles_{englobingStaticClass}_gen.cs", false, System.Text.Encoding.UTF8)) {
-				using (IndentedTextWriter tw = new IndentedTextWriter (sr)) {
-					writePreamble (tw, "System.Diagnostics");
-					tw.Indent++;
-
-					foreach (HandleDef hd in types.OfType<HandleDef> ())//.Where(t=>t.definedBy.Count == 0))
-						gen_handle (tw, hd);
-
-					tw.Indent--;
-					tw.WriteLine (@"}");
-				}
-			}
-		}
-
-		static void gen_constant_value (IndentedTextWriter tw, EnumerantValue cd) {
-			if (string.IsNullOrEmpty (cd.value)) { 
-				Console.ForegroundColor = ConsoleColor.DarkRed;
-				Console.WriteLine ("no value for constant: " + cd);
-				return;
-			}
-			string pTrims = cd.value.Replace ("(", "");
-			pTrims = pTrims.Replace (")", "");
-
-			int i = pTrims.Length;
-			while (i > 1 && char.IsLetter (pTrims[i-1]))
-				i--;
-
-			switch (pTrims.Substring(i).ToLower()) {
-				case "u":
-					tw.WriteLine ($"{"public const uint " + cd.GetCSName (),-50} = {cd.value};");
-					break;
-				case "ull":
-					tw.WriteLine ($"{"public const ulong " + cd.GetCSName (),-50} = ({pTrims.Remove(pTrims.Length-1)});");
-					break;
-				case "f":
-					tw.WriteLine ($"{"public const float " + cd.GetCSName (),-50} = {cd.value};");
-					break;
-				default:
-					tw.WriteLine ($"{"public const uint " + cd.GetCSName (),-50} = {cd.value};");
-					break;
-			}
-		}
-		static void gen_constants (string englobingStaticClass) {
-			using (StreamWriter sr = new StreamWriter ($"constants_{englobingStaticClass}_gen.cs", false, System.Text.Encoding.UTF8)) {
-				using (IndentedTextWriter tw = new IndentedTextWriter (sr)) {
-					writePreamble (tw);
-					tw.Indent++;
-
-					tw.WriteLine ($"public static partial class {englobingStaticClass} {{");
-					tw.Indent++;
-
-					foreach (EnumerantValue cd in Constants)
-						gen_constant_value (tw, cd);
-
-					tw.Indent--;
-					tw.WriteLine (@"}");
-
-					tw.Indent--;
-					tw.WriteLine (@"}");
-				}
-			}
-		}
-
-		static string getDefaultParamSig (MemberDef md, bool isLast) {
-			switch (md.typedef.IndirectionLevel) {
-				case 0:
-					return (string.Format ($"{md.typedef.CSName} {md.Name}{(isLast ? ", " : ")")}"));
-				case 1:
-					return (string.Format ($"IntPtr {md.Name}{(isLast ? ", " : ")")}"));
-				case 2:
-					return (string.Format ($"ref IntPtr {md.Name}{(isLast ? ", " : ")")}"));
-			}
-			return null;
-		}
-		static string getByRefParamSig (MemberDef md, bool isLast) {
-			string typeName = md.typedef.CSName == "void" ? "IntPtr" : md.typedef.CSName;
-			switch (md.typedef.IndirectionLevel) {
-				case 1:
-					return md.typedef.IsConst ?
-						(string.Format ($"ref {typeName} {md.Name}{(isLast ? ", " : ")")}")) :
-						(string.Format ($"out {typeName} {md.Name}{(isLast ? ", " : ")")}"));
-				case 2:
-					return md.typedef.IsConst ?
-						string.Format ($"ref IntPtr {md.Name}{(isLast ? ", " : ")")}") :
-						string.Format ($"out IntPtr {md.Name}{(isLast ? ", " : ")")}");
-			}
-			return null;
-		}
-
-		static void writeCmd (IndentedTextWriter tw, string sig) {
-			tw.WriteLine (@"[CalliRewrite]");
-			tw.Write ($"public static {sig}");
-			tw.WriteLine (@" => throw new NotImplementedException();");
-		}
-		static void gen_command (IndentedTextWriter tw, CommandDef cd) { 
-			if (!string.IsNullOrEmpty (cd.alias)) {
-				Console.ForegroundColor = ConsoleColor.DarkGray;
-				Console.WriteLine ("TODO:command generator: is alias: " + cd);
-				return;
-			}
-			tw.WriteLine ($"internal static IntPtr {cd.CSName}_ptr;");
-
-			List<string> signatures = new List<string> () { "" };
-
-			//if (cd.Name == "vkRegisterObjectsNVX")
-				//Debugger.Break ();
-
-			for (int i = 0; i < cd.parameters.Count; i++) {
-				MemberDef md = cd.parameters[i];
-				List<string> typeSigs = new List<string> () { getDefaultParamSig (md, i < cd.parameters.Count - 1) };
-				if (md.typedef.IndirectionLevel == 1 && md.typedef.Name != "void")
-					typeSigs.Add (getByRefParamSig (md, i < cd.parameters.Count - 1));
-
-				string[] prevSigs = new string[signatures.Count];
-				Array.Copy (signatures.ToArray (), prevSigs, prevSigs.Length);
-				signatures.Clear ();
-				for (int s = 0; s < prevSigs.Length; s++) {
-					signatures.Add (prevSigs[s] + typeSigs[0]);
-					for (int st = 1; st < typeSigs.Count; st++) {
-						signatures.Add (prevSigs[s] + typeSigs[st]);
-					}
-				}
-			}
-
-			foreach (string sig in signatures)
-				writeCmd (tw, string.Format ($"{cd.returnType.CSName} {cd.Name} ({sig}"));
-
-			tw.WriteLine ();
-		}
-		static void gen_commands (string englobingStaticClass) {
-			using (StreamWriter sr = new StreamWriter ($"commands_{englobingStaticClass}_gen.cs", false, System.Text.Encoding.UTF8)) {
-				using (IndentedTextWriter tw = new IndentedTextWriter (sr)) {
-					writePreamble (tw, vknamespace + ".Generator");
-					tw.Indent++;
-
-					tw.WriteLine ($"public static partial class {englobingStaticClass} {{");
-					tw.Indent++;
-
-					//func pointers and signature
-					foreach (CommandDef cd in commands)
-						gen_command (tw, cd);
-
-					#region Function pointers loading (os, inst and dev)
-					//norml dyn loading function
-
-					tw.WriteLine (@"internal static void LoadFunctionPointers() {");
-					tw.Indent++;
-					foreach (string preloadCmd in preloadedCommands) {
-						tw.WriteLine ($"{preloadCmd}_ptr      = Vk.s_nativeLib.LoadFunctionPointer(\"{preloadCmd}\");");
-					}
-					//tw.WriteLine (@"Console.WriteLine (""preload function pointer ok."");");
-
-					tw.Indent--;
-					tw.WriteLine (@"}");
-
-					//load instance func pointers
-					tw.WriteLine ($"public static void LoadInstanceFunctionPointers (VkInstance inst) {{");
-					tw.Indent++;
-					foreach (CommandDef cd in commands){//.Where (cmd=>cmd.definedBy.Count == 0)) {
-						if (!string.IsNullOrEmpty (cd.alias))
-							continue;
-						if (preloadedCommands.Contains (cd.Name))
-							continue;
-						tw.WriteLine ($"{cd.Name + "_ptr",-54} = LoadingUtils.GetDelegate (inst, \"{cd.Name}\");");
-					}
-
-					tw.Indent--;
-					tw.WriteLine (@"}");
-					tw.WriteLine ();
-					//load device func pointers
-					tw.WriteLine ($"public static void LoadDeviceFunctionPointers (VkDevice dev) {{");
-					tw.Indent++;
-					foreach (CommandDef cd in commands){//.Where (cmd=>cmd.definedBy.Count == 0)) {
-						if (!string.IsNullOrEmpty (cd.alias)) 
-							continue;
-						if (preloadedCommands.Contains (cd.Name))
-							continue;
-						tw.WriteLine ($"LoadingUtils.GetDelegate (dev, \"{cd.Name + "\",",-54} ref {cd.Name + "_ptr"});");
-					}
-
-					tw.Indent--;
-					tw.WriteLine (@"}");
-					#endregion
-
-					tw.Indent--;
-					tw.WriteLine (@"}");
-
-					tw.Indent--;
-					tw.WriteLine (@"}");
-				}
-			}
-		}
-		#endregion
-
-		#region vk.xml parsing
-		static void readType (XmlNode nType) {
-		 
-			if (nType.Attributes ["alias"] != null) {
-				aliases.Add (nType.Attributes["name"].Value, nType.Attributes["alias"].Value);
-				return;
-			}
-
-			TypeCategories category = TypeCategories.none;
-			if (nType.Attributes["category"] != null)
-				category = (TypeCategories)Enum.Parse (typeof (TypeCategories), nType.Attributes["category"].Value, true);
-			switch (category) {
-				case TypeCategories.none:
-					return;
-				case TypeCategories.basetype:
-					types.Add (new TypeDef {
-						category = category,
-						Name = nType["name"].InnerText,
-						baseType = nType["type"]?.InnerText
-					});
-					break;
-				case TypeCategories.bitmask:
-					TypeDef ed = new TypeDef {
-						category = category,
-						Name = nType["name"].InnerText
-					};
-					if (nType.Attributes ["requires"] == null)
-						ed.baseType = nType["type"].InnerXml;
-					else
-						ed.require = nType.Attributes["requires"].Value;
-					types.Add (ed);
-					break;
-				case TypeCategories.handle:
-					types.Add (new HandleDef {
-						category = category,
-						Name = nType["name"].InnerText,
-						baseType = nType["type"]?.InnerText,
-						parent = nType.Attributes["parent"]?.Value
-					});
-					break;
-				case TypeCategories.funcpointer:
-					FuncpointerDef fp = new FuncpointerDef {
-						category = category,
-						Name = nType["name"].InnerText
-					};
-					string returnTypeStr = nType.InnerText.Substring(8);//trim leading typedef
-					returnTypeStr = returnTypeStr.Remove (returnTypeStr.IndexOf ('(')).Trim();
-					switch (returnTypeStr) {
-						case "void":
-							fp.returnType = new ParamDef () { Name = "void" };
-							break;
-						case "void*":
-							fp.returnType = new ParamDef () { Name = "IntPtr" };
-							break;
-						default:
-							fp.returnType = new ParamDef () { Name = returnTypeStr };
-							break;
-					}
-					types.Add (fp);
-					break;
-				case TypeCategories.@enum:
-					types.Add (new TypeDef {
-						category = category,
-						Name = nType.Attributes["name"].Value,
-					});
-					break;
-				case TypeCategories.define:
-					Console.ForegroundColor = ConsoleColor.Cyan;
-					Console.WriteLine (nType.InnerXml);
-					break;
-				case TypeCategories.include:
-				case TypeCategories.group:
-					Console.ForegroundColor = ConsoleColor.DarkMagenta;
-					Console.WriteLine($"Unprocessed type category {category}: {nType.OuterXml}");
-					Console.ForegroundColor = ConsoleColor.Gray;
-					break;
-				case TypeCategories.union:
-				case TypeCategories.@struct:
-					StructDef sd = new StructDef {
-						Name = nType.Attributes["name"].Value,
-						category = category,
-					};
-
-					foreach (XmlNode m in nType.ChildNodes) {
-						if ((m.NodeType != XmlNodeType.Element)) {
-							Console.WriteLine ($"expecting element, having {m.NodeType}: {m.OuterXml}");
-							continue;
-						}
-						switch (m.Name) {
-							case "comment":
-								break;
-							case "member":
-								sd.members.Add (parseMember (m));
-								break;
-							default:
-								Console.ForegroundColor = ConsoleColor.Red;
-								Console.WriteLine ($"unknown element in struct def : {m.OuterXml}");
-								Console.ForegroundColor = ConsoleColor.Gray;
-								break;
-						}
-					}
-					types.Add (sd);
-					break;					
-				default:
-					Console.ForegroundColor = ConsoleColor.DarkMagenta;
-					Console.WriteLine ($"Unprocessed type: {nType.OuterXml}");
-					Console.ForegroundColor = ConsoleColor.Gray;
-					break;
-			}
-		}
-		public static void readEnum (XmlNode nEnum) {
-			if (nEnum.Attributes ["name"]?.Value == "API Constants") {
-				//constants
-				foreach (XmlNode c in nEnum.ChildNodes) {
-					if (c.Name != "enum")
-						throw new Exception ("unexpected element in enums");
-					if (c.Attributes ["alias"] != null) {
-						aliases.Add (c.Attributes["name"].Value, c.Attributes["alias"].Value);
-						continue;
-					}
-
-					Constants.Add (new EnumerantValue {
-						Name = c.Attributes["name"].Value,
-						value = c.Attributes["value"].Value,
-						comment = c.Attributes["comment"]?.Value
-					});
-				}
-				return;
-			}
-			EnumDef ed = new EnumDef {
-				type = (EnumTypes)Enum.Parse (typeof (EnumTypes), nEnum.Attributes["type"].Value, true),
-				Name = nEnum.Attributes["name"].Value
-			};
-
-			EnumerantValue ev = new EnumerantValue ();
-			foreach (XmlNode p in nEnum.ChildNodes) {
-				if (p.Name == "comment" || p.NodeType == XmlNodeType.Comment) {
-					ev.comment = p.InnerXml;
-					continue;
-				} 
-
-				if (p.Name == "unused") {
-					ev.unusedComment = p.InnerXml;
-					continue;
-				}
-
-				ev.Name = p.Attributes["name"].Value;
-				ev.comment = p.Attributes["comment"]?.Value;
-
-				if (p.Attributes["alias"] != null) {
-					ev.isAlias = true;
-					ev.value = p.Attributes["alias"].Value;
-				}else if(ed.type == EnumTypes.bitmask) {
-					if (p.Attributes["bitpos"] != null)
-						ev.value = (1u << int.Parse (p.Attributes["bitpos"].Value)).ToString ();
-					else
-						ev.value = p.Attributes["value"]?.Value;
-				} else 
-					ev.value = p.Attributes["value"].Value;
-
-				ed.values.Add (ev);
-				ev = new EnumerantValue ();
-			}
-
-			enums.Add (ed);
-		}
-
-		static void parseRequirements (InterfaceDef iface, XmlNode requirements) {
-			if (requirements.Attributes["comment"]?.Value == "API constants") {
-				//CONSTANTS
-				foreach (XmlNode req in requirements.ChildNodes) {
-					switch (req.Name) {
-						case "enum":
-							EnumerantValue ev = Constants.Where (v => v.Name == req.Attributes["name"].Value).First ();
-							ev.definedBy.Add (iface.Name);
-							break;
-						default:
-							Console.ForegroundColor = ConsoleColor.Red;
-							Console.WriteLine ($"unhandle requirement tag in constants defs: {req.Attributes["name"].Value}");
-							break;
-					}
-				}
-				return;
-			}
-
-			foreach (XmlNode req in requirements.ChildNodes) {
-				switch (req.Name) {
-					case "type":
-						switch (requirements.Attributes["comment"]?.Value) {
-							case "Header boilerplate":
-								break;
-							case "API version":
-								break;
-							default:
-								TypeDef tdef = types.Where (td => td.Name == req.Attributes["name"].Value).FirstOrDefault ();
-								if (tdef != null) {
-									tdef.definedBy.Add (iface.Name);
-								}else{
-									Console.ForegroundColor = ConsoleColor.DarkRed;
-									Console.WriteLine ($"iface type not found: {req.Attributes["name"].Value}");
-								}
-								break;
-						}
-						break;
-					case "command":
-						if (preloadedCommands.Contains (req.Attributes["name"].Value))//dont move those func
-							continue;
-						try {
-							CommandDef cd = commands.Where (e => e.Name == req.Attributes["name"].Value).First ();
-							cd.definedBy.Add (iface.Name);
-						} catch {
-							Console.ForegroundColor = ConsoleColor.Red;
-							Console.WriteLine ($"extension command not found: {req.Attributes["name"].Value}");
-						}
-						break;
-					case "enum":
-						string eName = req.Attributes["name"].Value;
-						if (skipEnums.Contains (eName))
-							continue;
-						EnumerantValue ev = extends.Where (e => e.Name == eName).FirstOrDefault ();
-						if (ev != null) {
-							ev.definedBy.Add (iface.Name);
-							continue;
-						}
-						if (req.Attributes["value"] != null) {
-							extends.Add (new EnumerantValue {
-								Name = eName,
-								definedBy = new List<string> { iface.Name },
-								extends = req.Attributes["extends"]?.Value,
-								value = req.Attributes["value"].Value
-							});
-						} else if (req.Attributes["bitpos"] != null) {
-							extends.Add (new EnumerantValue {
-								Name = eName,
-								definedBy = new List<string> { iface.Name },
-								extends = req.Attributes["extends"]?.Value,
-								value = (1u << int.Parse (req.Attributes["bitpos"].Value)).ToString ()
-							});
-						} else if (req.Attributes["alias"] != null) {
-							extends.Add (new EnumerantValue {
-								Name = eName,
-								definedBy = new List<string> { iface.Name },
-								isAlias = true,
-								extends = req.Attributes["extends"]?.Value,
-								value = req.Attributes["alias"].Value
-							});	
-						} else if (req.Attributes["offset"] != null) {
-							int offset = 0, extnumber = 0;
-							int.TryParse (req.Attributes["offset"].Value, out offset);
-							if (req.Attributes["extnumber"] != null)
-								int.TryParse (req.Attributes["extnumber"].Value, out extnumber);
-							int eval = extBase;
-							if (extnumber > 0)
-								eval += offset + (extnumber - 1) * extBlockSize;
-							else
-								eval += offset + (iface.number - 1) * extBlockSize;
-
-							if (req.Attributes["dir"] != null)
-								eval = -eval;
-
-							extends.Add (new EnumerantValue {
-								Name = eName,
-								definedBy = new List<string> { iface.Name },
-								extends = req.Attributes["extends"]?.Value,
-								value = eval.ToString ()
-							});
-						} else //constant
-							Constants.Add (new EnumerantValue {
-								Name = eName,
-								definedBy = new List<string> { iface.Name },
-								extends = req.Attributes["extends"]?.Value,
-							});
-						break;
-					default:
-						Console.ForegroundColor = ConsoleColor.DarkRed;
-						Console.WriteLine ($"unknown req: {req.OuterXml}");
-						break;
-				}
-			}
-		}
-
-		public static void readExtension (XmlNode nExt) {
-			ExtensionDef ext = new ExtensionDef ();
-			ext.Name = nExt.Attributes["name"].Value;
-			if (nExt.Attributes["number"] != null)
-				ext.number = int.Parse (nExt.Attributes["number"].Value);
-			if (nExt.Attributes["requires"] != null)
-				ext.requires = nExt.Attributes["requires"].Value.Split (new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
-			if (nExt.Attributes["supported"] != null)
-				ext.supported = nExt.Attributes["supported"].Value;
-			if (nExt.Attributes["type"] != null)
-				ext.type = (ExtensionType)Enum.Parse (typeof (ExtensionType), nExt.Attributes["type"].Value, true);
-
-			foreach (XmlNode n in nExt.ChildNodes) {
-				if (n.Name == "require") {
-					parseRequirements (ext, n);
-				} else if (n.Name == "remove") {
-					Console.ForegroundColor = ConsoleColor.Blue;
-					Console.WriteLine ($"extension remove: {n.OuterXml}");
-				} else
-					Debugger.Break ();
-			}
-
-			extensions.Add (ext);
-		}
-
-		public static void readFeature (XmlNode nFeat) {
-			FeatureDef fd = new FeatureDef ();
-			fd.number = 1;
-			fd.Name = nFeat.Attributes["name"].Value;
-			fd.api = nFeat.Attributes["api"].Value;
-			string[] version = nFeat.Attributes["number"].Value.Split ('.');
-			fd.major = int.Parse (version[0]);
-			fd.minor = int.Parse (version[1]);
-			fd.comment = nFeat.Attributes["comment"]?.Value;
-
-			foreach (XmlNode f in nFeat.ChildNodes) {
-				if (f.Name == "require") {
-					parseRequirements (fd, f);
-				} else if (f.Name == "remove") {
-					Console.ForegroundColor = ConsoleColor.DarkBlue;
-					Console.WriteLine ($"feature remove: {f.OuterXml}");
-				}// else
-					//Debugger.Break ();
-			}
-
-			features.Add (fd);
-		}
-
-
-		static MemberDef parseMember (XmlNode np) {
-			MemberDef md = new MemberDef () { typedef = ParamDef.parse (np) };
-			if (np.Attributes["optional"] != null)
-				md.optional = true;
-
-			md.lenMember = np.Attributes["len"]?.Value;
-			md.defaultValue = np.Attributes["values"]?.Value;
-			md.optional = np.Attributes["optional"] != null;//could handle both case
-			md.externsync = np.Attributes["externsync"] != null;
-
-			md.Name = np["name"].InnerText;
-			if (reservedNames.Contains (md.Name))
-				md.Name = "_" + md.Name;
-
-			XmlNode ns = np["name"].NextSibling;
-			if (ns?.NodeType == XmlNodeType.Text && ns.Value.StartsWith ("[",StringComparison.Ordinal)) {
-				if (np["enum"] != null) {
-					md.fixedArray = np["enum"].InnerXml;
-				} else
-					md.fixedArray = ns.Value;
-			}
-
-
-
-			md.comment = np["comment"]?.InnerText;
-
-			return md;
-		}
-
-		public static void readCommand (XmlNode ncmd) {
-			CommandDef cd = new CommandDef ();
-
-			if (ncmd.Attributes ["alias"] != null) {
-				cd.Name = ncmd.Attributes ["name"].Value;
-				cd.alias = ncmd.Attributes["alias"].Value;
-			} else {
-				cd.successCodes = ncmd.Attributes["successcodes"]?.Value;
-				cd.errorcodes = ncmd.Attributes["errorcodes"]?.Value;
-
-				XmlNode n = ncmd["proto"];
-				cd.returnType = ParamDef.parse (n);
-				cd.Name = n["name"].InnerText;
-				n = n.NextSibling;
-				while (n != null) {
-					if (n.Name == "param")
-						cd.parameters.Add (parseMember (n));
-					else if (n.Name == "implicitexternsyncparams")
-						cd.comment = n.InnerText;
-
-					n = n.NextSibling;
-				}
-			}
-			commands.Add (cd);
-		}
-		#endregion
-
-		const string vkxmlUrl = "https://raw.githubusercontent.com/KhronosGroup/Vulkan-Docs/master/xml/vk.xml";
-		const string vkxmlLocal = "vk.xml";
-
-		public static void Main (string[] args) {
-			Console.WriteLine("Http query for: " + vkxmlUrl);
-			DateTime lastModifiedLocal = DateTime.MinValue;
-			if (File.Exists(vkxmlLocal))			
-				lastModifiedLocal = File.GetLastWriteTime(vkxmlLocal);
-
-			WebClient webCli = new WebClient();
-			HttpWebRequest request = WebRequest.Create(vkxmlUrl) as HttpWebRequest;
-			HttpWebResponse response = request.GetResponse() as HttpWebResponse;
-			if (response.StatusCode == HttpStatusCode.OK) {
-				if (DateTime.Compare(lastModifiedLocal, response.LastModified) == 0)
-					Console.WriteLine(vkxmlLocal + "is up to date");
-				else {
-					Console.WriteLine("Downloading " + vkxmlUrl + " ...");
-					webCli.DownloadFile(vkxmlUrl, vkxmlLocal);
-				}
-			}
-
-			XmlDocument doc = new XmlDocument();
-			doc.Load(vkxmlLocal);
-
-			foreach (XmlNode p in doc.GetElementsByTagName("tags").Item(0))
-				tags.Add(p.Attributes["name"].Value.ToString());
-
-			foreach (XmlNode p in doc.GetElementsByTagName("types").Item(0))
-				readType(p);
-
-			XmlNodeList enumsNL = doc.GetElementsByTagName("enums");
-			for (int i = 0; i < enumsNL.Count; i++)
-				readEnum(enumsNL.Item(i));
-
-			foreach (XmlNode e in doc.GetElementsByTagName("commands").Item(0)) {
-				if (e.Name == "command")
-					readCommand(e);
-				else
-					Console.WriteLine($"commands: {e.OuterXml}");
-			}
-
-			foreach (XmlNode e in doc.GetElementsByTagName("extensions").Item(0)) {
-				if (e.Name == "extension")
-					readExtension(e);
-				else
-					Console.WriteLine($"extension: {e.OuterXml}");
-			}
-
-			XmlNodeList featuresNL = doc.GetElementsByTagName("feature");
-			for (int i = 0; i < featuresNL.Count; i++)
-				readFeature(featuresNL.Item(i));
-		
-
-			gen_constants ("Vk");
-			gen_enums ("Vk");
-			gen_structs ("Vk");
-			gen_commands ("Vk");
-			gen_handles ("Vk");
-			//gen_funcptrs ("Vk");
-
-			gen_extensions ();
-		}
-
-	}
+        static Dictionary<string, ParamDef> paramsDefs = new Dictionary<string, ParamDef> ();
+
+        public static List<string> tags = new List<string> ();
+
+
+        class Definition
+        {
+            public List<string> definedBy = new List<string> ();
+            protected string name;
+            public string comment;
+            public override string ToString () => this.GetType ().Name + ":" + name;
+
+            public string Name {
+                get { return reservedNames.Contains (name) ? "_" + name : name; }
+                set { name = value; }
+            }
+            public virtual string CSName {
+                get {
+                    string tmp = name.Replace ("FlagBits", "Flags");
+                    while (Generator.aliases.ContainsKey (tmp)) //recurse in aliases
+                        tmp = Generator.aliases[tmp];
+
+                    return (Generator.knownTypes.ContainsKey (tmp) ? Generator.knownTypes[tmp] : tmp);
+                }
+            }
+        }
+
+        class StructDef : TypeDef
+        {
+            public List<MemberDef> members = new List<MemberDef> ();
+        }
+        class TypeDef : Definition
+        {
+            public TypeCategories category;
+            public string baseType;
+            public string require;
+        }
+        class EnumDef : Definition
+        {
+            //public string require;
+            public EnumTypes type;
+            public int start;
+            public int end;
+            public string vendor;
+
+            public List<EnumerantValue> values = new List<EnumerantValue> ();
+        }
+        class HandleDef : TypeDef
+        {
+            public string parent;
+            public bool nonDispatchable => baseType == "VK_DEFINE_NON_DISPATCHABLE_HANDLE";
+        }
+        class ParamDef : Definition
+        {
+            public string txtbefore;
+            public string txtafter;
+
+            public static ParamDef parse (XmlNode n) {
+                XmlNode t = n["type"];
+                ParamDef tmp = new ParamDef ();
+                tmp.name = t.InnerText;
+                if (t.PreviousSibling?.NodeType == XmlNodeType.Text)
+                    tmp.txtbefore = t.PreviousSibling.Value;
+                if (t.NextSibling?.NodeType == XmlNodeType.Text)
+                    tmp.txtafter = t.NextSibling.Value;
+
+                if (paramsDefs.ContainsKey (tmp.FullCTypeDecl))
+                    return paramsDefs[tmp.FullCTypeDecl];
+
+                paramsDefs.Add (tmp.FullCTypeDecl, tmp);
+
+                return tmp;
+            }
+
+            public string FullCTypeDecl => txtbefore + name + txtafter;
+            public int IndirectionLevel {
+                get {
+                    if (string.IsNullOrEmpty (txtafter))
+                        return 0;
+                    int i = 0;
+                    foreach (char c in txtafter) {
+                        if (c == '*')
+                            i++;
+                    }
+                    return i;
+                }
+            }
+            public bool IsStruct => string.IsNullOrEmpty (txtbefore) ? false : txtbefore.Contains ("struct");
+            public bool IsConst => string.IsNullOrEmpty (txtbefore) ? false : txtbefore.Contains ("const");
+            public override string ToString () => FullCTypeDecl;
+        }
+        class MemberDef : Definition
+        {
+            public ParamDef typedef;
+
+            public bool isReadOnly;
+            public bool optional;
+            public bool externsync;
+            public bool nullTerminated;
+            public string lenMember;
+            public string defaultValue;
+            public string fixedArray;
+
+            public override string ToString () => string.Format ($"memberdef: {typedef.FullCTypeDecl} {name}");
+        }
+
+        class EnumerantValue : Definition, IEquatable<EnumerantValue>
+        {//name is not yet converted to csname!!
+            public string unusedComment;
+            public string extends;
+            public string value;
+            public bool isAlias;
+            public override string ToString () => string.Format ($"{name} = {value}");
+            public override string CSName => throw new NotImplementedException (); //name.ConvertUnderscoredUpperCasedNameToCamelCase ();
+
+            public string GetCSName (string containingType = null) {
+                return GetCSName (name, containingType);
+                // name.ConvertUnderscoredUpperCasedNameToCamelCase ().RemoveCommonLeadingPart (containingType.CSName);
+            }
+            public static string GetCSName (string value, string containingType) {
+                string ccValue = value.ConvertUnderscoredUpperCasedNameToCamelCase ();
+                string cType = containingType?.RemoveTagsAndFlagsSuffix ();
+                return containingType == null || (ccValue.Length > cType.Length && cType != ccValue.Substring (0, cType.Length)) ?
+                    ccValue.StartsWith ("Vk", StringComparison.Ordinal) ? ccValue.Substring (2) : ccValue :
+                    ccValue.RemoveCommonLeadingPart (containingType);
+            }
+
+            public bool Equals (EnumerantValue other) {
+                return name == other.name;
+            }
+            public override bool Equals (object obj) {
+                if (obj == null) return false;
+                return name == (obj as EnumerantValue).name;
+            }
+            public override int GetHashCode () {
+                return value.GetHashCode ();
+            }
+        }
+
+        class FuncpointerDef : TypeDef
+        {
+            public ParamDef returnType;
+            public List<MemberDef> parameters = new List<MemberDef> ();
+        }
+        class CommandDef : FuncpointerDef
+        {
+            public string alias;
+            public string successCodes;
+            public string errorcodes;
+        }
+
+        static List<TypeDef> types = new List<TypeDef> ();
+        static List<EnumDef> enums = new List<EnumDef> ();
+        static List<CommandDef> commands = new List<CommandDef> ();
+        static List<EnumerantValue> extends = new List<EnumerantValue> ();
+        static List<EnumerantValue> Constants = new List<EnumerantValue> ();
+
+        class InterfaceDef : Definition
+        {
+            public int number;
+        }
+        class FeatureDef : InterfaceDef
+        {
+            public string api;
+            public int major;
+            public int minor;
+        }
+        class ExtensionDef : InterfaceDef
+        {
+            public ExtensionType type;
+            public string supported;
+            public string[] requires;
+        }
+
+        static List<FeatureDef> features = new List<FeatureDef> ();
+        static List<ExtensionDef> extensions = new List<ExtensionDef> ();
+
+        #region code generation
+        static void writePreamble (IndentedTextWriter tw, params string[] additionalUsings) {
+            tw.WriteLine (heading);
+            foreach (string @using in defaultUsings)
+                tw.WriteLine ($"using {@using};");
+            foreach (string @using in additionalUsings)
+                tw.WriteLine ($"using {@using};");
+            tw.WriteLine ($"namespace {vknamespace} {{");
+        }
+
+        static void writeStructNew (IndentedTextWriter tw, StructDef sd) {
+            MemberDef md = sd.members.Where (mb => mb.Name == "sType").First ();
+            TypeDef sType = types.Where (
+                edd => edd.category == TypeCategories.@enum && edd.Name == md.typedef.Name).First ();
+
+            tw.WriteLine ($"public static {sd.Name} New () {{");
+            tw.Indent++;
+
+            tw.WriteLine ($"return new {sd.Name} {{");
+            tw.Indent++;
+
+            tw.WriteLine ($"sType = {sType.CSName}.{EnumerantValue.GetCSName (md.defaultValue, sType.CSName)},");
+            tw.WriteLine ($"pNext = IntPtr.Zero");
+            tw.Indent--;
+            tw.WriteLine (@"};");
+            tw.Indent--;
+            tw.WriteLine (@"}");
+
+            tw.WriteLine ($"public {sd.Name} (IntPtr pNext) : this () {{");
+            tw.Indent++;
+
+            tw.WriteLine ($"sType = {sType.CSName}.{EnumerantValue.GetCSName (md.defaultValue, sType.CSName)};");
+            tw.WriteLine ($"this.pNext = pNext;");
+
+            tw.Indent--;
+            tw.WriteLine (@"}");
+        }
+        static string[] valueTypes = { "byte", "int", "uint", "float", "ushort", "ulong" };
+        static void gen_struct (IndentedTextWriter tw, StructDef sd) {
+            if (sd.category == TypeCategories.union)
+                tw.WriteLine ($"[StructLayout(LayoutKind.Explicit)]");
+            else
+                tw.WriteLine ($"[StructLayout(LayoutKind.Sequential)]");
+            tw.WriteLine ($"public unsafe partial struct {sd.Name} {{");
+            tw.Indent++;
+            foreach (MemberDef mb in sd.members) {
+                if (!string.IsNullOrEmpty (mb.comment))
+                    tw.WriteLine ($"/// <summary> {mb.comment} </summary>");
+
+                string typeStr;
+
+                EnumDef ed = enums.FirstOrDefault (e => e.Name == mb.typedef.Name);
+
+                if (mb.typedef.IndirectionLevel > 0 || mb.typedef.Name.StartsWith ("PFN_", StringComparison.Ordinal))
+                    typeStr = "IntPtr";
+                else if (ed != null) {
+                    //enums has to be stored in struct as int or uint for enums are not yet blittable in ms .NET
+                    typeStr = ed.type == EnumTypes.@enum ? "int" : "uint";
+                    tw.WriteLine ($"{typeStr} _{mb.Name};");
+                    tw.WriteLine ($"public {mb.typedef.CSName} {mb.Name} {{");
+                    tw.Indent++;
+                    tw.WriteLine ($"get => ({mb.typedef.CSName})_{mb.Name};");
+                    tw.WriteLine ($"set {{ _{mb.Name} = ({typeStr})value; }}");
+                    tw.Indent--;
+                    tw.WriteLine (@"}");
+
+                    continue;
+                } else
+                    typeStr = mb.typedef.CSName;
+
+                if (sd.category == TypeCategories.union)
+                    tw.WriteLine ($"[FieldOffset(0)]");
+
+                if (!string.IsNullOrEmpty (mb.fixedArray)) {
+                    int dim = 0;
+                    string[] dims = mb.fixedArray.Split (new char[] { '[', ']' }, StringSplitOptions.RemoveEmptyEntries);
+                    if (valueTypes.Contains (typeStr)) {
+                        if (mb.typedef.Name == "char") {
+                            if (dims.Length != 1)
+                                throw new NotImplementedException ("multi dimentional char* array not implemented");
+                            string strSize = int.TryParse (dims[0], out dim) ? dim.ToString () : $"(int)Vk.{EnumerantValue.GetCSName (dims[0], null)}";
+                            tw.WriteLine ($"fixed {typeStr} _{mb.Name}[{strSize}];");
+                            tw.WriteLine ($"public string {mb.Name} {{");
+                            tw.Indent++;
+                            tw.WriteLine ($"get {{");
+                            tw.Indent++;
+                            tw.WriteLine ($"fixed ({typeStr}* tmp = _{mb.Name})");
+                            tw.Indent++;
+                            tw.WriteLine ($"return System.Text.Encoding.UTF8.GetString (tmp, {strSize});");
+                            //tw.WriteLine ($"set {{ _{mb.Name} = ({typeStr})value; }}");
+                            tw.Indent -= 2;
+                            tw.WriteLine (@"}");
+                            tw.Indent--;
+                            tw.WriteLine (@"}");
+                        } else if (dims.Length == 1) {
+                            string strSize = int.TryParse (dims[0], out dim) ? dim.ToString () : $"(int)Vk.{EnumerantValue.GetCSName (dims[0], null)}";
+                            tw.WriteLine ($"public fixed {typeStr} {mb.Name}[{strSize}];");
+                        } else {
+                            int totSize = 1;
+                            for (int i = 0; i < dims.Length; i++) {
+                                if (!int.TryParse (dims[i], out dim))
+                                    throw new NotImplementedException ("Only integer value accepted for multi dimentional arrays");
+                                totSize *= dim;
+                            }
+                            tw.WriteLine ($"fixed {typeStr} _{mb.Name}[{totSize}];");
+
+                        }
+                        continue;
+                    }
+                    if (dims.Length != 1)
+                        throw new NotImplementedException ("multi dimentional array not implemented");
+                    if (int.TryParse (dims[0], out dim)) {
+                        for (int i = 0; i < dim; i++) {
+                            tw.WriteLine ($"public {typeStr} {mb.Name}_{i};");
+                        }
+                    } else {
+                        tw.WriteLine ($"[MarshalAs (UnmanagedType.ByValArray, SizeConst = (int)Vk.{EnumerantValue.GetCSName (dims[0], null)})]");
+                        tw.WriteLine ($"public {typeStr}[] {mb.Name};");
+                    }
+                    continue;
+                }
+                tw.WriteLine ($"public {typeStr} {mb.Name};");
+            }
+
+            if (sd.members.Any (mb => mb.Name == "sType" && !string.IsNullOrEmpty (mb.defaultValue)))
+                writeStructNew (tw, sd); ;
+
+            tw.Indent--;
+            tw.WriteLine (@"}");
+        }
+
+        static void gen_structs (string englobingStaticClass) {
+            using (StreamWriter sr = new StreamWriter ($"structs_{englobingStaticClass}_gen.cs", false, System.Text.Encoding.UTF8)) {
+                using (IndentedTextWriter tw = new IndentedTextWriter (sr)) {
+                    writePreamble (tw, "System.Runtime.InteropServices");
+                    tw.Indent++;
+
+                    foreach (StructDef sd in types.OfType<StructDef> ())
+                        gen_struct (tw, sd);
+
+                    tw.Indent--;
+                    tw.WriteLine (@"}");
+                }
+            }
+        }
+        /* credit to https://github.com/mellinoe for the handle structs*/
+        static void write_empty_enum_as_struct (IndentedTextWriter tw, EnumDef enumType) {
+            tw.WriteLine (@"[DebuggerDisplay(""{DebuggerDisplay,nq}"")]");
+            tw.WriteLine ($"public struct {enumType.CSName} : IEquatable<{enumType.CSName}>");
+            tw.WriteLine (@"{");
+            tw.Indent++;
+
+            string hType = "uint";
+
+            tw.WriteLine ($"public readonly {hType} Value;");
+            tw.WriteLine ($"public {enumType.CSName}({hType} existingHandle) {{ Value = existingHandle; }}");
+            tw.WriteLine ($"public static {enumType.CSName} Null => new {enumType.CSName}(0);");
+            tw.WriteLine ($"public static implicit operator {enumType.CSName}({hType} flags) => new {enumType.CSName}(flags);");
+            tw.WriteLine ($"public static bool operator ==({enumType.CSName} left, {enumType.CSName} right) => left.Value == right.Value;");
+            tw.WriteLine ($"public static bool operator !=({enumType.CSName} left, {enumType.CSName} right) => left.Value != right.Value;");
+            tw.WriteLine ($"public static bool operator ==({enumType.CSName} left, {hType} right) => left.Value == right;");
+            tw.WriteLine ($"public static bool operator !=({enumType.CSName} left, {hType} right) => left.Value != right;");
+            tw.WriteLine ($"public bool Equals({enumType.CSName} h) => Value == h.Value;");
+            tw.WriteLine ($"public override bool Equals(object obj) => obj is {enumType.CSName} h && Equals(h);");
+            tw.WriteLine ($"public override int GetHashCode() => Value.GetHashCode();");
+            tw.WriteLine ($"private string DebuggerDisplay => string.Format(\"{enumType.CSName} [0x{{0}}]\", Value.ToString(\"X\"));");
+
+            tw.Indent--;
+            tw.WriteLine (@"}");
+        }
+
+        static void gen_enum_value (IndentedTextWriter tw, string enumName, EnumerantValue ev) {
+            if (!string.IsNullOrEmpty (ev.comment))
+                tw.WriteLine ($"/// <summary> {ev.comment} </summary>");
+            if (!string.IsNullOrEmpty (ev.unusedComment))
+                tw.WriteLine ($"[Obsolete(\"{ev.unusedComment}\"]");
+
+            uint v;
+            string vName = ev.GetCSName (enumName);
+
+            if (uint.TryParse (ev.value, out v))
+                tw.WriteLine ($"{vName,-50} = 0x{v.ToString ("X8")},");
+            else if (ev.isAlias) {
+                string alias = EnumerantValue.GetCSName (ev.value, enumName);
+                tw.WriteLine ($"{vName,-50} = {alias,10},");
+            } else
+                tw.WriteLine ($"{vName,-50} = {ev.value,10},");
+        }
+        static void gen_enums (string englobingStaticClass) {
+            using (StreamWriter sr = new StreamWriter ($"enums_{englobingStaticClass}_gen.cs", false, System.Text.Encoding.UTF8)) {
+                using (IndentedTextWriter tw = new IndentedTextWriter (sr)) {
+                    writePreamble (tw, "System.Diagnostics");
+                    tw.Indent++;
+
+                    //add uint alias for all type bitmask without flagbits enum
+                    foreach (TypeDef tdbm in types.Where (t => t.category == TypeCategories.bitmask && string.IsNullOrEmpty (t.require)))
+                        AddAlias (tdbm.Name, "uint");
+
+                    foreach (EnumDef ed in enums.Where (e => e.definedBy.Count () == 0)) {
+                        //search type
+                        TypeDef td = ed.type == EnumTypes.@enum ?
+                            types.Where (t => t.Name == ed.Name).FirstOrDefault () :
+                             types.Where (t => t.require == ed.Name).FirstOrDefault ();
+
+                        if (td == null) {
+                            AddAlias (ed.Name, "uint");
+                            continue;
+                        }
+
+                        if (!string.IsNullOrEmpty (ed?.comment))
+                            tw.WriteLine ($"/// <summary> {ed.comment} </summary>");
+                        if (ed?.type == EnumTypes.bitmask) {
+                            tw.WriteLine (@"[Flags]");
+                            tw.WriteLine ($"public enum {td.CSName} : uint {{");
+                        } else
+                            tw.WriteLine ($"public enum {td.CSName} {{");
+
+                        tw.Indent++;
+
+                        foreach (EnumerantValue ev in ed.values.OrderBy (aa => aa.isAlias))
+                            gen_enum_value (tw, td.CSName, ev);
+
+                        IEnumerable<EnumerantValue> ext = extends.Where (e => e.extends == ed.Name);
+                        foreach (EnumerantValue ev in ext.OrderBy (aa => aa.isAlias))
+                            gen_enum_value (tw, td.CSName, ev);
+
+
+                        tw.Indent--;
+                        tw.WriteLine (@"}");
+                    }
+
+                    tw.Indent--;
+                    tw.WriteLine (@"}");
+                }
+            }
+        }
+        static void gen_extensions () {
+            using (StreamWriter sr = new StreamWriter ("extensions_gen.cs", false, System.Text.Encoding.UTF8)) {
+                using (IndentedTextWriter tw = new IndentedTextWriter (sr)) {
+                    writePreamble (tw);
+                    tw.Indent++;
+
+                    tw.WriteLine (@"public static class Ext {");
+                    tw.Indent++;
+
+                    tw.WriteLine (@"public static class I {");
+                    tw.Indent++;
+                    foreach (ExtensionDef ed in extensions.Where (e => e.type == ExtensionType.Instance)) {
+                        tw.WriteLine ($"public static readonly string {ed.Name,-50} = \"{ed.Name}\";");
+                    }
+                    tw.Indent--;
+                    tw.WriteLine (@"}");
+
+                    tw.WriteLine (@"public static class D {");
+                    tw.Indent++;
+                    foreach (ExtensionDef ed in extensions.Where (e => e.type == ExtensionType.Device)) {
+                        tw.WriteLine ($"public static readonly string {ed.Name,-50} = \"{ed.Name}\";");
+                    }
+                    tw.Indent--;
+                    tw.WriteLine (@"}");
+
+                    tw.Indent--;
+                    tw.WriteLine (@"}");
+
+                    tw.Indent--;
+                    tw.WriteLine (@"}");
+                }
+            }
+        }
+        static void gen_funcptrs (string englobingStaticClass) {
+            using (StreamWriter sr = new StreamWriter ($"funcptrs_{englobingStaticClass}_gen.cs", false, System.Text.Encoding.UTF8)) {
+                using (IndentedTextWriter tw = new IndentedTextWriter (sr)) {
+                    writePreamble (tw);
+                    tw.Indent++;
+
+                    foreach (FuncpointerDef fp in types.OfType<FuncpointerDef> ())
+                        tw.WriteLine ($"public delegate {fp.returnType.CSName} {fp.Name} ();");
+
+                    tw.Indent--;
+                    tw.WriteLine (@"}");
+                }
+            }
+        }
+        static void gen_handle (IndentedTextWriter tw, HandleDef hd) {
+            tw.WriteLine (@"[DebuggerDisplay(""{DebuggerDisplay,nq}"")]");
+            tw.WriteLine ($"public struct {hd.CSName} : IEquatable<{hd.CSName}>");
+            tw.WriteLine (@"{");
+            tw.Indent++;
+            string hType = hd.nonDispatchable ? "ulong" : "IntPtr";
+
+            tw.WriteLine ($"public readonly {hType} Handle;");
+            tw.WriteLine ($"public {hd.CSName}({hType} existingHandle) {{ Handle = existingHandle; }}");
+            tw.WriteLine ($"public static {hd.CSName} Null => new {hd.CSName}({(hd.nonDispatchable ? "0" : "IntPtr.Zero")});");
+            tw.WriteLine ($"public static implicit operator {hd.CSName}({hType} handle) => new {hd.CSName}(handle);");
+            tw.WriteLine ($"public static bool operator ==({hd.CSName} left, {hd.CSName} right) => left.Handle == right.Handle;");
+            tw.WriteLine ($"public static bool operator !=({hd.CSName} left, {hd.CSName} right) => left.Handle != right.Handle;");
+            tw.WriteLine ($"public static bool operator ==({hd.CSName} left, {hType} right) => left.Handle == right;");
+            tw.WriteLine ($"public static bool operator !=({hd.CSName} left, {hType} right) => left.Handle != right;");
+            tw.WriteLine ($"public bool Equals({hd.CSName} h) => Handle == h.Handle;");
+            tw.WriteLine ($"public override bool Equals(object obj) => obj is {hd.CSName} h && Equals(h);");
+            tw.WriteLine ($"public override int GetHashCode() => Handle.GetHashCode();");
+            tw.WriteLine ($"private string DebuggerDisplay => string.Format(\"{hd.CSName} [0x{{0}}]\", Handle.ToString(\"X\"));");
+
+            tw.Indent--;
+            tw.WriteLine (@"}");
+        }
+        static void gen_handles (string englobingStaticClass) {
+            using (StreamWriter sr = new StreamWriter ($"handles_{englobingStaticClass}_gen.cs", false, System.Text.Encoding.UTF8)) {
+                using (IndentedTextWriter tw = new IndentedTextWriter (sr)) {
+                    writePreamble (tw, "System.Diagnostics");
+                    tw.Indent++;
+
+                    foreach (HandleDef hd in types.OfType<HandleDef> ())//.Where(t=>t.definedBy.Count == 0))
+                        gen_handle (tw, hd);
+
+                    tw.Indent--;
+                    tw.WriteLine (@"}");
+                }
+            }
+        }
+
+        static void gen_constant_value (IndentedTextWriter tw, EnumerantValue cd) {
+            if (string.IsNullOrEmpty (cd.value)) {
+                Console.ForegroundColor = ConsoleColor.DarkRed;
+                Console.WriteLine ("no value for constant: " + cd);
+                return;
+            }
+            string pTrims = cd.value.Replace ("(", "");
+            pTrims = pTrims.Replace (")", "");
+
+            int i = pTrims.Length;
+            while (i > 1 && char.IsLetter (pTrims[i - 1]))
+                i--;
+
+            switch (pTrims.Substring (i).ToLower ()) {
+            case "u":
+                tw.WriteLine ($"{"public const uint " + cd.GetCSName (),-50} = {cd.value};");
+                break;
+            case "ull":
+                tw.WriteLine ($"{"public const ulong " + cd.GetCSName (),-50} = ({pTrims.Remove (pTrims.Length - 1)});");
+                break;
+            case "f":
+                tw.WriteLine ($"{"public const float " + cd.GetCSName (),-50} = {cd.value};");
+                break;
+            default:
+                tw.WriteLine ($"{"public const uint " + cd.GetCSName (),-50} = {cd.value};");
+                break;
+            }
+        }
+        static void gen_constants (string englobingStaticClass) {
+            using (StreamWriter sr = new StreamWriter ($"constants_{englobingStaticClass}_gen.cs", false, System.Text.Encoding.UTF8)) {
+                using (IndentedTextWriter tw = new IndentedTextWriter (sr)) {
+                    writePreamble (tw);
+                    tw.Indent++;
+
+                    tw.WriteLine ($"public static partial class {englobingStaticClass} {{");
+                    tw.Indent++;
+
+                    foreach (EnumerantValue cd in Constants)
+                        gen_constant_value (tw, cd);
+
+                    tw.Indent--;
+                    tw.WriteLine (@"}");
+
+                    tw.Indent--;
+                    tw.WriteLine (@"}");
+                }
+            }
+        }
+
+        static string getDefaultParamSig (MemberDef md, bool isLast) {
+            switch (md.typedef.IndirectionLevel) {
+            case 0:
+                return (string.Format ($"{md.typedef.CSName} {md.Name}{(isLast ? ", " : ")")}"));
+            case 1:
+                return (string.Format ($"IntPtr {md.Name}{(isLast ? ", " : ")")}"));
+            case 2:
+                return (string.Format ($"ref IntPtr {md.Name}{(isLast ? ", " : ")")}"));
+            }
+            return null;
+        }
+        static string getByRefParamSig (MemberDef md, bool isLast) {
+            string typeName = md.typedef.CSName == "void" ? "IntPtr" : md.typedef.CSName;
+            switch (md.typedef.IndirectionLevel) {
+            case 1:
+                return md.typedef.IsConst ?
+                    (string.Format ($"ref {typeName} {md.Name}{(isLast ? ", " : ")")}")) :
+                    (string.Format ($"out {typeName} {md.Name}{(isLast ? ", " : ")")}"));
+            case 2:
+                return md.typedef.IsConst ?
+                    string.Format ($"ref IntPtr {md.Name}{(isLast ? ", " : ")")}") :
+                    string.Format ($"out IntPtr {md.Name}{(isLast ? ", " : ")")}");
+            }
+            return null;
+        }
+
+        static void writeCmd (IndentedTextWriter tw, string sig) {
+            tw.WriteLine (@"[CalliRewrite]");
+            tw.Write ($"public static {sig}");
+            tw.WriteLine (@" => throw new NotImplementedException();");
+        }
+        static void gen_command (IndentedTextWriter tw, CommandDef cd) {
+            if (!string.IsNullOrEmpty (cd.alias)) {
+                Console.ForegroundColor = ConsoleColor.DarkGray;
+                Console.WriteLine ("TODO:command generator: is alias: " + cd);
+                return;
+            }
+            tw.WriteLine ($"internal static IntPtr {cd.CSName}_ptr;");
+
+            List<string> signatures = new List<string> () { "" };
+
+            //if (cd.Name == "vkRegisterObjectsNVX")
+            //Debugger.Break ();
+
+            for (int i = 0; i < cd.parameters.Count; i++) {
+                MemberDef md = cd.parameters[i];
+                List<string> typeSigs = new List<string> () { getDefaultParamSig (md, i < cd.parameters.Count - 1) };
+                if (md.typedef.IndirectionLevel == 1 && md.typedef.Name != "void")
+                    typeSigs.Add (getByRefParamSig (md, i < cd.parameters.Count - 1));
+
+                string[] prevSigs = new string[signatures.Count];
+                Array.Copy (signatures.ToArray (), prevSigs, prevSigs.Length);
+                signatures.Clear ();
+                for (int s = 0; s < prevSigs.Length; s++) {
+                    signatures.Add (prevSigs[s] + typeSigs[0]);
+                    for (int st = 1; st < typeSigs.Count; st++) {
+                        signatures.Add (prevSigs[s] + typeSigs[st]);
+                    }
+                }
+            }
+
+            foreach (string sig in signatures)
+                writeCmd (tw, string.Format ($"{cd.returnType.CSName} {cd.Name} ({sig}"));
+
+            tw.WriteLine ();
+        }
+        static void gen_commands (string englobingStaticClass) {
+            using (StreamWriter sr = new StreamWriter ($"commands_{englobingStaticClass}_gen.cs", false, System.Text.Encoding.UTF8)) {
+                using (IndentedTextWriter tw = new IndentedTextWriter (sr)) {
+                    writePreamble (tw, vknamespace + ".Generator");
+                    tw.Indent++;
+
+                    tw.WriteLine ($"public static partial class {englobingStaticClass} {{");
+                    tw.Indent++;
+
+                    //func pointers and signature
+                    foreach (CommandDef cd in commands)
+                        gen_command (tw, cd);
+
+                    #region Function pointers loading (os, inst and dev)
+                    //norml dyn loading function
+
+                    tw.WriteLine (@"internal static void LoadFunctionPointers() {");
+                    tw.Indent++;
+                    foreach (string preloadCmd in preloadedCommands) {
+                        tw.WriteLine ($"{preloadCmd}_ptr      = Vk.s_nativeLib.LoadFunctionPointer(\"{preloadCmd}\");");
+                    }
+                    //tw.WriteLine (@"Console.WriteLine (""preload function pointer ok."");");
+
+                    tw.Indent--;
+                    tw.WriteLine (@"}");
+
+                    //load instance func pointers
+                    tw.WriteLine ($"public static void LoadInstanceFunctionPointers (VkInstance inst) {{");
+                    tw.Indent++;
+                    foreach (CommandDef cd in commands) {//.Where (cmd=>cmd.definedBy.Count == 0)) {
+                        if (!string.IsNullOrEmpty (cd.alias))
+                            continue;
+                        if (preloadedCommands.Contains (cd.Name))
+                            continue;
+                        tw.WriteLine ($"{cd.Name + "_ptr",-54} = LoadingUtils.GetDelegate (inst, \"{cd.Name}\");");
+                    }
+
+                    tw.Indent--;
+                    tw.WriteLine (@"}");
+                    tw.WriteLine ();
+                    //load device func pointers
+                    tw.WriteLine ($"public static void LoadDeviceFunctionPointers (VkDevice dev) {{");
+                    tw.Indent++;
+                    foreach (CommandDef cd in commands) {//.Where (cmd=>cmd.definedBy.Count == 0)) {
+                        if (!string.IsNullOrEmpty (cd.alias))
+                            continue;
+                        if (preloadedCommands.Contains (cd.Name))
+                            continue;
+                        tw.WriteLine ($"LoadingUtils.GetDelegate (dev, \"{cd.Name + "\",",-54} ref {cd.Name + "_ptr"});");
+                    }
+
+                    tw.Indent--;
+                    tw.WriteLine (@"}");
+                    #endregion
+
+                    tw.Indent--;
+                    tw.WriteLine (@"}");
+
+                    tw.Indent--;
+                    tw.WriteLine (@"}");
+                }
+            }
+        }
+        #endregion
+
+        #region vk.xml parsing
+        static void readType (XmlNode nType) {
+
+            if (nType.Attributes["alias"] != null) {
+                aliases.Add (nType.Attributes["name"].Value, nType.Attributes["alias"].Value);
+                return;
+            }
+
+            TypeCategories category = TypeCategories.none;
+            if (nType.Attributes["category"] != null)
+                category = (TypeCategories)Enum.Parse (typeof (TypeCategories), nType.Attributes["category"].Value, true);
+            switch (category) {
+            case TypeCategories.none:
+                return;
+            case TypeCategories.basetype:
+                types.Add (new TypeDef
+                {
+                    category = category,
+                    Name = nType["name"].InnerText,
+                    baseType = nType["type"]?.InnerText
+                });
+                break;
+            case TypeCategories.bitmask:
+                TypeDef ed = new TypeDef
+                {
+                    category = category,
+                    Name = nType["name"].InnerText
+                };
+                if (nType.Attributes["requires"] == null)
+                    ed.baseType = nType["type"].InnerXml;
+                else
+                    ed.require = nType.Attributes["requires"].Value;
+                types.Add (ed);
+                break;
+            case TypeCategories.handle:
+                types.Add (new HandleDef
+                {
+                    category = category,
+                    Name = nType["name"].InnerText,
+                    baseType = nType["type"]?.InnerText,
+                    parent = nType.Attributes["parent"]?.Value
+                });
+                break;
+            case TypeCategories.funcpointer:
+                FuncpointerDef fp = new FuncpointerDef
+                {
+                    category = category,
+                    Name = nType["name"].InnerText
+                };
+                string returnTypeStr = nType.InnerText.Substring (8);//trim leading typedef
+                returnTypeStr = returnTypeStr.Remove (returnTypeStr.IndexOf ('(')).Trim ();
+                switch (returnTypeStr) {
+                case "void":
+                    fp.returnType = new ParamDef () { Name = "void" };
+                    break;
+                case "void*":
+                    fp.returnType = new ParamDef () { Name = "IntPtr" };
+                    break;
+                default:
+                    fp.returnType = new ParamDef () { Name = returnTypeStr };
+                    break;
+                }
+                types.Add (fp);
+                break;
+            case TypeCategories.@enum:
+                types.Add (new TypeDef
+                {
+                    category = category,
+                    Name = nType.Attributes["name"].Value,
+                });
+                break;
+            case TypeCategories.define:
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.WriteLine (nType.InnerXml);
+                break;
+            case TypeCategories.include:
+            case TypeCategories.group:
+                Console.ForegroundColor = ConsoleColor.DarkMagenta;
+                Console.WriteLine ($"Unprocessed type category {category}: {nType.OuterXml}");
+                Console.ForegroundColor = ConsoleColor.Gray;
+                break;
+            case TypeCategories.union:
+            case TypeCategories.@struct:
+                StructDef sd = new StructDef
+                {
+                    Name = nType.Attributes["name"].Value,
+                    category = category,
+                };
+                string nextComment = "";
+                foreach (XmlNode m in nType.ChildNodes) {
+                    if ((m.NodeType == XmlNodeType.Comment)) {
+                        nextComment = m.InnerText;
+                        continue;
+                    }
+                    if ((m.NodeType != XmlNodeType.Element)) {
+                        Console.WriteLine ($"expecting element, having {m.NodeType}: {m.OuterXml}");
+                        continue;
+                    }
+                    switch (m.Name) {
+                    case "comment":
+                        break;
+                    case "member":
+                        MemberDef md = parseMember (m);
+                        md.comment = nextComment;
+                        nextComment = "";
+                        sd.members.Add (md);
+                        break;
+                    default:
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine ($"unknown element in struct def : {m.OuterXml}");
+                        Console.ForegroundColor = ConsoleColor.Gray;
+                        break;
+                    }
+                }
+                types.Add (sd);
+                break;
+            default:
+                Console.ForegroundColor = ConsoleColor.DarkMagenta;
+                Console.WriteLine ($"Unprocessed type: {nType.OuterXml}");
+                Console.ForegroundColor = ConsoleColor.Gray;
+                break;
+            }
+        }
+        public static void readEnum (XmlNode nEnum) {
+            if (nEnum.Attributes["name"]?.Value == "API Constants") {
+                //constants
+                foreach (XmlNode c in nEnum.ChildNodes) {
+                    if (c.Name != "enum")
+                        throw new Exception ("unexpected element in enums");
+                    if (c.Attributes["alias"] != null) {
+                        aliases.Add (c.Attributes["name"].Value, c.Attributes["alias"].Value);
+                        continue;
+                    }
+
+                    Constants.Add (new EnumerantValue
+                    {
+                        Name = c.Attributes["name"].Value,
+                        value = c.Attributes["value"].Value,
+                        comment = c.Attributes["comment"]?.Value
+                    });
+                }
+                return;
+            }
+            EnumDef ed = new EnumDef
+            {
+                type = (EnumTypes)Enum.Parse (typeof (EnumTypes), nEnum.Attributes["type"].Value, true),
+                Name = nEnum.Attributes["name"].Value
+            };
+
+            EnumerantValue ev = new EnumerantValue ();
+            foreach (XmlNode p in nEnum.ChildNodes) {
+                if (p.Name == "comment" || p.NodeType == XmlNodeType.Comment) {
+                    ev.comment = p.InnerXml;
+                    continue;
+                }
+
+                if (p.Name == "unused") {
+                    ev.unusedComment = p.InnerXml;
+                    continue;
+                }
+
+                ev.Name = p.Attributes["name"].Value;
+                ev.comment = p.Attributes["comment"]?.Value;
+
+                if (p.Attributes["alias"] != null) {
+                    ev.isAlias = true;
+                    ev.value = p.Attributes["alias"].Value;
+                } else if (ed.type == EnumTypes.bitmask) {
+                    if (p.Attributes["bitpos"] != null)
+                        ev.value = (1u << int.Parse (p.Attributes["bitpos"].Value)).ToString ();
+                    else
+                        ev.value = p.Attributes["value"]?.Value;
+                } else
+                    ev.value = p.Attributes["value"].Value;
+
+                ed.values.Add (ev);
+                ev = new EnumerantValue ();
+            }
+
+            enums.Add (ed);
+        }
+
+        static void parseRequirements (InterfaceDef iface, XmlNode requirements) {
+            if (requirements.Attributes["comment"]?.Value == "API constants") {
+                //CONSTANTS
+                foreach (XmlNode req in requirements.ChildNodes) {
+                    switch (req.Name) {
+                    case "enum":
+                        EnumerantValue ev = Constants.Where (v => v.Name == req.Attributes["name"].Value).First ();
+                        ev.definedBy.Add (iface.Name);
+                        break;
+                    default:
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine ($"unhandle requirement tag in constants defs: {req.Attributes["name"].Value}");
+                        break;
+                    }
+                }
+                return;
+            }
+
+            foreach (XmlNode req in requirements.ChildNodes) {
+                switch (req.Name) {
+                case "type":
+                    switch (requirements.Attributes["comment"]?.Value) {
+                    case "Header boilerplate":
+                        break;
+                    case "API version":
+                        break;
+                    default:
+                        TypeDef tdef = types.Where (td => td.Name == req.Attributes["name"].Value).FirstOrDefault ();
+                        if (tdef == null) {
+                            if (aliases.ContainsKey (req.Attributes["name"].Value))
+                                tdef = types.Where (td => td.Name == aliases[req.Attributes["name"].Value]).FirstOrDefault ();
+                            if (tdef == null) {
+                                Console.ForegroundColor = ConsoleColor.DarkRed;
+                                Console.WriteLine ($"iface type not found: {req.Attributes["name"].Value}");
+                                break;
+                            }
+                        }                        
+                        tdef.definedBy.Add (iface.Name);
+                        break;
+                    }
+                    break;
+                case "command":
+                    if (preloadedCommands.Contains (req.Attributes["name"].Value))//dont move those func
+                        continue;
+                    try {
+                        CommandDef cd = commands.Where (e => e.Name == req.Attributes["name"].Value).First ();
+                        cd.definedBy.Add (iface.Name);
+                    } catch {
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine ($"extension command not found: {req.Attributes["name"].Value}");
+                    }
+                    break;
+                case "enum":
+                    string eName = req.Attributes["name"].Value;
+                    if (skipEnums.Contains (eName))
+                        continue;
+                    if (aliases.ContainsKey (eName))
+                         eName = aliases[eName];
+                    EnumerantValue ev = extends.Where (e => e.Name == eName).FirstOrDefault ();
+                    if (ev != null) {
+                        ev.definedBy.Add (iface.Name);
+                        continue;
+                    }
+                    if (req.Attributes["value"] != null) {
+                        extends.Add (new EnumerantValue
+                        {
+                            Name = eName,
+                            definedBy = new List<string> { iface.Name },
+                            extends = req.Attributes["extends"]?.Value,
+                            value = req.Attributes["value"].Value
+                        });
+                    } else if (req.Attributes["bitpos"] != null) {
+                        extends.Add (new EnumerantValue
+                        {
+                            Name = eName,
+                            definedBy = new List<string> { iface.Name },
+                            extends = req.Attributes["extends"]?.Value,
+                            value = (1u << int.Parse (req.Attributes["bitpos"].Value)).ToString ()
+                        });
+                    } else if (req.Attributes["alias"] != null) {
+                        extends.Add (new EnumerantValue
+                        {
+                            Name = eName,
+                            definedBy = new List<string> { iface.Name },
+                            isAlias = true,
+                            extends = req.Attributes["extends"]?.Value,
+                            value = req.Attributes["alias"].Value
+                        });
+                    } else if (req.Attributes["offset"] != null) {
+                        int offset = 0, extnumber = 0;
+                        int.TryParse (req.Attributes["offset"].Value, out offset);
+                        if (req.Attributes["extnumber"] != null)
+                            int.TryParse (req.Attributes["extnumber"].Value, out extnumber);
+                        int eval = extBase;
+                        if (extnumber > 0)
+                            eval += offset + (extnumber - 1) * extBlockSize;
+                        else
+                            eval += offset + (iface.number - 1) * extBlockSize;
+
+                        if (req.Attributes["dir"] != null)
+                            eval = -eval;
+
+                        extends.Add (new EnumerantValue
+                        {
+                            Name = eName,
+                            definedBy = new List<string> { iface.Name },
+                            extends = req.Attributes["extends"]?.Value,
+                            value = eval.ToString ()
+                        });
+                    } else //constant
+                        Constants.Add (new EnumerantValue
+                        {
+                            Name = eName,
+                            definedBy = new List<string> { iface.Name },
+                            extends = req.Attributes["extends"]?.Value,
+                        });
+                    break;
+                default:
+                    Console.ForegroundColor = ConsoleColor.DarkRed;
+                    Console.WriteLine ($"unknown req: {req.OuterXml}");
+                    break;
+                }
+            }
+        }
+
+        public static void readExtension (XmlNode nExt) {
+            ExtensionDef ext = new ExtensionDef ();
+            ext.Name = nExt.Attributes["name"].Value;
+            if (nExt.Attributes["number"] != null)
+                ext.number = int.Parse (nExt.Attributes["number"].Value);
+            if (nExt.Attributes["requires"] != null)
+                ext.requires = nExt.Attributes["requires"].Value.Split (new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+            if (nExt.Attributes["supported"] != null)
+                ext.supported = nExt.Attributes["supported"].Value;
+            if (nExt.Attributes["type"] != null)
+                ext.type = (ExtensionType)Enum.Parse (typeof (ExtensionType), nExt.Attributes["type"].Value, true);
+
+            foreach (XmlNode n in nExt.ChildNodes) {
+                if (n.Name == "require") {
+                    parseRequirements (ext, n);
+                } else if (n.Name == "remove") {
+                    Console.ForegroundColor = ConsoleColor.Blue;
+                    Console.WriteLine ($"extension remove: {n.OuterXml}");
+                } else
+                    Debugger.Break ();
+            }
+
+            extensions.Add (ext);
+        }
+
+        public static void readFeature (XmlNode nFeat) {
+            FeatureDef fd = new FeatureDef ();
+            fd.number = 1;
+            fd.Name = nFeat.Attributes["name"].Value;
+            fd.api = nFeat.Attributes["api"].Value;
+            string[] version = nFeat.Attributes["number"].Value.Split ('.');
+            fd.major = int.Parse (version[0]);
+            fd.minor = int.Parse (version[1]);
+            fd.comment = nFeat.Attributes["comment"]?.Value;
+
+            foreach (XmlNode f in nFeat.ChildNodes) {
+                if (f.Name == "require") {
+                    parseRequirements (fd, f);
+                } else if (f.Name == "remove") {
+                    Console.ForegroundColor = ConsoleColor.DarkBlue;
+                    Console.WriteLine ($"feature remove: {f.OuterXml}");
+                }// else
+                 //Debugger.Break ();
+            }
+
+            features.Add (fd);
+        }
+
+
+        static MemberDef parseMember (XmlNode np) {
+            MemberDef md = new MemberDef () { typedef = ParamDef.parse (np) };
+            if (np.Attributes["optional"] != null)
+                md.optional = true;
+
+            md.lenMember = np.Attributes["len"]?.Value;
+            md.defaultValue = np.Attributes["values"]?.Value;
+            md.optional = np.Attributes["optional"] != null;//could handle both case
+            md.externsync = np.Attributes["externsync"] != null;
+
+            md.Name = np["name"].InnerText;
+            if (reservedNames.Contains (md.Name))
+                md.Name = "_" + md.Name;
+
+            XmlNode ns = np["name"].NextSibling;
+            if (ns?.NodeType == XmlNodeType.Text && ns.Value.StartsWith ("[", StringComparison.Ordinal)) {
+                if (np["enum"] != null) {
+                    md.fixedArray = np["enum"].InnerXml;
+                } else
+                    md.fixedArray = ns.Value;
+            }
+
+
+
+            md.comment = np["comment"]?.InnerText;
+
+            return md;
+        }
+
+        public static void readCommand (XmlNode ncmd) {
+            CommandDef cd = new CommandDef ();
+
+            if (ncmd.Attributes["alias"] != null) {
+                cd.Name = ncmd.Attributes["name"].Value;
+                cd.alias = ncmd.Attributes["alias"].Value;
+            } else {
+                cd.successCodes = ncmd.Attributes["successcodes"]?.Value;
+                cd.errorcodes = ncmd.Attributes["errorcodes"]?.Value;
+
+                XmlNode n = ncmd["proto"];
+                cd.returnType = ParamDef.parse (n);
+                cd.Name = n["name"].InnerText;
+                n = n.NextSibling;
+                while (n != null) {
+                    if (n.Name == "param")
+                        cd.parameters.Add (parseMember (n));
+                    else if (n.Name == "implicitexternsyncparams")
+                        cd.comment = n.InnerText;
+
+                    n = n.NextSibling;
+                }
+            }
+            commands.Add (cd);
+        }
+        #endregion
+
+        const string vkxmlUrl = "https://raw.githubusercontent.com/KhronosGroup/Vulkan-Docs/master/xml/vk.xml";
+        const string vkxmlLocal = "vk.xml";
+
+        public static void Main (string[] args) {
+            Console.WriteLine ("Http query for: " + vkxmlUrl);
+            DateTime lastModifiedLocal = DateTime.MinValue;
+            if (File.Exists (vkxmlLocal))
+                lastModifiedLocal = File.GetLastWriteTime (vkxmlLocal);
+
+            WebClient webCli = new WebClient ();
+            HttpWebRequest request = WebRequest.Create (vkxmlUrl) as HttpWebRequest;
+            HttpWebResponse response = request.GetResponse () as HttpWebResponse;
+            if (response.StatusCode == HttpStatusCode.OK) {
+                if (DateTime.Compare (lastModifiedLocal, response.LastModified) == 0)
+                    Console.WriteLine (vkxmlLocal + "is up to date");
+                else {
+                    Console.WriteLine ("Downloading " + vkxmlUrl + " ...");
+                    webCli.DownloadFile (vkxmlUrl, vkxmlLocal);
+                }
+            }
+
+            XmlDocument doc = new XmlDocument ();
+            doc.Load (vkxmlLocal);
+
+            foreach (XmlNode p in doc.GetElementsByTagName ("tags").Item (0))
+                tags.Add (p.Attributes["name"].Value.ToString ());
+
+            foreach (XmlNode p in doc.GetElementsByTagName ("types").Item (0))
+                readType (p);
+
+            XmlNodeList enumsNL = doc.GetElementsByTagName ("enums");
+            for (int i = 0; i < enumsNL.Count; i++)
+                readEnum (enumsNL.Item (i));
+
+            foreach (XmlNode e in doc.GetElementsByTagName ("commands").Item (0)) {
+                if (e.Name == "command")
+                    readCommand (e);
+                else
+                    Console.WriteLine ($"commands: {e.OuterXml}");
+            }
+
+            foreach (XmlNode e in doc.GetElementsByTagName ("extensions").Item (0)) {
+                if (e.Name == "extension")
+                    readExtension (e);
+                else
+                    Console.WriteLine ($"extension: {e.OuterXml}");
+            }
+
+            XmlNodeList featuresNL = doc.GetElementsByTagName ("feature");
+            for (int i = 0; i < featuresNL.Count; i++)
+                readFeature (featuresNL.Item (i));
+
+
+            gen_constants ("Vk");
+            gen_enums ("Vk");
+            gen_structs ("Vk");
+            gen_commands ("Vk");
+            gen_handles ("Vk");
+            //gen_funcptrs ("Vk");
+
+            gen_extensions ();
+        }
+
+    }
 }
