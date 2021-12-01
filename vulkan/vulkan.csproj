@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFrameworks>netstandard2.0</TargetFrameworks>
+
+		<AssemblyVersion>0.2.5</AssemblyVersion>
+		<AssemblyName>Vulkan</AssemblyName>
+		<PackageVersion>$(AssemblyVersion)-beta</PackageVersion>
+
+		<Description>Low level vulkan bindings for .net</Description>
+		<Product>Vulkan</Product>
+		<PackageLicence>MIT</PackageLicence>
+		<PackageId>Vulkan</PackageId>
+		<PackageTags>C# vulkan net binding</PackageTags>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+		<PackageProjectUrl>https://github.com/jpbruyere/vk.net/blob/master/README.md</PackageProjectUrl>
+		<Icon>vk.net-64.png</Icon>
+		<PackageIcon>vk.net-64.png</PackageIcon>
+		<SynchReleaseVersion>false</SynchReleaseVersion>
+		<PackageReleaseNotes>
+
+		</PackageReleaseNotes>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<Content Include="vk.net-64.png" Pack="true" PackagePath="" />
+	</ItemGroup>
+
+	<Target Name="generate" BeforeTargets="BeforeCompile">
+		<MakeDir Directories="$(SolutionDir)build/generated" />
+		<Exec Condition="$(OS) == 'Windows_NT'"
+				Command="$(SolutionDir)vk.generator/bin/$(Configuration)/$(ToolsFramework)/vk.generator.exe"
+				WorkingDirectory="$(SolutionDir)">
+			<Output TaskParameter="ConsoleOutput" PropertyName="OutputOfExec" />
+		</Exec>
+		<Exec Condition="$(OS) != 'Windows_NT'"
+				Command="$(SolutionDir)vk.generator/bin/$(Configuration)/$(ToolsFramework)/vk.generator"
+				WorkingDirectory="$(SolutionDir)">
+			<Output TaskParameter="ConsoleOutput" PropertyName="OutputOfExec" />
+		</Exec>
+		<CreateItem Include="$(SolutionDir)build/generated/*.cs">
+			<Output TaskParameter="Include" ItemName="Compile" />
+		</CreateItem>
+	</Target>
+
+	<Target Name="rewrite" AfterTargets="CoreBuild">
+		<Exec Condition="$(OS) == 'Windows_NT'" ConsoleToMSBuild="true" EchoOff="true"
+				Command="$(SolutionDir)vk.rewrite/bin/$(Configuration)/$(ToolsFramework)/vk.rewrite.exe $(TargetPath)" >
+			<Output TaskParameter="ConsoleOutput" PropertyName="OutputOfExec" />
+		</Exec>
+		<Exec Condition="$(OS) != 'Windows_NT'" ConsoleToMSBuild="true" EchoOff="true"
+			Command="$(SolutionDir)vk.rewrite/bin/$(Configuration)/$(ToolsFramework)/vk.rewrite $(TargetPath)">
+			<Output TaskParameter="ConsoleOutput" PropertyName="OutputOfExec" />
+		</Exec>
+	</Target>
+
+</Project>
