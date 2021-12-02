@@ -22,21 +22,27 @@
 
 		</PackageReleaseNotes>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+
 	</PropertyGroup>
 
 	<ItemGroup>
 		<Content Include="vk.net-64.png" Pack="true" PackagePath="" />
 	</ItemGroup>
+	<ItemGroup>
+		<SpecFile Include="$(SolutionDir)Vulkan-Docs/xml/vk.xml" />
+	</ItemGroup>
 
 	<Target Name="generate" BeforeTargets="BeforeCompile">
 		<MakeDir Directories="$(SolutionDir)build/generated" />
 		<Exec Condition="$(OS) == 'Windows_NT'"
-				Command="$(SolutionDir)vk.generator/bin/$(Configuration)/$(ToolsFramework)/vk.generator.exe"
+				Command="$(SolutionDir)vk.generator/bin/$(Configuration)/$(ToolsFramework)/vk.generator.exe %(SpecFile.Identity)"
 				WorkingDirectory="$(SolutionDir)">
 			<Output TaskParameter="ConsoleOutput" PropertyName="OutputOfExec" />
 		</Exec>
 		<Exec Condition="$(OS) != 'Windows_NT'"
-				Command="$(SolutionDir)vk.generator/bin/$(Configuration)/$(ToolsFramework)/vk.generator"
+				Command="$(SolutionDir)vk.generator/bin/$(Configuration)/$(ToolsFramework)/vk.generator %(SpecFile.Identity)"
 				WorkingDirectory="$(SolutionDir)">
 			<Output TaskParameter="ConsoleOutput" PropertyName="OutputOfExec" />
 		</Exec>

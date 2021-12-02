@@ -26,7 +26,7 @@ namespace Vulkan {
 				System.Diagnostics.Debug.WriteLine ("device function pointer not found for " + name);
 			else
 				ptr = del;
-			hnd.Free ();			
-		} 
-	} 
+			hnd.Free ();
+		}
+	}
 }
