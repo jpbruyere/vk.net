@@ -9,6 +9,7 @@ using System.IO;
 using System.Xml;
 using System.Linq;
 using System.Net;
+using System.Text.RegularExpressions;
 
 namespace vk.generator {
 
@@ -145,7 +146,7 @@ namespace vk.generator {
 			{ "xcb_visualid_t", "Xcb.xcb_visualid_t" },
 
 			//those are not checked, just putted there for compiling
-            { "GgpFrameToken", "uint" },	//cant find header to check length
+			{ "GgpFrameToken", "uint" },	//cant find header to check length
 			{ "zx_handle_t", "ulong" },
 			{ "GgpStreamDescriptor", "ulong" },
 			{ "PFN_vkVoidFunction","IntPtr" },
@@ -195,7 +196,7 @@ namespace vk.generator {
 										"vkEnumerateInstanceLayerProperties",
 										"vkEnumerateInstanceVersion"};
 
-        static string[] reservedNames = { "event", "object" };
+		static string[] reservedNames = { "event", "object" };
 
 		static Dictionary<string, ParamDef> paramsDefs = new Dictionary<string, ParamDef> ();
 
@@ -320,11 +321,11 @@ namespace vk.generator {
 				return name == other.name;
 			}
 			public override bool Equals(object obj){
-			     if(obj == null) return false;
+				 if(obj == null) return false;
 				return name == (obj as EnumerantValue).name;
 			}
 			public override int GetHashCode(){
-			     return value.GetHashCode();
+				 return value.GetHashCode();
 			}
 		}
 
@@ -400,6 +401,10 @@ namespace vk.generator {
 		}
 		static string[] valueTypes = { "byte", "int", "uint", "float", "ushort", "ulong" };
 		static void gen_struct (IndentedTextWriter tw, StructDef sd) {
+			bool hasDoc = tryFindRefPage (sd.Name, out refPage rp);
+			if (hasDoc)
+				rp.writeSummaryAndRemarks (tw);
+
 			if (sd.category == TypeCategories.union)
 				tw.WriteLine($"[StructLayout(LayoutKind.Explicit)]");
 			else
@@ -407,7 +412,9 @@ namespace vk.generator {
 			tw.WriteLine ($"public unsafe partial struct {sd.Name} {{");
 			tw.Indent++;
 			foreach (MemberDef mb in sd.members) {
-				if (!string.IsNullOrEmpty (mb.comment))
+				if (hasDoc)
+					rp.writeMemberDocIfFound (tw, mb.Name);
+				else if (!string.IsNullOrEmpty (mb.comment))
 					tw.WriteLine ($"/// <summary> {mb.comment} </summary>");
 
 				string typeStr;
@@ -532,8 +539,10 @@ namespace vk.generator {
 			tw.WriteLine (@"}");
 		}
 
-		static void gen_enum_value (IndentedTextWriter tw, string enumName, EnumerantValue ev) {
-			if (!string.IsNullOrEmpty (ev.comment))
+		static void gen_enum_value (IndentedTextWriter tw, string enumName, EnumerantValue ev, refPage? refpage = null) {
+			if (refpage.HasValue)
+				refpage.Value.writeMemberDocIfFound (tw, ev.Name);
+			else if (!string.IsNullOrEmpty (ev.comment))
 				tw.WriteLine ($"/// <summary> {ev.comment} </summary>");
 			if (!string.IsNullOrEmpty (ev.unusedComment))
 				tw.WriteLine ($"[Obsolete(\"{ev.unusedComment}\"]");
@@ -569,9 +578,11 @@ namespace vk.generator {
 							AddAlias (ed.Name, "uint");
 							continue;
 						}
-
-						if (!string.IsNullOrEmpty (ed?.comment))
-							tw.WriteLine ($"/// <summary> {ed.comment} </summary>");
+						bool hasDoc = tryFindRefPage (ed.Name, out refPage rp);
+						if (hasDoc) {
+							rp.writeSummaryAndRemarks (tw);
+						} else if (!string.IsNullOrEmpty (ed?.comment))
+							tw.WriteLine ($"///<summary>{ed.comment}</summary>");
 						if (ed?.type == EnumTypes.bitmask) {
 							tw.WriteLine (@"[Flags]");
 							tw.WriteLine ($"public enum {td.CSName} : uint {{");
@@ -580,12 +591,20 @@ namespace vk.generator {
 
 						tw.Indent++;
 
-						foreach (EnumerantValue ev in ed.values.OrderBy(aa => aa.isAlias))
-							gen_enum_value (tw, td.CSName, ev);
+						foreach (EnumerantValue ev in ed.values.OrderBy(aa => aa.isAlias)) {
+							if (hasDoc)
+								gen_enum_value (tw, td.CSName, ev, rp);
+							else
+								gen_enum_value (tw, td.CSName, ev);
+						}
 
 						IEnumerable<EnumerantValue> ext = extends.Where (e => e.extends == ed.Name);
-						foreach (EnumerantValue ev in ext.OrderBy(aa => aa.isAlias))
-							gen_enum_value (tw, td.CSName, ev);
+						foreach (EnumerantValue ev in ext.OrderBy(aa => aa.isAlias)) {
+							if (hasDoc)
+								gen_enum_value (tw, td.CSName, ev, rp);
+							else
+								gen_enum_value (tw, td.CSName, ev);
+						}
 
 
 						tw.Indent--;
@@ -645,6 +664,8 @@ namespace vk.generator {
 			}
 		}
 		static void gen_handle (IndentedTextWriter tw, HandleDef hd) {
+			if (tryFindRefPage (hd.Name, out refPage rp))
+				rp.writeSummaryAndRemarks(tw, true);
 			tw.WriteLine (@"[DebuggerDisplay(""{DebuggerDisplay,nq}"")]");
 			tw.WriteLine ($"public struct {hd.CSName} : IEquatable<{hd.CSName}>");
 			tw.WriteLine (@"{");
@@ -791,9 +812,15 @@ namespace vk.generator {
 					}
 				}
 			}
-
-			foreach (string sig in signatures)
-				writeCmd (tw, string.Format ($"{cd.returnType.CSName} {cd.Name} ({sig}"));
+			if (tryFindRefPage (cd.Name, out refPage rp)) {
+				foreach (string sig in signatures) {
+					rp.writeSummaryAndRemarks(tw);
+					writeCmd (tw, string.Format ($"{cd.returnType.CSName} {cd.Name} ({sig}"));
+				}
+			} else {
+				foreach (string sig in signatures)
+					writeCmd (tw, string.Format ($"{cd.returnType.CSName} {cd.Name} ({sig}"));
+			}
 
 			tw.WriteLine ();
 		}
@@ -1255,7 +1282,200 @@ namespace vk.generator {
 		}
 		#endregion
 
-		const string vkxmlLocal = "Vulkan-Docs/xml/vk.xml";
+		/// <summary>
+		/// this is a summary #ref:string
+		/// </summary>
+		struct refPage {
+			public string bief;
+			public string description;
+			public string cspecInfos;
+			public Dictionary<string, string> members;
+
+			public void writeSummaryAndRemarks (IndentedTextWriter tw, bool writecspecAsRemark = false) {
+				tw.WriteLine ($"///<summary>{bief}</summary>");
+				if (description != null || (writecspecAsRemark && cspecInfos != null)) {
+					tw.WriteLine ($"///<remarks>");
+					if (writecspecAsRemark) {
+						foreach (string s in splitLines (cspecInfos))
+							tw.WriteLine ($"///{s}");
+					}
+					foreach (string s in splitLines (description))
+						tw.WriteLine ($"///{s}");
+					tw.WriteLine ($"///</remarks>");
+				}
+			}
+			public void writeMemberDocIfFound (IndentedTextWriter tw, string memberName) {
+				if (members == null || !members.ContainsKey (memberName))
+					return;
+				string[] docs = splitLines (members[memberName]).ToArray();
+				if (docs.Length == 1)
+					tw.WriteLine ($"///<summary>{docs[0]}</summary>");
+				else {
+					tw.WriteLine ($"///<summary>");
+					foreach (string d in docs)
+						tw.WriteLine ($"///{d}");
+					tw.WriteLine ($"///</summary>");
+				}
+			}
+		}
+		static IEnumerable<string> splitLines (string s) {
+			if (string.IsNullOrEmpty (s))
+				return new List<string>();
+			List<string> tmp = s.Split (@"\n").ToList();
+			int start = tmp.FindIndex (0, tmp.Count, l=>!string.IsNullOrEmpty(l));
+			if (start<0)
+				return new List<string>();
+			int end = tmp.Count < 2 ? tmp.Count - 1 :
+			tmp.FindLastIndex (tmp.Count - 1, start, l=>!string.IsNullOrEmpty(l));
+			if (end < 0)
+				return tmp.GetRange (start, tmp.Count - start);
+			else
+				return tmp.GetRange (start, end + 1 - start);
+		}
+		static Regex linkRx = new Regex (@"[p|f|s|e]link:([a-zA-Z0-9_:]*)", RegexOptions.Multiline);
+		static Regex nameRx = new Regex (@"([p|f|s|e]name|code):([a-zA-Z0-9_]*)", RegexOptions.Multiline);
+		//static Regex elinkRx = new Regex (@"[p|f|s|e]link:([a-zA-Z0-9]*)", RegexOptions.Multiline);
+		static string seecrefG1replace = @"<see cref=""$1""/>";
+		static string codeG2replace = @"<c>$2</c>";
+		static string docReplacements (string s) {
+			if (string.IsNullOrEmpty (s))
+				return "";
+			string tmp = linkRx.Replace(s, seecrefG1replace);
+			tmp = tmp.Replace ("::pname:", ".");
+			tmp = nameRx.Replace(tmp, codeG2replace);
+
+			return tmp;
+		}
+		static string readRefPageMembers (StreamReader sr, ref refPage refpage, bool isEnum) {
+			refpage.members = new Dictionary<string, string>();
+			string memberName = null;
+			string memberDoc = null;
+			Stack<string> conditionsStack = new Stack<string>();
+			while (!sr.EndOfStream) {
+				string l = sr.ReadLine().Trim();
+				if (l.StartsWith ("include::{generated}/api"))
+					continue;
+
+				if (l.StartsWith ("ifdef::")) {
+					conditionsStack.Push (l);
+					continue;
+				}
+				if (l.StartsWith ("endif::")) {
+					if (!conditionsStack.TryPop (out string condition)) {
+						printError ($"empty condition stack: {l}");
+					}
+				}
+				if (l.StartsWith ("== ") || l.StartsWith (".")) {
+					if (memberName != null) {
+						if (refpage.members.ContainsKey (memberName))
+							refpage.members[memberName] += @"\n--duplicated--\n" + docReplacements (memberDoc);
+						else
+							refpage.members.Add (memberName, docReplacements (memberDoc));
+					}
+					return l;
+				}
+				if (isEnum && string.IsNullOrEmpty(l)) {
+					if (memberName != null) {
+						refpage.members.Add (memberName, docReplacements (memberDoc));
+						return l;
+					}
+					continue;
+				}
+				if (l.StartsWith ("* ename:") || l.StartsWith ("* pname:")) {
+					l = l.Substring (8);
+					int nameEndIdx = l.IndexOf (' ');
+					string newMemberName = nameEndIdx < 0 ? l : l.Substring (0,nameEndIdx);
+					string newMemberDoc = nameEndIdx < 0 ? "" : l.Substring (nameEndIdx + 1);
+
+					if (memberName != null) {
+						if (newMemberName == memberName) {
+							memberDoc += @"\n" + newMemberDoc;
+							continue;
+						}
+						if (refpage.members.ContainsKey (memberName))
+							refpage.members[memberName] += @"\n--duplicated--\n" + docReplacements (memberDoc);
+						else
+							refpage.members.Add (memberName, docReplacements (memberDoc));
+					}
+					memberName = newMemberName;
+					memberDoc = newMemberDoc;
+					continue;
+				}
+				memberDoc += @"\n" + l;
+			}
+			return null;
+		}
+		static bool tryFindRefPage (string name, out refPage refpage) {
+			refpage = default;
+			string path = Path.Combine (vkrefsdir, $"{name}.txt");
+			if (!File.Exists(path))
+				return false;
+			bool isEnum = true;
+
+			using (StreamReader sr = new StreamReader (path)) {
+				string l = null, savedLine = null;
+				while(!sr.EndOfStream) {
+					if (savedLine != null) {
+						l = savedLine;
+						savedLine = null;
+					} else
+						l = sr.ReadLine();
+					if (l.StartsWith ("= ")) {
+						int idx = l.IndexOf ('(');
+						if (idx < 1 || l.Substring (2, idx - 2) != name)
+							Debugger.Break();
+						continue;
+					}
+					if (l.StartsWith ("== Name")) {
+						l = sr.ReadLine();
+						refpage.bief = l.Substring (name.Length + 3);
+						continue;
+					}
+					if (l.StartsWith ("== C Specification")) {
+						while (!sr.EndOfStream) {
+							l = sr.ReadLine();
+							if (l.StartsWith ("include::{generated}/api"))
+								continue;
+							if (l.StartsWith ("== ") || l.StartsWith (".")) {
+								savedLine = l;
+								break;
+							}
+							if (!string.IsNullOrEmpty(refpage.cspecInfos))
+								refpage.cspecInfos += @"\n";
+							refpage.cspecInfos += docReplacements (l);
+						}
+						continue;
+					}
+					if (l.StartsWith ("== Members") || l.StartsWith ("== Parameters")) {
+						isEnum = false;
+						savedLine = readRefPageMembers (sr, ref refpage, isEnum);
+						continue;
+					}
+					if (l.StartsWith ("== Description")) {
+						if (isEnum) {
+							savedLine = readRefPageMembers (sr, ref refpage, isEnum);
+							if (savedLine != null)
+								continue;
+						}
+						while (!sr.EndOfStream) {
+							l = sr.ReadLine();
+							if (l.StartsWith ("include::{generated}/api"))
+								continue;
+							if (l.StartsWith ("== ") || l.StartsWith (".")) {
+								savedLine = l;
+								break;
+							}
+							if (!string.IsNullOrEmpty(refpage.description))
+								refpage.description += @"\n";
+							refpage.description += docReplacements (l);
+						}
+						continue;
+					}
+				}
+			}
+			return true;
+		}
+		const string vkrefsdir = "Vulkan-Docs/gen/refpage";
 		const string targetDir = "build/generated";
 		static string targetPath (string fileName) =>
 			Path.Combine (targetDir, $"{fileName}_gen.cs");
@@ -1267,6 +1487,11 @@ namespace vk.generator {
 		}
 
 		public static void Main (string[] args) {
+			if(args.Length < 1) {
+				Console.WriteLine ("Usage: vk.generator path/to/vk.xml");
+				return;
+			}
+			string vkxmlLocal = args[0];
 
 			if (!File.Exists(vkxmlLocal)) {
 				printError ($"[GEN] {Path.Combine (Directory.GetCurrentDirectory(),vkxmlLocal)} not found.");
