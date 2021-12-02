@@ -14,34 +14,95 @@ namespace Vulkan {
 		}
 	}
 
-	public unsafe partial struct VkClearColorValue {
+	[StructLayout(LayoutKind.Explicit, Pack = 1, CharSet = CharSet.Ansi, Size = 16)]
+    public struct VkClearColorValue {
+		[StructLayout(LayoutKind.Sequential, Pack = 1)]
+		public struct _Float32 {
+			public float r;
+			public float g;
+			public float b;
+			public float a;
+		}
+		[StructLayout(LayoutKind.Sequential, Pack = 1)]
+		public struct _Int32 {
+			public int r;
+			public int g;
+			public int b;
+			public int a;
+		}
+		[StructLayout(LayoutKind.Sequential, Pack = 1)]
+		public struct _UInt32 {
+			public uint r;
+			public uint g;
+			public uint b;
+			public uint a;
+		}
+        [FieldOffset(0)]
+		public _Float32 float32;
+        [FieldOffset(0)]
+		public _Int32 int32;
+        [FieldOffset(0)]
+		public _UInt32 uint32;
 		public VkClearColorValue (float r, float g, float b, float a = 1.0f) : this () {
-			fixed (float* tmp = float32) {
-				tmp[0] = r;
-				tmp[1] = g;
-				tmp[2] = b;
-				tmp[3] = a;
-			}
+			float32.r = r;
+			float32.g = g;
+			float32.b = b;
+			float32.a = a;
 		}
 
 		public VkClearColorValue (int r, int g, int b, int a = 255) : this () {
-			fixed (int* tmp = int32) {
-				tmp[0] = r;
-				tmp[1] = g;
-				tmp[2] = b;
-				tmp[3] = a;
-			}
+			int32.r = r;
+			int32.g = g;
+			int32.b = b;
+			int32.a = a;
 		}
 
 		public VkClearColorValue (uint r, uint g, uint b, uint a = 255) : this () {
-			fixed (uint* tmp = uint32) {
-				tmp[0] = r;
-				tmp[1] = g;
-				tmp[2] = b;
-				tmp[3] = a;
-			}
+			uint32.r = r;
+			uint32.g = g;
+			uint32.b = b;
+			uint32.a = a;
 		}
-	}
+    }
+
+	/*[StructLayout(LayoutKind.Explicit, Pack = 1)]
+    public struct VkClearColorValue {
+        [FieldOffset(0)]public float float32_r;
+        [FieldOffset(1)]public float float32_g;
+        [FieldOffset(2)]public float float32_b;
+        [FieldOffset(3)]public float float32_a;
+        [FieldOffset(0)]public int int32_r;
+        [FieldOffset(1)]public int int32_g;
+        [FieldOffset(2)]public int int32_b;
+        [FieldOffset(3)]public int int32_a;
+        [FieldOffset(0)]public uint uint32_r;
+        [FieldOffset(1)]public uint uint32_g;
+        [FieldOffset(2)]public uint uint32_b;
+        [FieldOffset(3)]public uint uint32_a;
+		public float[] ToFloats => new float[] {float32_r, float32_g, float32_b, float32_a};
+		public float[] ToInts => new float[] {int32_r, int32_g, int32_b, int32_a};
+		public float[] ToUInts => new float[] {uint32_r, uint32_g, uint32_b, uint32_a};
+		public VkClearColorValue (float r, float g, float b, float a = 1.0f) : this () {
+			float32_r = r;
+			float32_g = g;
+			float32_b = b;
+			float32_a = a;
+		}
+
+		public VkClearColorValue (int r, int g, int b, int a = 255) : this () {
+			int32_r = r;
+			int32_g = g;
+			int32_b = b;
+			int32_a = a;
+		}
+
+		public VkClearColorValue (uint r, uint g, uint b, uint a = 255) : this () {
+			uint32_r = r;
+			uint32_g = g;
+			uint32_b = b;
+			uint32_a = a;
+		}
+    }*/
     public partial struct VkClearDepthStencilValue
     {
         public VkClearDepthStencilValue(float depth, uint stencil)

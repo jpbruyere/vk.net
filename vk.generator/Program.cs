@@ -161,12 +161,25 @@ namespace vk.generator {
 			{ "VkRemoteAddressNV","IntPtr" },
 		};
 
+		static string[] reservedNames = { "event", "object" };
 		static string[] skipEnums = { "VK_STRUCTURE_TYPE_SURFACE_CAPABILITIES2_EXT", "VK_PIPELINE_CREATE_DISPATCH_BASE" };
+
+		static string[] skipGenStruct = { "VkClearColorValue" };
 
 		static Dictionary<string, string[]> paramTypeAliases = new Dictionary<string, string[]> {
 			{ "void*", new string[] {"IntPtr"} },
 			{ "char*", new string[] {"string"} }
 		};
+		//function pointers to retrieve before any other vulkan api call.
+		//those command should not move in other iface than common to be preload by normal dyn load
+		static string[] preloadedCommands  = {
+										"vkCreateInstance",
+										"vkDestroyInstance",
+										"vkGetDeviceProcAddr",
+										"vkGetInstanceProcAddr",
+										"vkEnumerateInstanceExtensionProperties",
+										"vkEnumerateInstanceLayerProperties",
+										"vkEnumerateInstanceVersion"};
 
 		public static Dictionary<string, string> aliases = new Dictionary<string, string> ();
 		static void AddAlias (string from, string to) {
@@ -185,18 +198,7 @@ namespace vk.generator {
 		enum ExtensionType { None, Device, Instance }
 		enum TypeCategories {none, basetype, bitmask, define, @enum, funcpointer, group, handle, include, @struct, @union };
 
-		//function pointers to retrieve before any other vulkan api call.
-		//those command should not move in other iface than common to be preload by normal dyn load
-		static string[] preloadedCommands  = {
-										"vkCreateInstance",
-										"vkDestroyInstance",
-										"vkGetDeviceProcAddr",
-										"vkGetInstanceProcAddr",
-										"vkEnumerateInstanceExtensionProperties",
-										"vkEnumerateInstanceLayerProperties",
-										"vkEnumerateInstanceVersion"};
 
-		static string[] reservedNames = { "event", "object" };
 
 		static Dictionary<string, ParamDef> paramsDefs = new Dictionary<string, ParamDef> ();
 
@@ -406,9 +408,9 @@ namespace vk.generator {
 				rp.writeSummaryAndRemarks (tw);
 
 			if (sd.category == TypeCategories.union)
-				tw.WriteLine($"[StructLayout(LayoutKind.Explicit)]");
+				tw.WriteLine($"[StructLayout(LayoutKind.Explicit, Pack = 1, CharSet = CharSet.Ansi)]");
 			else
-				tw.WriteLine ($"[StructLayout(LayoutKind.Sequential)]");
+				tw.WriteLine ($"[StructLayout(LayoutKind.Sequential, Pack = 1, CharSet = CharSet.Ansi)]");
 			tw.WriteLine ($"public unsafe partial struct {sd.Name} {{");
 			tw.Indent++;
 			foreach (MemberDef mb in sd.members) {
@@ -505,8 +507,11 @@ namespace vk.generator {
 					writePreamble (tw, "System.Runtime.InteropServices");
 					tw.Indent++;
 
-					foreach (StructDef sd in types.OfType<StructDef> ())
+					foreach (StructDef sd in types.OfType<StructDef> ()) {
+						if (skipGenStruct.Contains (sd.Name))
+							continue;
 						gen_struct (tw, sd);
+					}
 
 					tw.Indent--;
 					tw.WriteLine (@"}");
@@ -1282,9 +1287,7 @@ namespace vk.generator {
 		}
 		#endregion
 
-		/// <summary>
-		/// this is a summary #ref:string
-		/// </summary>
+		#region VulkanDoc refpages parsing
 		struct refPage {
 			public string bief;
 			public string description;
@@ -1475,6 +1478,7 @@ namespace vk.generator {
 			}
 			return true;
 		}
+		#endregion
 		const string vkrefsdir = "Vulkan-Docs/gen/refpage";
 		const string targetDir = "build/generated";
 		static string targetPath (string fileName) =>
