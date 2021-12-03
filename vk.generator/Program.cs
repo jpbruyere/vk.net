@@ -212,6 +212,13 @@ namespace vk.generator {
 
 
 
+		/// <summary>
+		/// array proxies list to created to avoid fixed arrays
+		/// </summary>
+		/// <typeparam name="string">size</typeparam>
+		/// <typeparam name="string">type</typeparam>
+		/// <returns></returns>
+		static Dictionary<string, string> arrayProxies = new Dictionary<string, string>();
 		static Dictionary<string, ParamDef> paramsDefs = new Dictionary<string, ParamDef> ();
 
 		public static List<string> tags = new List<string> ();
@@ -336,6 +343,16 @@ namespace vk.generator {
 					ccValue.RemoveCommonLeadingPart (containingType);
 				return newCsName;
 			}
+			public static string GetArrayProxyStructName (string value) {
+				string ccValue = value.ConvertUnderscoredUpperCasedNameToCamelCase();
+				if (ccValue.StartsWith("Vk", StringComparison.Ordinal))
+					ccValue = ccValue.Substring (2);
+				if (ccValue.StartsWith("Max", StringComparison.Ordinal))
+					ccValue = ccValue.Substring (3);
+				if (ccValue.EndsWith("Size", StringComparison.Ordinal))
+					ccValue = ccValue.Substring (0, ccValue.Length - 4);
+				return $"{ccValue}_proxy";
+			}
 
 			public bool Equals (EnumerantValue other) {
 				return name == other.name;
@@ -425,7 +442,9 @@ namespace vk.generator {
 			switch (type) {
 			case "float":
 				switch (dim) {
-					case 2: vectorType = "Vector2i"; return true;
+					case 2: vectorType = "Vector2"; return true;
+					case 3: vectorType = "Vector3"; return true;
+					case 4: vectorType = "Vector4"; return true;
 					default: return false;
 				}
 			case "int":
@@ -443,6 +462,60 @@ namespace vk.generator {
 			default: return false;
 			}
 		}
+		static void gen_array_proxies (string englobingStaticClass) {
+			using (StreamWriter sr = new StreamWriter (vkNetTargetPath($"proxies_{englobingStaticClass}"), false, System.Text.Encoding.UTF8)) {
+				using (IndentedTextWriter tw = new IndentedTextWriter (sr)) {
+					writePreamble (tw, "System.Runtime.InteropServices");
+					tw.Indent++;
+
+					foreach	(KeyValuePair<string,string> kvp in arrayProxies) {
+						tw.WriteLine ($"[StructLayout(LayoutKind.Sequential, Size = (int)Vk.{EnumerantValue.GetCSName (kvp.Key, null)})]");
+						string structName = EnumerantValue.GetArrayProxyStructName (kvp.Key);
+						string baseType = kvp.Value == "char" ? "byte" : kvp.Value;
+						tw.WriteLine ($"public struct {structName} {{");
+
+						tw.Indent++;
+
+						tw.WriteLine ($"public Span<{baseType}> AsSpan {{");
+						tw.Indent++;
+						tw.WriteLine ($"get {{");
+						tw.Indent++;
+						tw.WriteLine ($"Span<{structName}> valSpan = MemoryMarshal.CreateSpan(ref this, 1);");
+						tw.WriteLine ($"return MemoryMarshal.Cast<{structName}, {baseType}>(valSpan);");
+						tw.Indent--;
+						tw.WriteLine (@"}");
+						tw.Indent--;
+						tw.WriteLine (@"}");
+
+						if (kvp.Value == "char") {
+							tw.WriteLine ($"public override string ToString()");
+							tw.WriteLine (@"{");
+							tw.Indent++;
+							tw.WriteLine ($"Span<{structName}> valSpan = MemoryMarshal.CreateSpan(ref this, 1);");
+							tw.WriteLine ($"ReadOnlySpan<byte> bytes = MemoryMarshal.Cast<{structName}, byte>(valSpan);");
+							tw.WriteLine ($"return System.Text.Encoding.UTF8.GetString (bytes);");
+							tw.Indent--;
+							tw.WriteLine (@"}");
+							tw.WriteLine ($"public void Update(string value)");
+							tw.WriteLine (@"{");
+							tw.Indent++;
+							tw.WriteLine ($"Span<{structName}> valSpan = MemoryMarshal.CreateSpan(ref this, 1);");
+							tw.WriteLine ($"Span<byte> bytes = MemoryMarshal.Cast<{structName}, byte>(valSpan);");
+							tw.WriteLine ($"System.Text.Encoding.UTF8.GetBytes (value).CopyTo (bytes);");
+							tw.Indent--;
+							tw.WriteLine (@"}");
+						}
+
+						tw.Indent--;
+						tw.WriteLine (@"}");
+					}
+
+
+					tw.Indent--;
+					tw.WriteLine (@"}");
+				}
+			}
+		}
 		static void gen_struct (IndentedTextWriter tw, StructDef sd) {
 			bool hasDoc = tryFindRefPage (sd.Name, out refPage rp);
 			if (hasDoc)
@@ -452,7 +525,7 @@ namespace vk.generator {
 				tw.WriteLine($"[StructLayout(LayoutKind.Explicit)]");
 			else
 				tw.WriteLine ($"[StructLayout(LayoutKind.Sequential)]");
-			tw.WriteLine ($"public unsafe partial struct {sd.Name} {{");
+			tw.WriteLine ($"public partial struct {sd.Name} {{");
 			tw.Indent++;
 			foreach (MemberDef mb in sd.members) {
 
@@ -493,40 +566,24 @@ namespace vk.generator {
 					int dim = 0;
 					string[] dims = mb.fixedArray.Split (new char[] { '[', ']' }, StringSplitOptions.RemoveEmptyEntries);
 					if (valueTypes.Contains (typeStr)) {
-						if (mb.typedef.Name == "char") {
-							if (dims.Length != 1)
-								throw new NotImplementedException ("multi dimentional char* array not implemented");
-							string strSize = int.TryParse (dims[0], out dim) ? dim.ToString () : $"(int)Vk.{EnumerantValue.GetCSName (dims[0], null)}";
-							tw.WriteLine ($"fixed {typeStr} _{mb.Name}[{strSize}];");
-							tw.WriteLine ($"public string {mb.Name} {{");
-							tw.Indent++;
-							tw.WriteLine ($"get {{");
-							tw.Indent++;
-							tw.WriteLine ($"fixed ({typeStr}* tmp = _{mb.Name})");
-							tw.Indent++;
-							tw.WriteLine ($"return System.Text.Encoding.UTF8.GetString (tmp, {strSize});");
-							//tw.WriteLine ($"set {{ _{mb.Name} = ({typeStr})value; }}");
-							tw.Indent -= 2;
-							tw.WriteLine (@"}");
-							tw.Indent--;
-							tw.WriteLine (@"}");
-						} else if (dims.Length == 1) {
-							if (int.TryParse (dims[0], out dim) && tryGetVectorType (typeStr, dim, out string vectorType))
-								tw.WriteLine ($"public {vectorType} {mb.Name};");
-							else {
-								string strSize = int.TryParse (dims[0], out dim) ? dim.ToString () : $"(int)Vk.{EnumerantValue.GetCSName (dims[0], null)}";
-								tw.WriteLine ($"public fixed {typeStr} {mb.Name}[{strSize}];");
-							}
-						} else {
-							int totSize = 1;
-							for (int i = 0; i < dims.Length; i++) {
-								if (!int.TryParse (dims[i], out dim))
-									throw new NotImplementedException ("Only integer value accepted for multi dimentional arrays");
-								totSize *= dim;
-							}
-							tw.WriteLine ($"fixed {typeStr} _{mb.Name}[{totSize}];");
-
+						if (mb.typedef.Name == "char")
+							typeStr = "char";
+						else if (int.TryParse (dims[0], out dim) && tryGetVectorType (typeStr, dim, out string vectorType)) {
+							tw.WriteLine ($"public {vectorType} {mb.Name};");
+							continue;
 						}
+
+						if (dims.Length != 1)
+							throw new NotImplementedException ("multi dimentional array not implemented");
+						if (int.TryParse (dims[0], out dim))
+							throw new NotImplementedException ("litteral dimention size not handled in char* arrays");
+						string strSize = dims[0];
+						if (arrayProxies.ContainsKey(strSize)) {
+							if (arrayProxies[strSize] != typeStr)
+								throw new NotImplementedException ("same constant used for different array types");
+						} else
+							arrayProxies.Add (strSize, typeStr);
+						tw.WriteLine ($"public {EnumerantValue.GetArrayProxyStructName (strSize)} {mb.Name};");
 						continue;
 					}
 					if (dims.Length != 1)
@@ -1630,6 +1687,7 @@ namespace vk.generator {
 			gen_commands ("Vk");
 			gen_handles ("Vk");
 			//gen_funcptrs ("Vk");
+			gen_array_proxies ("Vk");
 
 			gen_extensions ();
 
