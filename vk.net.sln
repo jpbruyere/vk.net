@@ -40,9 +40,6 @@ Global
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 	EndGlobalSection
-	GlobalSection(ProjectDependencies) = postSolution
-		{37D01BE5-5FE2-4742-BD5B-5D2C25FCF146} = {B105512C-9461-4802-B299-A6E7A29CDAEE}
-	EndGlobalSection
 	GlobalSection(MonoDevelopProperties) = preSolution
 		Policies = $0
 		$0.TextStylePolicy = $1

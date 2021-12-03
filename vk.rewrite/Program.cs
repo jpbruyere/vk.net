@@ -13,148 +13,128 @@ using System.Text;
 
 namespace Vk.Rewrite
 {
-    public class Program
-    {
+	public class Program
+	{
 		const string mainVkNamespace = "Vulkan";
 
-        static TypeReference s_calliRewriteRef;
-        static MethodReference s_stringToHGlobalUtf8Ref;
-        static MethodDefinition s_freeHGlobalRef;
-        static TypeReference s_stringHandleRef;
+		static TypeReference s_calliRewriteRef;
 
-        public static int Main(string[] args)
-        {
-            
+		public static int Main(string[] args)
+		{
 
-            if ((args.Length < 1) == true || args[0] == null) {
-                Console.WriteLine ("Error: argument 1 must be the path of VK.dll.");
-                return -1;
-            }
+
+			if ((args.Length < 1) == true || args[0] == null) {
+				Console.WriteLine ("Error: argument 1 must be the path of VK.dll.");
+				return -1;
+			}
 			string vkDllPath = args[0];
-            string outputPath = null;
-            bool rewriteInPlace = false;
-			            
-            if (outputPath == null)
-            {
-                outputPath = Path.GetTempFileName ();
-                rewriteInPlace = true;
-            }
+			string outputPath = null;
+			bool rewriteInPlace = false;
 
-            Rewrite(vkDllPath, outputPath);
+			if (outputPath == null)
+			{
+				outputPath = Path.GetTempFileName ();
+				rewriteInPlace = true;
+			}
 
-            if (rewriteInPlace) {
-                File.Delete (vkDllPath);
-                File.Copy (outputPath, vkDllPath);
-                File.Delete (outputPath);
-                outputPath = vkDllPath;
-            }
+			Rewrite(vkDllPath, outputPath);
+
+			if (rewriteInPlace) {
+				File.Delete (vkDllPath);
+				File.Copy (outputPath, vkDllPath);
+				File.Delete (outputPath);
+				outputPath = vkDllPath;
+			}
 
 			Console.WriteLine (outputPath + " rewrited.");
-            return 0;
-        }
+			return 0;
+		}
 
-        private static void Rewrite(string vkDllPath, string outputPath)
-        {
-            using (AssemblyDefinition vkDll = AssemblyDefinition.ReadAssembly (vkDllPath)) 
-            {                
-                ModuleDefinition mainModule = vkDll.Modules[0];                    
+		private static void Rewrite(string vkDllPath, string outputPath)
+		{
+			using (AssemblyDefinition vkDll = AssemblyDefinition.ReadAssembly (vkDllPath))
+			{
+				ModuleDefinition mainModule = vkDll.Modules[0];
 
-                s_calliRewriteRef = mainModule.GetType (mainVkNamespace+".Generator.CalliRewriteAttribute");
-                s_stringHandleRef = mainModule.GetType (mainVkNamespace+".StringHandle");
+				s_calliRewriteRef = mainModule.GetType (mainVkNamespace+".Generator.CalliRewriteAttribute");
 
-                TypeDefinition bindingHelpers = mainModule.GetType(mainVkNamespace+".BindingsHelpers");
+				foreach (TypeDefinition type in mainModule.Types)
+				{
 
-                s_stringToHGlobalUtf8Ref	= bindingHelpers.Methods.Single (md => md.Name == "StringToHGlobalUtf8");
-                s_freeHGlobalRef			= bindingHelpers.Methods.Single (md => md.Name == "FreeHGlobal");
-
-                foreach (TypeDefinition type in mainModule.Types)
-                {
-
-                    foreach (MethodDefinition method in type.Methods)
-		            {
-                        if (method.CustomAttributes.Any(ca => ca.AttributeType == s_calliRewriteRef))
-                            RewriteMethod (method);
-		            }                
+					foreach (MethodDefinition method in type.Methods)
+					{
+						if (method.CustomAttributes.Any(ca => ca.AttributeType == s_calliRewriteRef))
+							RewriteMethod (method);
+					}
 				}
-                vkDll.Write(outputPath);
-            }
-        }
+				vkDll.Write(outputPath);
+			}
+		}
 
-        static void RewriteMethod (MethodDefinition method)
-        {
-            ILProcessor il = method.Body.GetILProcessor();
-            il.Body.Instructions.Clear();
+		static void RewriteMethod (MethodDefinition method)
+		{
+			ILProcessor il = method.Body.GetILProcessor();
+			il.Body.Instructions.Clear();
 
-            List<VariableDefinition> stringParams = new List<VariableDefinition>();
-            for (int i = 0; i < method.Parameters.Count; i++)
-            {
-                EmitLoadArgument (il, i, method.Parameters);
-                TypeReference parameterType = method.Parameters[i].ParameterType;
+			List<VariableDefinition> stringParams = new List<VariableDefinition>();
+			for (int i = 0; i < method.Parameters.Count; i++)
+			{
+				EmitLoadArgument (il, i, method.Parameters);
+				TypeReference parameterType = method.Parameters[i].ParameterType;
 
 				if (parameterType.IsGenericInstance) {
 					if (parameterType.Name == "Nullable`1")
 						System.Diagnostics.Debugger.Break ();
 				}
 
-                if (parameterType.FullName == "System.String")
-                {
-                    VariableDefinition variableDef = new VariableDefinition(s_stringHandleRef);
-                    method.Body.Variables.Add(variableDef);
-                    il.Emit(OpCodes.Call, s_stringToHGlobalUtf8Ref);
-                    il.Emit(OpCodes.Stloc, variableDef);
-                    il.Emit(OpCodes.Ldloc, variableDef);
-                    stringParams.Add(variableDef);
-                }
-                else if (parameterType.IsByReference)
-                {
-                    VariableDefinition byRefVariable = new VariableDefinition(new PinnedType(parameterType));
-                    method.Body.Variables.Add(byRefVariable);
-                    il.Emit(OpCodes.Stloc, byRefVariable);
-                    il.Emit(OpCodes.Ldloc, byRefVariable);
-                    il.Emit(OpCodes.Conv_I);
-                }
-            }
-				            
-            FieldDefinition field = method.DeclaringType.Fields.SingleOrDefault(fd => fd.Name == method.Name + "_ptr");
-            
-			if (field == null)            
-                throw new InvalidOperationException("Can't find function pointer field for " + method.Name);
-            
-            il.Emit(OpCodes.Ldsfld, field);
+				if (parameterType.IsByReference)
+				{
+					VariableDefinition byRefVariable = new VariableDefinition(new PinnedType(parameterType));
+					method.Body.Variables.Add(byRefVariable);
+					il.Emit(OpCodes.Stloc, byRefVariable);
+					il.Emit(OpCodes.Ldloc, byRefVariable);
+					il.Emit(OpCodes.Conv_I);
+				}
+			}
 
-            CallSite callSite = new CallSite(method.ReturnType) {CallingConvention = MethodCallingConvention.StdCall};
-            
+			FieldDefinition field = method.DeclaringType.Fields.SingleOrDefault(fd => fd.Name == method.Name + "_ptr");
+
+			if (field == null)
+				throw new InvalidOperationException("Can't find function pointer field for " + method.Name);
+
+			il.Emit(OpCodes.Ldsfld, field);
+
+			CallSite callSite = new CallSite(method.ReturnType) {CallingConvention = MethodCallingConvention.StdCall};
+
 			foreach (ParameterDefinition pd in method.Parameters)
-            {
-                TypeReference parameterType;
+			{
+				TypeReference parameterType;
 
-                if (pd.ParameterType.IsByReference)
-                    parameterType = new PointerType(pd.ParameterType.GetElementType());
-                else if (pd.ParameterType.FullName == "System.String")
-                    parameterType = s_stringHandleRef;
-                else
-                    parameterType = pd.ParameterType;
+				if (pd.ParameterType.IsByReference)
+					parameterType = new PointerType(pd.ParameterType.GetElementType());
+				else
+					parameterType = pd.ParameterType;
 
-                ParameterDefinition calliPD = new ParameterDefinition(pd.Name, pd.Attributes, parameterType);
+				ParameterDefinition calliPD = new ParameterDefinition(pd.Name, pd.Attributes, parameterType);
 
-                callSite.Parameters.Add(calliPD);
-            }
-            il.Emit(OpCodes.Calli, callSite);
+				callSite.Parameters.Add(calliPD);
+			}
+			il.Emit(OpCodes.Calli, callSite);
 
-            foreach (VariableDefinition stringVar in stringParams)
-            {
-                il.Emit(OpCodes.Ldloc, stringVar);
-                il.Emit(OpCodes.Call, s_freeHGlobalRef);
-            }
+			/*foreach (VariableDefinition stringVar in stringParams)
+			{
+				il.Emit(OpCodes.Ldloc, stringVar);
+				il.Emit(OpCodes.Call, s_freeHGlobalRef);
+			}*/
 
-            il.Emit(OpCodes.Ret);
+			il.Emit(OpCodes.Ret);
 
-            if (method.Body.Variables.Count > 0)
-                method.Body.InitLocals = true;
-        }
+			if (method.Body.Variables.Count > 0)
+				method.Body.InitLocals = true;
+		}
 
-        static void EmitLoadArgument(ILProcessor il, int i, Collection<ParameterDefinition> parameters)
-        {
+		static void EmitLoadArgument(ILProcessor il, int i, Collection<ParameterDefinition> parameters)
+		{
 			switch (i) {
 				case 0:
 					il.Emit(OpCodes.Ldarg_0);
@@ -172,6 +152,6 @@ namespace Vk.Rewrite
 					il.Emit(OpCodes.Ldarg, i);
 					break;
 			}
-        }
-    }
+		}
+	}
 }

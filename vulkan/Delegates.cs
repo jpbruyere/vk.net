@@ -6,31 +6,31 @@ using System;
 
 namespace Vulkan
 {
-    public unsafe delegate void* PFN_vkAllocationFunction(
-         void* pUserData,
+    public delegate IntPtr PFN_vkAllocationFunction(
+         IntPtr pUserData,
          UIntPtr size,
          UIntPtr alignment,
          VkSystemAllocationScope allocationScope);
 
-    public unsafe delegate void* PFN_vkReallocationFunction(
-         void* pUserData,
-         void* pOriginal,
+    public delegate IntPtr PFN_vkReallocationFunction(
+         IntPtr pUserData,
+         IntPtr pOriginal,
          UIntPtr size,
          UIntPtr alignment,
          VkSystemAllocationScope allocationScope);
 
-    public unsafe delegate void PFN_vkFreeFunction(
-         void* pUserData,
-         void* pMemory);
+    public delegate void PFN_vkFreeFunction(
+         IntPtr pUserData,
+         IntPtr pMemory);
 
-    public unsafe delegate void PFN_vkInternalAllocationNotification(
-         void* pUserData,
+    public delegate void PFN_vkInternalAllocationNotification(
+         IntPtr pUserData,
          UIntPtr size,
          VkInternalAllocationType allocationType,
          VkSystemAllocationScope allocationScope);
 
-    public unsafe delegate void PFN_vkInternalFreeNotification(
-         void* pUserData,
+    public delegate void PFN_vkInternalFreeNotification(
+         IntPtr pUserData,
          UIntPtr size,
          VkInternalAllocationType allocationType,
          VkSystemAllocationScope allocationScope);
