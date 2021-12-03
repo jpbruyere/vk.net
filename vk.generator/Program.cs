@@ -92,6 +92,12 @@ namespace vk.generator {
 	/// has been recreated from scratch to be more like a simple functional parser easyer to tweak.
 	/// </summary>
 	public class Generator {
+		[Conditional ("LOG_VK_NET_GEN")]
+		static void log_vk_net_gen (ConsoleColor c, string msg) {
+			Console.ForegroundColor = c;
+			Console.WriteLine ($"[GEN] {msg}");
+			Console.ResetColor();
+		}
 		const int extBase = 1000000000;
 		const int extBlockSize = 1000;
 		/// <summary> Main namespace for generated code. </summary>
@@ -162,9 +168,17 @@ namespace vk.generator {
 		};
 
 		static string[] reservedNames = { "event", "object" };
-		static string[] skipEnums = { "VK_STRUCTURE_TYPE_SURFACE_CAPABILITIES2_EXT", "VK_PIPELINE_CREATE_DISPATCH_BASE" };
+		static string[] skipEnums = {
+			"VK_STRUCTURE_TYPE_SURFACE_CAPABILITIES2_EXT",
+			"VK_PIPELINE_CREATE_DISPATCH_BASE",
+			//cs names generate same output
+			"VK_SURFACE_COUNTER_VBLANK_EXT",
+			"VK_PERFORMANCE_COUNTER_DESCRIPTION_PERFORMANCE_IMPACTING_KHR",
+			"VK_PERFORMANCE_COUNTER_DESCRIPTION_CONCURRENTLY_IMPACTED_KHR"
+		};
 
-		static string[] skipGenStruct = { "VkClearColorValue" };
+		static string[] skipGenStruct = { "VkClearColorValue", "VkTransformMatrixKHR" };
+
 
 		static Dictionary<string, string[]> paramTypeAliases = new Dictionary<string, string[]> {
 			{ "void*", new string[] {"IntPtr"} },
@@ -186,12 +200,10 @@ namespace vk.generator {
 			if (to == "VkFlags")//dont alias to VkFlags
 				return;
 			if (aliases.ContainsKey (from))
-				Console.WriteLine ($"aliases list constains already an alias for: {from}");
+				log_vk_net_gen (ConsoleColor.Red, $"aliases list constains already an alias for: {from}");
 			else
 				aliases.Add (from, to);
-			Console.ForegroundColor = ConsoleColor.Green;
-			Console.WriteLine ($"adding alias {from} -> {to}");
-			Console.ForegroundColor = ConsoleColor.Gray;
+			log_vk_net_gen (ConsoleColor.DarkGreen, $"adding alias {from} -> {to}");
 		}
 
 		enum EnumTypes { bitmask, @enum };
@@ -408,9 +420,9 @@ namespace vk.generator {
 				rp.writeSummaryAndRemarks (tw);
 
 			if (sd.category == TypeCategories.union)
-				tw.WriteLine($"[StructLayout(LayoutKind.Explicit, Pack = 1, CharSet = CharSet.Ansi)]");
+				tw.WriteLine($"[StructLayout(LayoutKind.Explicit)]");
 			else
-				tw.WriteLine ($"[StructLayout(LayoutKind.Sequential, Pack = 1, CharSet = CharSet.Ansi)]");
+				tw.WriteLine ($"[StructLayout(LayoutKind.Sequential)]");
 			tw.WriteLine ($"public unsafe partial struct {sd.Name} {{");
 			tw.Indent++;
 			foreach (MemberDef mb in sd.members) {
@@ -502,7 +514,7 @@ namespace vk.generator {
 		}
 
 		static void gen_structs (string englobingStaticClass) {
-			using (StreamWriter sr = new StreamWriter (targetPath($"structs_{englobingStaticClass}"), false, System.Text.Encoding.UTF8)) {
+			using (StreamWriter sr = new StreamWriter (vkNetTargetPath($"structs_{englobingStaticClass}"), false, System.Text.Encoding.UTF8)) {
 				using (IndentedTextWriter tw = new IndentedTextWriter (sr)) {
 					writePreamble (tw, "System.Runtime.InteropServices");
 					tw.Indent++;
@@ -564,7 +576,7 @@ namespace vk.generator {
 				tw.WriteLine ($"{vName,-50} = {ev.value,10},");
 		}
 		static void gen_enums (string englobingStaticClass) {
-			using (StreamWriter sr = new StreamWriter (targetPath($"enums_{englobingStaticClass}"), false, System.Text.Encoding.UTF8)) {
+			using (StreamWriter sr = new StreamWriter (vkNetTargetPath($"enums_{englobingStaticClass}"), false, System.Text.Encoding.UTF8)) {
 				using (IndentedTextWriter tw = new IndentedTextWriter (sr)) {
 					writePreamble (tw, "System.Diagnostics");
 					tw.Indent++;
@@ -622,7 +634,7 @@ namespace vk.generator {
 			}
 		}
 		static void gen_extensions () {
-			using (StreamWriter sr = new StreamWriter (targetPath ("extensions"), false, System.Text.Encoding.UTF8)) {
+			using (StreamWriter sr = new StreamWriter (vkNetTargetPath ("extensions"), false, System.Text.Encoding.UTF8)) {
 				using (IndentedTextWriter tw = new IndentedTextWriter (sr)) {
 					writePreamble (tw);
 					tw.Indent++;
@@ -694,7 +706,7 @@ namespace vk.generator {
 			tw.WriteLine (@"}");
 		}
 		static void gen_handles (string englobingStaticClass) {
-			using (StreamWriter sr = new StreamWriter (targetPath($"handles_{englobingStaticClass}"), false, System.Text.Encoding.UTF8)) {
+			using (StreamWriter sr = new StreamWriter (vkNetTargetPath($"handles_{englobingStaticClass}"), false, System.Text.Encoding.UTF8)) {
 				using (IndentedTextWriter tw = new IndentedTextWriter (sr)) {
 					writePreamble (tw, "System.Diagnostics");
 					tw.Indent++;
@@ -710,8 +722,7 @@ namespace vk.generator {
 
 		static void gen_constant_value (IndentedTextWriter tw, EnumerantValue cd) {
 			if (string.IsNullOrEmpty (cd.value)) {
-				Console.ForegroundColor = ConsoleColor.DarkRed;
-				Console.WriteLine ("no value for constant: " + cd);
+				log_vk_net_gen (ConsoleColor.DarkRed, "no value for constant: " + cd);
 				return;
 			}
 			string pTrims = cd.value.Replace ("(", "");
@@ -737,7 +748,7 @@ namespace vk.generator {
 			}
 		}
 		static void gen_constants (string englobingStaticClass) {
-			using (StreamWriter sr = new StreamWriter (targetPath($"constants_{englobingStaticClass}"), false, System.Text.Encoding.UTF8)) {
+			using (StreamWriter sr = new StreamWriter (vkNetTargetPath($"constants_{englobingStaticClass}"), false, System.Text.Encoding.UTF8)) {
 				using (IndentedTextWriter tw = new IndentedTextWriter (sr)) {
 					writePreamble (tw);
 					tw.Indent++;
@@ -790,8 +801,7 @@ namespace vk.generator {
 		}
 		static void gen_command (IndentedTextWriter tw, CommandDef cd) {
 			if (!string.IsNullOrEmpty (cd.alias)) {
-				Console.ForegroundColor = ConsoleColor.DarkGray;
-				Console.WriteLine ("TODO:command generator: is alias: " + cd);
+				log_vk_net_gen (ConsoleColor.DarkGray, "TODO:command generator: is alias: " + cd);
 				return;
 			}
 			tw.WriteLine ($"internal static IntPtr {cd.CSName}_ptr;");
@@ -830,7 +840,7 @@ namespace vk.generator {
 			tw.WriteLine ();
 		}
 		static void gen_commands (string englobingStaticClass) {
-			using (StreamWriter sr = new StreamWriter (targetPath ($"commands_{englobingStaticClass}"), false, System.Text.Encoding.UTF8)) {
+			using (StreamWriter sr = new StreamWriter (vkNetTargetPath ($"commands_{englobingStaticClass}"), false, System.Text.Encoding.UTF8)) {
 				using (IndentedTextWriter tw = new IndentedTextWriter (sr)) {
 					writePreamble (tw, vknamespace + ".Generator");
 					tw.Indent++;
@@ -850,7 +860,6 @@ namespace vk.generator {
 					foreach (string preloadCmd in preloadedCommands) {
 						tw.WriteLine ($"{preloadCmd}_ptr      = Vk.s_nativeLib.LoadFunctionPointer(\"{preloadCmd}\");");
 					}
-					//tw.WriteLine (@"Console.WriteLine (""preload function pointer ok."");");
 
 					tw.Indent--;
 					tw.WriteLine (@"}");
@@ -961,14 +970,11 @@ namespace vk.generator {
 					});
 					break;
 				case TypeCategories.define:
-					Console.ForegroundColor = ConsoleColor.Cyan;
-					Console.WriteLine (nType.InnerXml);
+					log_vk_net_gen (ConsoleColor.Cyan, nType.InnerXml);
 					break;
 				case TypeCategories.include:
 				case TypeCategories.group:
-					Console.ForegroundColor = ConsoleColor.DarkMagenta;
-					Console.WriteLine($"Unprocessed type category {category}: {nType.OuterXml}");
-					Console.ForegroundColor = ConsoleColor.Gray;
+					log_vk_net_gen (ConsoleColor.DarkMagenta, $"Unprocessed type category {category}: {nType.OuterXml}");
 					break;
 				case TypeCategories.union:
 				case TypeCategories.@struct:
@@ -979,7 +985,7 @@ namespace vk.generator {
 
 					foreach (XmlNode m in nType.ChildNodes) {
 						if ((m.NodeType != XmlNodeType.Element)) {
-							Console.WriteLine ($"expecting element, having {m.NodeType}: {m.OuterXml}");
+							log_vk_net_gen (ConsoleColor.Red, $"expecting element, having {m.NodeType}: {m.OuterXml}");
 							continue;
 						}
 						switch (m.Name) {
@@ -989,18 +995,14 @@ namespace vk.generator {
 								sd.members.Add (parseMember (m));
 								break;
 							default:
-								Console.ForegroundColor = ConsoleColor.Red;
-								Console.WriteLine ($"unknown element in struct def : {m.OuterXml}");
-								Console.ForegroundColor = ConsoleColor.Gray;
+								log_vk_net_gen (ConsoleColor.Red, $"unknown element in struct def : {m.OuterXml}");
 								break;
 						}
 					}
 					types.Add (sd);
 					break;
 				default:
-					Console.ForegroundColor = ConsoleColor.DarkMagenta;
-					Console.WriteLine ($"Unprocessed type: {nType.OuterXml}");
-					Console.ForegroundColor = ConsoleColor.Gray;
+					log_vk_net_gen (ConsoleColor.Red, $"Unprocessed type: {nType.OuterXml}");
 					break;
 			}
 		}
@@ -1039,17 +1041,15 @@ namespace vk.generator {
 					ev.unusedComment = p.InnerXml;
 					continue;
 				}
-				//cs names generate same output
-				//TODO: removed suffix could be saved to be appened if alias csname is not unique
-				if (p.Attributes["name"].Value == "VK_SURFACE_COUNTER_VBLANK_EXT" ||
-					p.Attributes["name"].Value == "VK_PERFORMANCE_COUNTER_DESCRIPTION_PERFORMANCE_IMPACTING_KHR" ||
-					p.Attributes["name"].Value == "VK_PERFORMANCE_COUNTER_DESCRIPTION_CONCURRENTLY_IMPACTED_KHR") {
-					Console.WriteLine ($"Discarded Enum Value:{ed.Name}->{p.Attributes["name"].Value}");
-					continue;
-				}
 
 				ev.Name = p.Attributes["name"].Value;
 				ev.comment = p.Attributes["comment"]?.Value;
+
+				if (skipEnums.Contains (ev.Name)) {
+					log_vk_net_gen (ConsoleColor.Yellow, $"skiped enum: {ev.Name}");
+					continue;
+				}
+
 
 				if (p.Attributes["alias"] != null) {
 					ev.isAlias = true;
@@ -1078,8 +1078,7 @@ namespace vk.generator {
 							ev.definedBy.Add (iface.Name);
 							break;
 						default:
-							Console.ForegroundColor = ConsoleColor.Red;
-							Console.WriteLine ($"unhandle requirement tag in constants defs: {req.Attributes["name"].Value}");
+							log_vk_net_gen (ConsoleColor.Red, $"unhandle requirement tag in constants defs: {req.Attributes["name"].Value}");
 							break;
 					}
 				}
@@ -1096,12 +1095,10 @@ namespace vk.generator {
 								break;
 							default:
 								TypeDef tdef = types.Where (td => td.Name == req.Attributes["name"].Value).FirstOrDefault ();
-								if (tdef != null) {
+								if (tdef != null)
 									tdef.definedBy.Add (iface.Name);
-								}else{
-									Console.ForegroundColor = ConsoleColor.DarkRed;
-									Console.WriteLine ($"iface type not found: {req.Attributes["name"].Value}");
-								}
+								else
+									log_vk_net_gen (ConsoleColor.DarkRed, $"iface type not found: {req.Attributes["name"].Value}");
 								break;
 						}
 						break;
@@ -1112,14 +1109,15 @@ namespace vk.generator {
 							CommandDef cd = commands.Where (e => e.Name == req.Attributes["name"].Value).First ();
 							cd.definedBy.Add (iface.Name);
 						} catch {
-							Console.ForegroundColor = ConsoleColor.Red;
-							Console.WriteLine ($"extension command not found: {req.Attributes["name"].Value}");
+							log_vk_net_gen (ConsoleColor.Red, $"extension command not found: {req.Attributes["name"].Value}");
 						}
 						break;
 					case "enum":
 						string eName = req.Attributes["name"].Value;
-						if (skipEnums.Contains (eName))
+						if (skipEnums.Contains (eName)) {
+							log_vk_net_gen (ConsoleColor.Yellow, $"skiped enum: {eName}");
 							continue;
+						}
 						EnumerantValue ev = extends.Where (e => e.Name == eName).FirstOrDefault ();
 						if (ev != null) {
 							ev.definedBy.Add (iface.Name);
@@ -1175,8 +1173,7 @@ namespace vk.generator {
 							});
 						break;
 					default:
-						Console.ForegroundColor = ConsoleColor.DarkRed;
-						Console.WriteLine ($"unknown req: {req.OuterXml}");
+						log_vk_net_gen (ConsoleColor.DarkRed, $"unknown req: {req.OuterXml}");
 						break;
 				}
 			}
@@ -1195,13 +1192,12 @@ namespace vk.generator {
 				ext.type = (ExtensionType)Enum.Parse (typeof (ExtensionType), nExt.Attributes["type"].Value, true);
 
 			foreach (XmlNode n in nExt.ChildNodes) {
-				if (n.Name == "require") {
+				if (n.Name == "require")
 					parseRequirements (ext, n);
-				} else if (n.Name == "remove") {
-					Console.ForegroundColor = ConsoleColor.Blue;
-					Console.WriteLine ($"extension remove: {n.OuterXml}");
-				} else
-					Debugger.Break ();
+				else if (n.Name == "remove")
+					log_vk_net_gen (ConsoleColor.Blue, $"extension remove: {n.OuterXml}");
+				else
+					throw new NotImplementedException();
 			}
 
 			extensions.Add (ext);
@@ -1218,13 +1214,12 @@ namespace vk.generator {
 			fd.comment = nFeat.Attributes["comment"]?.Value;
 
 			foreach (XmlNode f in nFeat.ChildNodes) {
-				if (f.Name == "require") {
+				if (f.Name == "require")
 					parseRequirements (fd, f);
-				} else if (f.Name == "remove") {
-					Console.ForegroundColor = ConsoleColor.DarkBlue;
-					Console.WriteLine ($"feature remove: {f.OuterXml}");
-				}// else
-					//Debugger.Break ();
+				else if (f.Name == "remove")
+					log_vk_net_gen (ConsoleColor.DarkBlue, $"feature remove: {f.OuterXml}");
+				else
+					throw new NotImplementedException();
 			}
 
 			features.Add (fd);
@@ -1364,9 +1359,8 @@ namespace vk.generator {
 					continue;
 				}
 				if (l.StartsWith ("endif::")) {
-					if (!conditionsStack.TryPop (out string condition)) {
-						printError ($"empty condition stack: {l}");
-					}
+					if (!conditionsStack.TryPop (out string condition))
+						log_vk_net_gen (ConsoleColor.Red, $"refpages: empty condition stack: {l}");
 				}
 				if (l.StartsWith ("== ") || l.StartsWith (".")) {
 					if (memberName != null) {
@@ -1480,9 +1474,10 @@ namespace vk.generator {
 		}
 		#endregion
 		const string vkrefsdir = "Vulkan-Docs/gen/refpage";
-		const string targetDir = "build/generated";
-		static string targetPath (string fileName) =>
-			Path.Combine (targetDir, $"{fileName}_gen.cs");
+		const string vkNetTargetDir = "build/generated/vk_net";
+		const string vkeTargetDir = "build/generated/vke";
+		static string vkNetTargetPath (string fileName) =>
+			Path.Combine (vkNetTargetDir, $"{fileName}_gen.cs");
 
 		static void printError (string errString) {
 			Console.ForegroundColor = ConsoleColor.Red;
@@ -1492,7 +1487,7 @@ namespace vk.generator {
 
 		public static void Main (string[] args) {
 			if(args.Length < 1) {
-				Console.WriteLine ("Usage: vk.generator path/to/vk.xml");
+				printError ("[GEN] Usage:\n\tvk.generator path/to/vk.xml");
 				return;
 			}
 			string vkxmlLocal = args[0];
@@ -1501,6 +1496,8 @@ namespace vk.generator {
 				printError ($"[GEN] {Path.Combine (Directory.GetCurrentDirectory(),vkxmlLocal)} not found.");
 				return;
 			}
+			if (!Directory.Exists (vkNetTargetDir))
+				Directory.CreateDirectory (vkNetTargetDir);
 
 			XmlDocument doc = new XmlDocument();
 			doc.Load(vkxmlLocal);
@@ -1519,14 +1516,14 @@ namespace vk.generator {
 				if (e.Name == "command")
 					readCommand(e);
 				else
-					Console.WriteLine($"commands: {e.OuterXml}");
+					log_vk_net_gen (ConsoleColor.Red, $"expecting 'command', having '{e.Name}'\n{{e.OuterXml}}");
 			}
 
 			foreach (XmlNode e in doc.GetElementsByTagName("extensions").Item(0)) {
 				if (e.Name == "extension")
 					readExtension(e);
 				else
-					Console.WriteLine($"extension: {e.OuterXml}");
+					log_vk_net_gen (ConsoleColor.Red, $"expecting 'extension', having '{e.Name}'\n{{e.OuterXml}}");
 			}
 
 			XmlNodeList featuresNL = doc.GetElementsByTagName("feature");

@@ -40,7 +40,7 @@ namespace tests
 
 
 			VkClearColorValue clear = new VkClearColorValue(255,0,0);
-			clear.float32.a = 210;
+			clear.floats[2] = 210;
 
 			using (PinnedObjects pi = new PinnedObjects()) {
 				ci.pApplicationInfo = ai.Pin(pi);
