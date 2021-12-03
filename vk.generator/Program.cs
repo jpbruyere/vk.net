@@ -432,10 +432,6 @@ namespace vk.generator {
 			tw.WriteLine ($"public unsafe partial struct {sd.Name} {{");
 			tw.Indent++;
 			foreach (MemberDef mb in sd.members) {
-				if (hasDoc)
-					rp.writeMemberDocIfFound (tw, mb.Name);
-				else if (!string.IsNullOrEmpty (mb.comment))
-					tw.WriteLine ($"/// <summary> {mb.comment} </summary>");
 
 				string typeStr;
 
@@ -447,6 +443,10 @@ namespace vk.generator {
 					//enums has to be stored in struct as int or uint for enums are not yet blittable in ms .NET
 					typeStr = ed.type == EnumTypes.@enum ? "int" : "uint";
 					tw.WriteLine ($"{typeStr} _{mb.Name};");
+					if (hasDoc)
+						rp.writeMemberDocIfFound (tw, mb.Name);
+					else if (!string.IsNullOrEmpty (mb.comment))
+						tw.WriteLine ($"/// <summary> {mb.comment} </summary>");
 					tw.WriteLine ($"public {mb.typedef.CSName} {mb.Name} {{");
 					tw.Indent++;
 					tw.WriteLine ($"get => ({mb.typedef.CSName})_{mb.Name};");
@@ -457,6 +457,11 @@ namespace vk.generator {
 					continue;
 				} else
 					typeStr = mb.typedef.CSName;
+
+				if (hasDoc)
+					rp.writeMemberDocIfFound (tw, mb.Name);
+				else if (!string.IsNullOrEmpty (mb.comment))
+					tw.WriteLine ($"/// <summary> {mb.comment} </summary>");
 
 				if (sd.category == TypeCategories.union)
 					tw.WriteLine($"[FieldOffset(0)]");
@@ -1330,6 +1335,7 @@ namespace vk.generator {
 				}
 			}
 		}
+		System.Numerics.Vector<int> test;
 		static IEnumerable<string> splitLines (string s) {
 			if (string.IsNullOrEmpty (s))
 				return new List<string>();
@@ -1344,9 +1350,10 @@ namespace vk.generator {
 			else
 				return tmp.GetRange (start, end + 1 - start);
 		}
-		static Regex linkRx = new Regex (@"[p|s]link:([a-zA-Z0-9_:]*)", RegexOptions.Multiline);
+		static Regex linkRx = new Regex (@"[p|s|d]link:([a-zA-Z0-9_:]*)", RegexOptions.Multiline);
 		static Regex flinkRx = new Regex (@"flink:([a-zA-Z0-9_:]*)", RegexOptions.Multiline);
 		static Regex elinkRx = new Regex (@"elink:([a-zA-Z0-9_:]*)", RegexOptions.Multiline);
+		static Regex externalLink = new Regex (@"link:([^\[]*)\[([^\]]*)\]", RegexOptions.Multiline);
 		static Regex nameRx = new Regex (@"([p|f|s|e]name|code):([a-zA-Z0-9_]*)", RegexOptions.Multiline);
 		//static Regex elinkRx = new Regex (@"[p|f|s|e]link:([a-zA-Z0-9]*)", RegexOptions.Multiline);
 		static string docReplacements (string s) {
@@ -1361,23 +1368,37 @@ namespace vk.generator {
 			tmp = flinkRx.Replace (tmp, $"<see cref=\"{vkCommonCmdClassName}.$1\"/>");
 			Match match = elinkRx.Match (tmp);
 			while (match.Success) {
-				EnumDef ed = enums.FirstOrDefault (e=>e.values.Any (v=>v.Name == match.Value));
+				EnumDef ed = enums.FirstOrDefault (e=>e.Name == match.Groups[1].Value);
+				bool isEnumType = false;
+				if (ed == null) {
+					ed = enums.FirstOrDefault (e=>e.values.Any (v=>v.Name == match.Groups[1].Value));
+				} else
+					isEnumType = true;
+
 				int offset = match.Index + match.Length;
 
 				if (ed == null) {
-					log_vk_net_gen (ConsoleColor.Magenta, $"docReplacements: enum not fount: {match.Value}");
+					log_vk_net_gen (ConsoleColor.Magenta, $"docReplacements: enum not fount: {match.Groups[1].Value}");
 				} else {
-					EnumerantValue ev = ed.values.FirstOrDefault (v=>v.Name == match.Value);
-					if (ev.ResolvedName == null)
-						log_vk_net_gen (ConsoleColor.Magenta, $"no resolved name for: {match.Value}");
+					string id = null;
+					if (isEnumType)
+						id = ed.CSName;
 					else {
-						string replace = $"<see cref=\"{ev.ResolvedName}\"/>";
-						tmp = match.Result (replace);
+						EnumerantValue ev = ed.values.FirstOrDefault (v=>v.Name == match.Groups[1].Value);
+						if (ev.ResolvedName == null)
+							log_vk_net_gen (ConsoleColor.Magenta, $"no resolved name for: {match.Groups[1].Value}");
+						else
+							id = ev.ResolvedName;
+					}
+					if (id != null) {
+						string replace = $"<see cref=\"{id}\"/>";
+						tmp =  elinkRx.Replace (tmp, replace);
 						offset = match.Index + replace.Length;
 					}
 				}
 				match = elinkRx.Match (tmp,offset);
 			}
+			tmp = externalLink.Replace (tmp, @" <see href=""$1"">$2</see>");
 			return tmp;
 		}
 		static string readRefPageMembers (StreamReader sr, ref refPage refpage, bool isEnum) {
