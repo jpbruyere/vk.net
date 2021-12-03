@@ -420,6 +420,29 @@ namespace vk.generator {
 			tw.WriteLine (@"}");
 		}
 		static string[] valueTypes = { "byte", "int", "uint", "float", "ushort", "ulong" };
+		static bool tryGetVectorType (string type, int dim, out string vectorType) {
+			vectorType = null;
+			switch (type) {
+			case "float":
+				switch (dim) {
+					case 2: vectorType = "Vector2i"; return true;
+					default: return false;
+				}
+			case "int":
+				switch (dim) {
+					case 2: vectorType = "Vector2ui"; return true;
+					case 3: vectorType = "Vector3ui"; return true;
+					default: return false;
+				}
+			case "uint":
+				switch (dim) {
+					case 2: vectorType = "Vector2ui"; return true;
+					case 3: vectorType = "Vector3ui"; return true;
+					default: return false;
+				}
+			default: return false;
+			}
+		}
 		static void gen_struct (IndentedTextWriter tw, StructDef sd) {
 			bool hasDoc = tryFindRefPage (sd.Name, out refPage rp);
 			if (hasDoc)
@@ -488,8 +511,12 @@ namespace vk.generator {
 							tw.Indent--;
 							tw.WriteLine (@"}");
 						} else if (dims.Length == 1) {
-							string strSize = int.TryParse (dims[0], out dim) ? dim.ToString () : $"(int)Vk.{EnumerantValue.GetCSName (dims[0], null)}";
-							tw.WriteLine ($"public fixed {typeStr} {mb.Name}[{strSize}];");
+							if (int.TryParse (dims[0], out dim) && tryGetVectorType (typeStr, dim, out string vectorType))
+								tw.WriteLine ($"public {vectorType} {mb.Name};");
+							else {
+								string strSize = int.TryParse (dims[0], out dim) ? dim.ToString () : $"(int)Vk.{EnumerantValue.GetCSName (dims[0], null)}";
+								tw.WriteLine ($"public fixed {typeStr} {mb.Name}[{strSize}];");
+							}
 						} else {
 							int totSize = 1;
 							for (int i = 0; i < dims.Length; i++) {
@@ -523,11 +550,10 @@ namespace vk.generator {
 			tw.Indent--;
 			tw.WriteLine (@"}");
 		}
-
 		static void gen_structs (string englobingStaticClass) {
 			using (StreamWriter sr = new StreamWriter (vkNetTargetPath($"structs_{englobingStaticClass}"), false, System.Text.Encoding.UTF8)) {
 				using (IndentedTextWriter tw = new IndentedTextWriter (sr)) {
-					writePreamble (tw, "System.Runtime.InteropServices");
+					writePreamble (tw, "System.Runtime.InteropServices", "System.Numerics");
 					tw.Indent++;
 
 					foreach (StructDef sd in types.OfType<StructDef> ()) {
