@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFrameworks>netstandard2.0</TargetFrameworks>
+		<TargetFrameworks>netstandard2.1</TargetFrameworks>
 
 		<AssemblyVersion>0.3.0</AssemblyVersion>
 		<AssemblyName>Vulkan</AssemblyName>
@@ -24,7 +24,7 @@
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 
-
+		<NoWarn>$(NoWarn);1591</NoWarn>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -46,7 +46,7 @@
 				WorkingDirectory="$(SolutionDir)">
 			<Output TaskParameter="ConsoleOutput" PropertyName="OutputOfExec" />
 		</Exec>
-		<CreateItem Include="$(SolutionDir)build/generated/*.cs">
+		<CreateItem Include="$(SolutionDir)build/generated/vk_net/*.cs">
 			<Output TaskParameter="Include" ItemName="Compile" />
 		</CreateItem>
 	</Target>
