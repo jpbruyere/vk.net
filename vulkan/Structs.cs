@@ -265,7 +265,7 @@ namespace Vulkan
 			descriptorCount = count;
 		}
 	}
-	public unsafe partial struct VkAttachmentReference
+	public partial struct VkAttachmentReference
 	{
 		public VkAttachmentReference(uint attachment, VkImageLayout layout)
 		{

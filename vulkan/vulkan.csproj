@@ -19,9 +19,12 @@
 		<PackageIcon>vk.net-64.png</PackageIcon>
 		<SynchReleaseVersion>false</SynchReleaseVersion>
 		<PackageReleaseNotes>
-
+			* Docummentation extracted from Vulkan-Docs
+			* no usafe code.
+			* use Vector type where possible
+			* Proxy structures to handle arrays.
 		</PackageReleaseNotes>
-		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<AllowUnsafeBlocks>false</AllowUnsafeBlocks>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 
 		<NoWarn>$(NoWarn);1591;0419</NoWarn>
