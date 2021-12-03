@@ -4,6 +4,7 @@
 		<TargetFramework>$(ToolsFramework)</TargetFramework>
 		<OutputType>Exe</OutputType>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<DefineConstants>$(DefineConstants);LOG_VK_NET_GEN</DefineConstants>
 	</PropertyGroup>
 
 </Project>

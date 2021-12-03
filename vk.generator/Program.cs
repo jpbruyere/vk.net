@@ -203,7 +203,7 @@ namespace vk.generator {
 				log_vk_net_gen (ConsoleColor.Red, $"aliases list constains already an alias for: {from}");
 			else
 				aliases.Add (from, to);
-			log_vk_net_gen (ConsoleColor.DarkGreen, $"adding alias {from} -> {to}");
+			log_vk_net_gen (ConsoleColor.DarkYellow, $"adding alias {from} -> {to}");
 		}
 
 		enum EnumTypes { bitmask, @enum };
@@ -318,17 +318,23 @@ namespace vk.generator {
 			public bool isAlias;
 			public override string ToString () => string.Format ($"{name} = {value}");
 			public override string CSName => throw new NotImplementedException (); //name.ConvertUnderscoredUpperCasedNameToCamelCase ();
-
+			public string ResolvedName = null;
 			public string GetCSName (string containingType = null) {
-				return GetCSName (name, containingType);
+				string tmp = GetCSName (name, containingType);
+				string newCsName = $"{containingType}.{tmp}";
+				if (ResolvedName!=null && ResolvedName != newCsName)
+					log_vk_net_gen (ConsoleColor.Red, $"enumerant multiple cs name: {ResolvedName}, {newCsName}");
+				ResolvedName = newCsName;
+				return tmp;
 				// name.ConvertUnderscoredUpperCasedNameToCamelCase ().RemoveCommonLeadingPart (containingType.CSName);
 			}
 			public static string GetCSName (string value, string containingType) {
 				string ccValue = value.ConvertUnderscoredUpperCasedNameToCamelCase();
 				string cType = containingType?.RemoveTagsAndFlagsSuffix();
-				return containingType == null || (ccValue.Length > cType.Length && cType != ccValue.Substring(0, cType.Length)) ?
+				string newCsName = containingType == null || (ccValue.Length > cType.Length && cType != ccValue.Substring(0, cType.Length)) ?
 					ccValue.StartsWith("Vk", StringComparison.Ordinal) ? ccValue.Substring(2) : ccValue :
 					ccValue.RemoveCommonLeadingPart (containingType);
+				return newCsName;
 			}
 
 			public bool Equals (EnumerantValue other) {
@@ -970,11 +976,11 @@ namespace vk.generator {
 					});
 					break;
 				case TypeCategories.define:
-					log_vk_net_gen (ConsoleColor.Cyan, nType.InnerXml);
+					log_vk_net_gen (ConsoleColor.Cyan, $"Unprocessed type category {category}:\n{nType.InnerXml}");
 					break;
 				case TypeCategories.include:
 				case TypeCategories.group:
-					log_vk_net_gen (ConsoleColor.DarkMagenta, $"Unprocessed type category {category}: {nType.OuterXml}");
+					log_vk_net_gen (ConsoleColor.DarkMagenta, $"Unprocessed type category {category}:\n{nType.OuterXml}");
 					break;
 				case TypeCategories.union:
 				case TypeCategories.@struct:
@@ -1172,6 +1178,8 @@ namespace vk.generator {
 								extends = req.Attributes["extends"]?.Value,
 							});
 						break;
+					case "comment":
+						break;
 					default:
 						log_vk_net_gen (ConsoleColor.DarkRed, $"unknown req: {req.OuterXml}");
 						break;
@@ -1286,6 +1294,12 @@ namespace vk.generator {
 		struct refPage {
 			public string bief;
 			public string description;
+			public void AppendDescription (string desc ) {
+ 				if (!string.IsNullOrEmpty(description))
+					description += @"\n";
+				description += desc;
+			}
+
 			public string cspecInfos;
 			public Dictionary<string, string> members;
 
@@ -1330,18 +1344,40 @@ namespace vk.generator {
 			else
 				return tmp.GetRange (start, end + 1 - start);
 		}
-		static Regex linkRx = new Regex (@"[p|f|s|e]link:([a-zA-Z0-9_:]*)", RegexOptions.Multiline);
+		static Regex linkRx = new Regex (@"[p|s]link:([a-zA-Z0-9_:]*)", RegexOptions.Multiline);
+		static Regex flinkRx = new Regex (@"flink:([a-zA-Z0-9_:]*)", RegexOptions.Multiline);
+		static Regex elinkRx = new Regex (@"elink:([a-zA-Z0-9_:]*)", RegexOptions.Multiline);
 		static Regex nameRx = new Regex (@"([p|f|s|e]name|code):([a-zA-Z0-9_]*)", RegexOptions.Multiline);
 		//static Regex elinkRx = new Regex (@"[p|f|s|e]link:([a-zA-Z0-9]*)", RegexOptions.Multiline);
-		static string seecrefG1replace = @"<see cref=""$1""/>";
-		static string codeG2replace = @"<c>$2</c>";
 		static string docReplacements (string s) {
 			if (string.IsNullOrEmpty (s))
 				return "";
-			string tmp = linkRx.Replace(s, seecrefG1replace);
+			string tmp = s.Replace ("<", "&lt;");
+			tmp = tmp.Replace (">", "&gt;");
+			tmp = tmp.Replace (@"//", @" //");
+			tmp = linkRx.Replace(tmp, @"<see cref=""$1""/>");
 			tmp = tmp.Replace ("::pname:", ".");
-			tmp = nameRx.Replace(tmp, codeG2replace);
+			tmp = nameRx.Replace(tmp, @"<c>$2</c>");
+			tmp = flinkRx.Replace (tmp, $"<see cref=\"{vkCommonCmdClassName}.$1\"/>");
+			Match match = elinkRx.Match (tmp);
+			while (match.Success) {
+				EnumDef ed = enums.FirstOrDefault (e=>e.values.Any (v=>v.Name == match.Value));
+				int offset = match.Index + match.Length;
 
+				if (ed == null) {
+					log_vk_net_gen (ConsoleColor.Magenta, $"docReplacements: enum not fount: {match.Value}");
+				} else {
+					EnumerantValue ev = ed.values.FirstOrDefault (v=>v.Name == match.Value);
+					if (ev.ResolvedName == null)
+						log_vk_net_gen (ConsoleColor.Magenta, $"no resolved name for: {match.Value}");
+					else {
+						string replace = $"<see cref=\"{ev.ResolvedName}\"/>";
+						tmp = match.Result (replace);
+						offset = match.Index + replace.Length;
+					}
+				}
+				match = elinkRx.Match (tmp,offset);
+			}
 			return tmp;
 		}
 		static string readRefPageMembers (StreamReader sr, ref refPage refpage, bool isEnum) {
@@ -1458,13 +1494,23 @@ namespace vk.generator {
 							l = sr.ReadLine();
 							if (l.StartsWith ("include::{generated}/api"))
 								continue;
+							if (l.StartsWith ("[source,c]")) {
+								if (sr.ReadLine() != "~~~~")
+									throw new Exception("expecting c source start: ~~~~");
+								refpage.AppendDescription ("<c>");
+								l =  sr.ReadLine();
+								while (l != "~~~~") {
+									refpage.AppendDescription ($"\t{l}");
+									l =  sr.ReadLine();
+								}
+								refpage.AppendDescription ("</c>");
+								continue;
+							}
 							if (l.StartsWith ("== ") || l.StartsWith (".")) {
 								savedLine = l;
 								break;
 							}
-							if (!string.IsNullOrEmpty(refpage.description))
-								refpage.description += @"\n";
-							refpage.description += docReplacements (l);
+							refpage.AppendDescription (docReplacements (l));
 						}
 						continue;
 					}
