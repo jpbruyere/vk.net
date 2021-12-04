@@ -8,24 +8,6 @@ using Version = Vulkan.Version;
 
 namespace tests
 {
-	[StructLayout(LayoutKind.Sequential, Pack = 1, CharSet = CharSet.Ansi)]
-	public struct NewStuff
-	{
-		[MarshalAs(UnmanagedType.ByValTStr, SizeConst = (int)Vulkan.Vk.UuidSize)]
-		public StringBuilder name;
-
-		[MarshalAs(UnmanagedType.ByValArray, SizeConst = 4*16)]
-		public float[,] calibrate;
-
-		[MarshalAs(UnmanagedType.R4)]
-		public float DMTI;
-
-		[MarshalAs(UnmanagedType.R4)]
-		public float DMTII;
-
-		// Etc
-	}
-
 	class Program
 	{
 
@@ -35,8 +17,10 @@ namespace tests
 
 			VkInstanceCreateInfo ci = VkInstanceCreateInfo.New();
 			VkApplicationInfo ai = VkApplicationInfo.New();
-			//ai.apiVersion = new Version (1,0,0);
-			//ai.applicationVersion = new Version (1,0,0);
+			ai.apiVersion = new Version (1,0,0);
+			ai.applicationVersion = new Version (1,0,0);
+			ai.pApplicationName = "new application name";
+			ai.pEngineName = "new engine name";
 
 
 			VkClearColorValue clear = new VkClearColorValue(255,0,0);

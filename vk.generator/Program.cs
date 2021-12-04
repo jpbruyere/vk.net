@@ -488,6 +488,15 @@ namespace vk.generator {
 						tw.WriteLine (@"}");
 
 						if (kvp.Value == "char") {
+							tw.WriteLine ($"public static implicit operator string ({structName} s) => s.ToString();");
+							tw.WriteLine ($"public static implicit operator {structName} (string s)");
+							tw.WriteLine (@"{");
+							tw.Indent++;
+							tw.WriteLine ($"{structName} tmp = default;");
+							tw.WriteLine ($"tmp.Update (s);");
+							tw.WriteLine ($"return tmp;");
+							tw.Indent--;
+							tw.WriteLine (@"}");
 							tw.WriteLine ($"public override string ToString()");
 							tw.WriteLine (@"{");
 							tw.Indent++;
@@ -496,7 +505,7 @@ namespace vk.generator {
 							tw.WriteLine ($"return System.Text.Encoding.UTF8.GetString (bytes);");
 							tw.Indent--;
 							tw.WriteLine (@"}");
-							tw.WriteLine ($"public void Update(string value)");
+							tw.WriteLine ($"void Update(string value)");
 							tw.WriteLine (@"{");
 							tw.Indent++;
 							tw.WriteLine ($"Span<{structName}> valSpan = MemoryMarshal.CreateSpan(ref this, 1);");
@@ -533,7 +542,9 @@ namespace vk.generator {
 
 				EnumDef ed = enums.FirstOrDefault (e => e.Name == mb.typedef.Name);
 
-				if (mb.typedef.IndirectionLevel > 0 || mb.typedef.Name.StartsWith ("PFN_", StringComparison.Ordinal))
+				if (mb.typedef.IndirectionLevel == 1 && mb.typedef.Name == "char")
+					typeStr = "Utf8StringPointer";
+				else if (mb.typedef.IndirectionLevel > 0 || mb.typedef.Name.StartsWith ("PFN_", StringComparison.Ordinal))
 					typeStr = "IntPtr";
 				else if (ed != null) {
 					//enums has to be stored in struct as int or uint for enums are not yet blittable in ms .NET

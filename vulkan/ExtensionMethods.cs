@@ -38,18 +38,18 @@ namespace Vulkan {
 				return handles[obj].AddrOfPinnedObject ();
 			}
 
-            GCHandle hnd = GCHandle.Alloc (obj, GCHandleType.Pinned);
-            handles.Add (obj, hnd);
-            return hnd.AddrOfPinnedObject ();
-        }
-        public static IntPtr Pin<T> (this List<T> obj) {
-            if (handles.ContainsKey (obj))
-                Debug.WriteLine ("Pinning already pinned object: {0}", obj);
+			GCHandle hnd = GCHandle.Alloc (obj, GCHandleType.Pinned);
+			handles.Add (obj, hnd);
+			return hnd.AddrOfPinnedObject ();
+		}
+		public static IntPtr Pin<T> (this List<T> obj) {
+			if (handles.ContainsKey (obj))
+				Debug.WriteLine ("Pinning already pinned object: {0}", obj);
 
-            GCHandle hnd = GCHandle.Alloc (obj.ToArray(), GCHandleType.Pinned);
-            handles.Add (obj, hnd);
-            return hnd.AddrOfPinnedObject ();
-        }
+			GCHandle hnd = GCHandle.Alloc (obj.ToArray(), GCHandleType.Pinned);
+			handles.Add (obj, hnd);
+			return hnd.AddrOfPinnedObject ();
+		}
 		public static IntPtr Pin<T> (this T[] obj) {
 			if (handles.ContainsKey (obj))
 				Debug.WriteLine ("Pinning already pinned object: {0}", obj);
@@ -63,9 +63,15 @@ namespace Vulkan {
 				Debug.WriteLine ("Trying to pin already pinned object: {0}", obj);
 				return handles[obj].AddrOfPinnedObject ();
 			}
+			byte[] n = System.Text.Encoding.UTF8.GetBytes(obj +'\0');
+			GCHandle hnd = GCHandle.Alloc (n, GCHandleType.Pinned);
+			handles.Add (obj, hnd);
+			return hnd.AddrOfPinnedObject ();
+		}
+		public static IntPtr PinPointer (this string obj) {
             byte[] n = System.Text.Encoding.UTF8.GetBytes(obj +'\0');
 			GCHandle hnd = GCHandle.Alloc (n, GCHandleType.Pinned);
-            handles.Add (obj, hnd);
+            handles.Add (hnd.AddrOfPinnedObject (), hnd);
             return hnd.AddrOfPinnedObject ();
         }
 

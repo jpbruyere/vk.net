@@ -16,7 +16,7 @@ namespace Vulkan
         public uint Value;
 
         /// <summary>
-        /// Constructs a new <see cref="VkBool32"/> with the given raw value. 
+        /// Constructs a new <see cref="VkBool32"/> with the given raw value.
         /// </summary>
         /// <param name="value"></param>
         public VkBool32(uint value)
