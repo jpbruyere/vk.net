@@ -3,11 +3,44 @@
 //
 // This code is licensed under the MIT license (MIT) (http://opensource.org/licenses/MIT)
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Linq;
+using System.Collections.ObjectModel;
 
 namespace Vulkan
 {
+	public struct VkApplicationInfoPtr2 : IDisposable
+	{
+		IntPtr handle;
+		VkApplicationInfoPtr2 (IntPtr ptr) {
+			handle = ptr;
+		}
+		VkApplicationInfoPtr2 (IEnumerable<VkApplicationInfo> str) {
+			handle = str.ToArray().PinPointer();
+		}
+		public VkApplicationInfo Single {
+			set {
+				if (handle != IntPtr.Zero)
+					handle.Unpin();
+				handle = value.PinPointer();
+			}
+		}
 
+		//public static implicit operator IEnumerable<VkApplicationInfo> (VkApplicationInfoPtr2 pt)	=> Marshal.PtrToStructure <VkApplicationInfo> (pt.handle);
+		public static implicit operator IntPtr (VkApplicationInfoPtr2 pt) => pt.handle;
+		public static implicit operator VkApplicationInfoPtr2 (IntPtr ptr) => new VkApplicationInfoPtr2 (ptr);
+		public void Dispose() => handle.Unpin();
+	}
+	/*
+	public partial struct VkApplicationInfo : IDisposable
+	{
+		//public static implicit operator VkApplicationInfoPtr2
+		public void Dispose()
+		{
+			throw new NotImplementedException();
+		}
+	}*/
 	public partial struct VkClearValue
 	{
 		public VkClearValue(float r, float g, float b)
@@ -142,7 +175,7 @@ namespace Vulkan
 			this._descriptorType = (int)_descriptorType;
 			descriptorCount = _descriptorCount;
 			stageFlags = _stageFlags;
-			pImmutableSamplers = (IntPtr)0;
+			_pImmutableSamplers = IntPtr.Zero;
 		}
 	}
 	public partial struct VkDescriptorSetLayoutCreateInfo
@@ -153,7 +186,7 @@ namespace Vulkan
 			pNext = IntPtr.Zero;
 			this.flags = flags;
 			this.bindingCount = bindingCount;
-			this.pBindings = pBindings;
+			_pBindings = pBindings;
 		}
 	}
 	public partial struct VkVertexInputBindingDescription
@@ -218,7 +251,7 @@ namespace Vulkan
 		public VkCommandBufferBeginInfo(VkCommandBufferUsageFlags usage = (VkCommandBufferUsageFlags)0)
 		{
 			this._sType = (int)VkStructureType.CommandBufferBeginInfo;
-			pNext = pInheritanceInfo = IntPtr.Zero;
+			pNext = _pInheritanceInfo = IntPtr.Zero;
 			flags = usage;
 		}
 	}

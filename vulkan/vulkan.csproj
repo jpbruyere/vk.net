@@ -3,7 +3,7 @@
 	<PropertyGroup>
 		<TargetFrameworks>netstandard2.1</TargetFrameworks>
 
-		<AssemblyVersion>0.3.0</AssemblyVersion>
+		<AssemblyVersion>0.4.0</AssemblyVersion>
 		<AssemblyName>Vulkan</AssemblyName>
 		<PackageVersion>$(AssemblyVersion)-beta</PackageVersion>
 

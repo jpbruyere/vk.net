@@ -128,7 +128,7 @@ namespace vk.generator {
 
 			{ "DWORD", "uint" },
 
-			{ "ANativeWindow", "Android.ANativeWindow" },
+			//{ "ANativeWindow", "Android.ANativeWindow" },
 
 			{ "MirConnection", "Mir.MirConnection" },
 			{ "MirSurface", "Mir.MirSurface" },
@@ -219,7 +219,9 @@ namespace vk.generator {
 		/// <typeparam name="string">type</typeparam>
 		/// <returns></returns>
 		static Dictionary<string, string> arrayProxies = new Dictionary<string, string>();
-		static Dictionary<string, ParamDef> paramsDefs = new Dictionary<string, ParamDef> ();
+		//contains raw types names
+		static List<string> structurePointerProxies = new List<string>(100);
+		static Dictionary<string, ParamDef> paramsDefs = new Dictionary<string, ParamDef> (100);
 
 		public static List<string> tags = new List<string> ();
 
@@ -311,7 +313,7 @@ namespace vk.generator {
 			public bool optional;
 			public bool externsync;
 			public bool nullTerminated;
-			public string lenMember;
+			public string len;
 			public string defaultValue;
 			public string fixedArray;
 
@@ -525,6 +527,71 @@ namespace vk.generator {
 				}
 			}
 		}
+		static void gen_structurePointer_proxies (string englobingStaticClass) {
+			using (StreamWriter sr = new StreamWriter (vkNetTargetPath($"struct_pointer_proxies_{englobingStaticClass}"), false, System.Text.Encoding.UTF8)) {
+				using (IndentedTextWriter tw = new IndentedTextWriter (sr)) {
+					writePreamble (tw, "System.Runtime.InteropServices", "System.Linq", "System.Collections.Generic", "System.Collections.ObjectModel");
+					tw.Indent++;
+
+					foreach	(string str in structurePointerProxies) {
+						bool isIEnumerable = str.EndsWith ('+');
+						string baseType = isIEnumerable ? str.Substring (0, str.Length - 1) : str;
+						string ptrType = isIEnumerable ? baseType + "IEnumerablePtr" : baseType + "Ptr";
+						if (ptrType.Contains('*'))
+							Debugger.Break();
+
+						tw.WriteLine ($"public struct {ptrType} : IDisposable {{");
+						tw.Indent++;
+						tw.WriteLine ($"IntPtr handle;");
+						tw.WriteLine ($"{ptrType} (IntPtr ptr) {{");
+						tw.Indent++;
+						tw.WriteLine ($"handle = ptr;");
+						tw.Indent--;
+						tw.WriteLine (@"}");
+						if (isIEnumerable) {
+							tw.WriteLine ($"internal {ptrType} (IEnumerable<{baseType}> str) {{");
+							tw.Indent++;
+							tw.WriteLine ($"handle = str.ToArray().PinPointer();");
+						} else {
+							tw.WriteLine ($"{ptrType} ({baseType} str) {{");
+							tw.Indent++;
+							tw.WriteLine ($"handle = str.PinPointer();");
+						}
+						tw.Indent--;
+						tw.WriteLine (@"}");
+						tw.WriteLine ($"public static implicit operator IntPtr ({ptrType} pt) => pt.handle;");
+						tw.WriteLine ($"public static implicit operator {ptrType} (IntPtr ptr) => new {ptrType} (ptr);");
+						if (isIEnumerable) {
+							tw.WriteLine ($"public {baseType} Single {{");
+							tw.Indent++;
+							tw.WriteLine ($"set {{");
+							tw.Indent++;
+							tw.WriteLine ($"if (handle != IntPtr.Zero)");
+							tw.Indent++;
+							tw.WriteLine ($"handle.Unpin();");
+							tw.Indent--;
+							tw.WriteLine ($"handle = value.PinPointer();");
+							tw.Indent--;
+							tw.WriteLine (@"}");
+							tw.Indent--;
+							tw.WriteLine (@"}");
+							tw.WriteLine ($"public static implicit operator {ptrType} (List<{baseType}> s) => new {ptrType} (s);");
+							tw.WriteLine ($"public static implicit operator {ptrType} ({baseType}[] s) => new {ptrType} (s);");
+							tw.WriteLine ($"public static implicit operator {ptrType} (Collection<{baseType}> s) => new {ptrType} (s);");
+						} else {
+							tw.WriteLine ($"public static implicit operator {baseType} ({ptrType} pt)	=> Marshal.PtrToStructure <{baseType}> (pt.handle);");
+							tw.WriteLine ($"public static implicit operator {ptrType} ({baseType} s) => new {ptrType} (s);");
+						}
+						tw.WriteLine ($"public void Dispose() => handle.Unpin();");
+						tw.Indent--;
+						tw.WriteLine (@"}");
+					}
+
+					tw.Indent--;
+					tw.WriteLine (@"}");
+				}
+			}
+		}
 		static void gen_struct (IndentedTextWriter tw, StructDef sd) {
 			bool hasDoc = tryFindRefPage (sd.Name, out refPage rp);
 			if (hasDoc)
@@ -537,14 +604,29 @@ namespace vk.generator {
 			tw.WriteLine ($"public partial struct {sd.Name} {{");
 			tw.Indent++;
 			foreach (MemberDef mb in sd.members) {
-
 				string typeStr;
 
 				EnumDef ed = enums.FirstOrDefault (e => e.Name == mb.typedef.Name);
 
-				if (mb.typedef.IndirectionLevel == 1 && mb.typedef.Name == "char")
-					typeStr = "Utf8StringPointer";
-				else if (mb.typedef.IndirectionLevel > 0 || mb.typedef.Name.StartsWith ("PFN_", StringComparison.Ordinal))
+				if (mb.typedef.IndirectionLevel == 1){
+					if (mb.typedef.Name == "char")
+						typeStr = "Utf8StringPointer";
+					else if (mb.typedef.Name != "void" && !valueTypes.Contains (mb.typedef.CSName)) {
+						TypeDef td = types.FirstOrDefault(t=>t.Name == mb.typedef.Name);
+						if (td == null || (td.category == TypeCategories.basetype && td.baseType == null))
+							typeStr = "IntPtr";
+						else {
+							typeStr = $"{mb.typedef.CSName}";
+							if (mb.len != null) {
+								if (!structurePointerProxies.Contains ($"{typeStr}+"))
+									structurePointerProxies.Add ($"{typeStr}+");
+							} else if (!structurePointerProxies.Contains(typeStr))
+								structurePointerProxies.Add (typeStr);
+							typeStr += "+";
+						}
+					} else
+						typeStr = "IntPtr";
+				} else if (mb.typedef.IndirectionLevel > 0 || mb.typedef.Name.StartsWith ("PFN_", StringComparison.Ordinal))
 					typeStr = "IntPtr";
 				else if (ed != null) {
 					//enums has to be stored in struct as int or uint for enums are not yet blittable in ms .NET
@@ -609,7 +691,46 @@ namespace vk.generator {
 					}
 					continue;
 				}
-				tw.WriteLine ($"public {typeStr} {mb.Name};");
+
+				if (typeStr.EndsWith ("+")) {
+					string origTypeStr = typeStr.Substring (0, typeStr.Length - 1);
+					string len = mb.len?.Split (',')[0];
+					string ptrType = mb.len == null ? origTypeStr + "Ptr" : origTypeStr + "IEnumerablePtr";
+					if (mb.len == null)
+						tw.WriteLine ($"public {origTypeStr} {mb.Name} {{");
+					else
+						tw.WriteLine ($"public IEnumerable<{origTypeStr}> {mb.Name} {{");
+					tw.Indent++;
+					tw.WriteLine ($"set {{");
+					tw.Indent++;
+					if (mb.len != null) {
+						tw.WriteLine ($"if (value == null) {{");
+						tw.Indent++;
+						tw.WriteLine ($"_{mb.Name} = IntPtr.Zero;");
+						tw.WriteLine ($"{len} = 0;");
+						tw.WriteLine ($"return;");
+						tw.Indent--;
+						tw.WriteLine (@"}");
+						tw.WriteLine ($"_{mb.Name} = new {ptrType} (value);");
+					} else
+						tw.WriteLine ($"_{mb.Name} = value;");
+
+					if (mb.len != null) {
+						string targetType = sd.members.FirstOrDefault (m=>m.Name == len).typedef.CSName;
+						if (targetType == "int")
+							tw.WriteLine ($"{len} = value.Count();");
+						else if (targetType == "byte")
+							tw.WriteLine ($"{len} = Convert.ToByte (value.Count());");
+						else
+							tw.WriteLine ($"{len} = ({targetType})value.Count();");
+					}
+					tw.Indent--;
+					tw.WriteLine (@"}");
+					tw.Indent--;
+					tw.WriteLine (@"}");
+					tw.WriteLine ($"{ptrType} _{mb.Name};");
+				} else
+					tw.WriteLine ($"public {typeStr} {mb.Name};");
 			}
 
 			if (sd.members.Any (mb => mb.Name == "sType" && !string.IsNullOrEmpty (mb.defaultValue)))
@@ -621,7 +742,7 @@ namespace vk.generator {
 		static void gen_structs (string englobingStaticClass) {
 			using (StreamWriter sr = new StreamWriter (vkNetTargetPath($"structs_{englobingStaticClass}"), false, System.Text.Encoding.UTF8)) {
 				using (IndentedTextWriter tw = new IndentedTextWriter (sr)) {
-					writePreamble (tw, "System.Runtime.InteropServices", "System.Numerics");
+					writePreamble (tw, "System.Runtime.InteropServices", "System.Numerics", "System.Linq", "System.Collections.Generic");
 					tw.Indent++;
 
 					foreach (StructDef sd in types.OfType<StructDef> ()) {
@@ -1335,10 +1456,12 @@ namespace vk.generator {
 
 		static MemberDef parseMember (XmlNode np) {
 			MemberDef md = new MemberDef () { typedef = ParamDef.parse (np) };
+			if (md.typedef.CSName.Contains('*'))
+				Debugger.Break();
 			if (np.Attributes["optional"] != null)
 				md.optional = true;
 
-			md.lenMember = np.Attributes["len"]?.Value;
+			md.len = np.Attributes["len"]?.Value;
 			md.defaultValue = np.Attributes["values"]?.Value;
 			md.optional = np.Attributes["optional"] != null;//could handle both case
 			md.externsync = np.Attributes["externsync"] != null;
@@ -1699,6 +1822,7 @@ namespace vk.generator {
 			gen_handles ("Vk");
 			//gen_funcptrs ("Vk");
 			gen_array_proxies ("Vk");
+			gen_structurePointer_proxies ("Vk");
 
 			gen_extensions ();
 

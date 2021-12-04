@@ -27,7 +27,7 @@ namespace tests
 			clear.floats[2] = 210;
 
 			using (PinnedObjects pi = new PinnedObjects()) {
-				ci.pApplicationInfo = ai.Pin(pi);
+				ci.pApplicationInfo = ai;
 
 				VkResult res = vkCreateInstance (ref ci, IntPtr.Zero, out instance);
 				if (res != VkResult.Success) {

@@ -42,7 +42,7 @@ namespace Vulkan {
 			handles.Add (obj, hnd);
 			return hnd.AddrOfPinnedObject ();
 		}
-		public static IntPtr Pin<T> (this List<T> obj) {
+		public static IntPtr Pin<T> (this IEnumerable<T> obj) {
 			if (handles.ContainsKey (obj))
 				Debug.WriteLine ("Pinning already pinned object: {0}", obj);
 
@@ -79,7 +79,11 @@ namespace Vulkan {
 			handles.Add (hnd.AddrOfPinnedObject (), hnd);
 			return hnd.AddrOfPinnedObject ();
 		}
-
+		public static IntPtr PinPointer<T> (this IEnumerable<T> obj) {
+			GCHandle hnd = GCHandle.Alloc (obj.ToArray(), GCHandleType.Pinned);
+			handles.Add (obj, hnd);
+			return hnd.AddrOfPinnedObject ();
+		}
 
 		//pin with pinning context
 		public static IntPtr Pin (this object obj, PinnedObjects ctx) {
