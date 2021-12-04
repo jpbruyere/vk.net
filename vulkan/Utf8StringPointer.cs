@@ -12,7 +12,7 @@ namespace Vulkan
 		Utf8StringPointer (IntPtr ptr) {
 			handle = ptr;
 		}
-		public Utf8StringPointer (string str) {
+		Utf8StringPointer (string str) {
 			handle = str.PinPointer();
 		}
 		public static implicit operator string (Utf8StringPointer pt)

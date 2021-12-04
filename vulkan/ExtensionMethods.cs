@@ -74,6 +74,12 @@ namespace Vulkan {
             handles.Add (hnd.AddrOfPinnedObject (), hnd);
             return hnd.AddrOfPinnedObject ();
         }
+		public static IntPtr PinPointer (this object obj) {
+			GCHandle hnd = GCHandle.Alloc (obj, GCHandleType.Pinned);
+			handles.Add (hnd.AddrOfPinnedObject (), hnd);
+			return hnd.AddrOfPinnedObject ();
+		}
+
 
 		//pin with pinning context
 		public static IntPtr Pin (this object obj, PinnedObjects ctx) {
