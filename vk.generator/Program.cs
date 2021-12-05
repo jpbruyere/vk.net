@@ -203,8 +203,6 @@ namespace vk.generator {
 
 		public static Dictionary<string, string> aliases = new Dictionary<string, string> ();
 		static void AddAlias (string from, string to) {
-			if (to == "VkFlags")//dont alias to VkFlags
-				return;
 			if (aliases.ContainsKey (from))
 				log_vk_net_gen (ConsoleColor.Red, $"aliases list constains already an alias for: {from}");
 			else
@@ -268,6 +266,10 @@ namespace vk.generator {
 				reqType = requires == null ? null : types.FirstOrDefault (t=>t.name == requires);
 				return reqType != null;
 			}
+			public bool tryGetBaseType (out TypeDef _baseType) {
+				_baseType = baseType == null ? null : types.FirstOrDefault (t=>t.Name == baseType);
+				return _baseType != null;
+			}
 			public bool IsValueType => csValueTypes.Contains (CSName);
 
 			public bool IsEnum => category == TypeCategories.bitmask || category == TypeCategories.@enum;
@@ -280,6 +282,15 @@ namespace vk.generator {
 			}
 			public override string CSName {
 				get {
+					if (IsEnum && enumDef == null) {//enums without values
+						TypeDef _baseType = null;
+						if (tryGetBaseType (out _baseType)) {
+							while (_baseType.tryGetBaseType (out TypeDef bT))
+								_baseType = bT;
+							return _baseType.CSName;
+						}
+					}
+
 					string tmp = name;// name.Replace ("FlagBits", "Flags");
 					while (Generator.aliases.ContainsKey (tmp)) //recurse in aliases
 						tmp = Generator.aliases[tmp];
@@ -300,14 +311,39 @@ namespace vk.generator {
 			public int start;
 			public int end;
 			public string vendor;
-			public TypeDef typeDef => types.FirstOrDefault (t=>t.Name == name);
+			public TypeDef typeDef {
+				get {
+					string tmp = name;
+					while (Generator.aliases.ContainsKey (tmp)) //recurse in aliases
+						tmp = Generator.aliases[tmp];
+					return types.FirstOrDefault (t=>t.Name == tmp);
+				}
+			}
+			public bool tryGetTypeDef (out TypeDef td ) {
+				td = typeDef;
+				return td != null;
+			}
+			public string baseType {
+				get {
+					if (tryGetTypeDef (out TypeDef td)) {
+						TypeDef baseType = null;
+						if (td.tryGetBaseType (out baseType)) {
+							while (baseType.tryGetBaseType (out TypeDef bT))
+								baseType = bT;
+							return baseType.CSName;
+						}
 
+					}
+					return type == EnumTypes.@enum ? "int" : "uint";
+				}
+			}
 			public List<EnumerantValue> values = new List<EnumerantValue> ();
 			public override string ToString() => $"{type,-8}{values.Count,3} {typeDef?.ToString()}";
 
 			public IEnumerable<EnumerantValue> AllValues => values.Concat(Generator.extends.Where(e=>e.extends == name));
 		}
 		class ParamDef : Definition {
+			public bool optional;
 			public string txtbefore;
 			public string txtafter;
 
@@ -315,6 +351,7 @@ namespace vk.generator {
 				XmlNode t = n["type"];
 				ParamDef tmp = new ParamDef ();
 				tmp.name = t.InnerText;
+				tmp.optional = string.Equals (t.Attributes["optional"]?.Value, "true", StringComparison.OrdinalIgnoreCase);
 				if (t.PreviousSibling?.NodeType == XmlNodeType.Text)
 					tmp.txtbefore = t.PreviousSibling.Value;
 				if (t.NextSibling?.NodeType == XmlNodeType.Text)
@@ -365,6 +402,11 @@ namespace vk.generator {
 			public string len;
 			public string defaultValue;
 			public string fixedArray;
+			public bool HasDefaultValue => defaultValue != null;
+			public bool GetIsFixedArray (out string[] dims) {
+				dims = fixedArray?.Split (new char[] { '[', ']' }, StringSplitOptions.RemoveEmptyEntries);
+				return dims != null;
+			}
 
 			public override string ToString () => string.Format ($"memberdef: {paramDef.FullCTypeDecl} {name}");
 		}
@@ -402,23 +444,6 @@ namespace vk.generator {
 				}
 			}
 			public string ResolvedName = null;
-			/*public string GetCSName (string containingType = null) {
-				string tmp = GetCSName (name, containingType);
-				string newCsName = $"{containingType}.{tmp}";
-				if (ResolvedName!=null && ResolvedName != newCsName)
-					log_vk_net_gen (ConsoleColor.Red, $"enumerant multiple cs name: {ResolvedName}, {newCsName}");
-				ResolvedName = newCsName;
-				return tmp;
-				// name.ConvertUnderscoredUpperCasedNameToCamelCase ().RemoveCommonLeadingPart (containingType.CSName);
-			}
-			public static string GetCSName (string value, string containingType) {
-				string ccValue = value.ConvertUnderscoredUpperCasedNameToCamelCase();
-				string cType = containingType?.RemoveTagsAndFlagsSuffix();
-				string newCsName = containingType == null || (ccValue.Length > cType.Length && cType != ccValue.Substring(0, cType.Length)) ?
-					ccValue.StartsWith("Vk", StringComparison.Ordinal) ? ccValue.Substring(2) : ccValue :
-					ccValue.RemoveCommonLeadingPart (containingType);
-				return newCsName;
-			}*/
 			public static string GetArrayProxyStructName (string value) {
 				string ccValue = value.ConvertUnderscoredUpperCasedNameToCamelCase();
 				if (ccValue.StartsWith("Vk", StringComparison.Ordinal))
@@ -730,12 +755,12 @@ namespace vk.generator {
 				} else if (mb.paramDef.IndirectionLevel > 0 || mb.paramDef.Name.StartsWith ("PFN_", StringComparison.Ordinal))
 					typeStr = "IntPtr";
 				else if (td.IsEnum) {
-					EnumDef ed = enums.FirstOrDefault (e => e.Name == td.enumDefName);
+					EnumDef ed = td.enumDef;
 					if (ed == null)//no value for enum
 						typeStr = td.CSName;
 					else {
 						//enums has to be stored in struct as int or uint for enums are not yet blittable in ms .NET
-						typeStr = ed.type == EnumTypes.@enum ? "int" : "uint";
+						typeStr = ed.baseType;
 						tw.WriteLine ($"{typeStr} _{mb.Name};");
 						if (hasDoc)
 							rp.writeMemberDocIfFound (tw, mb.Name);
@@ -838,7 +863,7 @@ namespace vk.generator {
 			}
 
 			if (sd.members.Any (mb => mb.Name == "sType" && !string.IsNullOrEmpty (mb.defaultValue)))
-				writeStructNew (tw, sd); ;
+				writeStructNew (tw, sd);
 
 			if (ptrProxies != null) {
 				tw.WriteLine ($"public void Dispose() {{");
@@ -926,20 +951,12 @@ namespace vk.generator {
 					writePreamble (tw, "System.Diagnostics");
 					tw.Indent++;
 
-					//add uint alias for all type bitmask without flagbits enum
-					foreach (TypeDef tdbm in types.Where (t => t.category == TypeCategories.bitmask && string.IsNullOrEmpty (t.requires)))
-						AddAlias (tdbm.Name, "uint");
-
 					foreach (EnumDef ed in enums.Where(e=>e.definedBy.Count()==0)) {
-						//search type
-						TypeDef td = ed.type == EnumTypes.@enum ?
-							types.Where(t=>t.Name == ed.Name).FirstOrDefault() :
-						 	types.Where(t=>t.requires == ed.Name).FirstOrDefault();
-
-						if (td == null) {
-							AddAlias (ed.Name, "uint");
+						if (!ed.tryGetTypeDef (out TypeDef td)) {
+							AddAlias (ed.Name, ed.baseType);
 							continue;
 						}
+
 						bool hasDoc = tryFindRefPage (ed.Name, out refPage rp);
 						if (hasDoc) {
 							rp.writeSummaryAndRemarks (tw);
@@ -947,9 +964,9 @@ namespace vk.generator {
 							tw.WriteLine ($"///<summary>{ed.comment}</summary>");
 						if (ed?.type == EnumTypes.bitmask) {
 							tw.WriteLine (@"[Flags]");
-							tw.WriteLine ($"public enum {td.CSName} : uint {{");
+							tw.WriteLine ($"public enum {td.CSName} : {ed.baseType} {{");
 						} else
-							tw.WriteLine ($"public enum {td.CSName} {{");
+							tw.WriteLine ($"public enum {td.CSName} : {ed.baseType} {{");
 
 						tw.Indent++;
 
@@ -1116,7 +1133,9 @@ namespace vk.generator {
 		static string getDefaultParamSig (MemberDef md, bool isLast) {
 			switch (md.paramDef.IndirectionLevel) {
 				case 0:
-					return (string.Format ($"{md.paramDef.CSName} {md.Name}{(isLast ? ", " : ")")}"));
+					if (!md.paramDef.tryGetTypeDef (out TypeDef td))
+						throw new Exception ($"type not found: {md.paramDef.Name}");
+					return (string.Format ($"{td.CSName} {md.Name}{(isLast ? ", " : ")")}"));
 				case 1:
 					return (string.Format ($"IntPtr {md.Name}{(isLast ? ", " : ")")}"));
 				case 2:
@@ -1125,7 +1144,9 @@ namespace vk.generator {
 			return null;
 		}
 		static string getByRefParamSig (MemberDef md, bool isLast) {
-			string typeName = md.paramDef.CSName == "void" ? "IntPtr" : md.paramDef.CSName;
+			if (!md.paramDef.tryGetTypeDef (out TypeDef td))
+				throw new Exception ($"type not found: {md.paramDef.Name}");
+			string typeName = td.CSName; //md.paramDef.CSName == "void" ? "IntPtr" : md.paramDef.CSName;
 			switch (md.paramDef.IndirectionLevel) {
 				case 1:
 					return md.paramDef.IsConst ?
@@ -1253,9 +1274,9 @@ namespace vk.generator {
 				return;
 			}
 
-			TypeCategories category = TypeCategories.none;
-			if (nType.Attributes["category"] != null)
-				category = (TypeCategories)Enum.Parse (typeof (TypeCategories), nType.Attributes["category"].Value, true);
+			TypeCategories category = nType.Attributes["category"] == null ? TypeCategories.none :
+				(TypeCategories)Enum.Parse (typeof (TypeCategories), nType.Attributes["category"].Value, true);
+
 			switch (category) {
 				case TypeCategories.none:
 				case TypeCategories.basetype:
@@ -1552,12 +1573,9 @@ namespace vk.generator {
 
 		static MemberDef parseMember (XmlNode np) {
 			MemberDef md = new MemberDef () { paramDef = ParamDef.parse (np) };
-			if (np.Attributes["optional"] != null)
-				md.optional = true;
-
 			md.len = np.Attributes["len"]?.Value;
 			md.defaultValue = np.Attributes["values"]?.Value;
-			md.optional = np.Attributes["optional"] != null;//could handle both case
+			md.optional = string.Equals (np.Attributes["optional"]?.Value, "true", StringComparison.OrdinalIgnoreCase);
 			md.externsync = np.Attributes["externsync"] != null;
 
 			md.Name = np["name"].InnerText;
