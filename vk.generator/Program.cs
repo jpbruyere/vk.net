@@ -172,16 +172,7 @@ namespace vk.generator {
 		};
 
 		static string[] reservedNames = { "event", "object" };
-		static string[] skipEnums = {
-			"VK_STRUCTURE_TYPE_SURFACE_CAPABILITIES2_EXT",
-			//"VK_PIPELINE_CREATE_DISPATCH_BASE",
-			//cs names generate same output
-			"VK_SURFACE_COUNTER_VBLANK_EXT",
-			"VK_PERFORMANCE_COUNTER_DESCRIPTION_PERFORMANCE_IMPACTING_KHR",
-			"VK_PERFORMANCE_COUNTER_DESCRIPTION_CONCURRENTLY_IMPACTED_KHR"
-		};
 		static string[] csValueTypes = { "byte", "int", "uint", "float", "ushort", "ulong", "IntPtr", "UIntPtr" };
-
 
 		static string[] skipGenStruct = { "VkClearColorValue", "VkTransformMatrixKHR" };
 
@@ -207,7 +198,7 @@ namespace vk.generator {
 				log_vk_net_gen (ConsoleColor.Red, $"aliases list constains already an alias for: {from}");
 			else
 				aliases.Add (from, to);
-			log_vk_net_gen (ConsoleColor.DarkYellow, $"adding alias {from} -> {to}");
+			log_vk_net_gen (ConsoleColor.DarkGray, $"adding alias {from} -> {to}");
 		}
 
 		enum EnumTypes { bitmask, @enum };
@@ -243,9 +234,7 @@ namespace vk.generator {
 			}
 			public virtual string CSName {
 				get {
-					string tmp = name;
-					while (Generator.aliases.ContainsKey (tmp)) //recurse in aliases
-						tmp = Generator.aliases[tmp];
+					string tmp = resolveAlias(name);
 					return (Generator.knownTypes.ContainsKey (tmp) ? Generator.knownTypes[tmp] : tmp);
 				}
 			}
@@ -291,9 +280,7 @@ namespace vk.generator {
 						}
 					}
 
-					string tmp = name;// name.Replace ("FlagBits", "Flags");
-					while (Generator.aliases.ContainsKey (tmp)) //recurse in aliases
-						tmp = Generator.aliases[tmp];
+					string tmp = resolveAlias (name);
 					if (Generator.knownTypes.ContainsKey (tmp))
 						return Generator.knownTypes[tmp];
 					if (requires != "vk_platform" && tryGetRequirementsTypeDef (out TypeDef req) && req.category == TypeCategories.include)
@@ -313,9 +300,7 @@ namespace vk.generator {
 			public string vendor;
 			public TypeDef typeDef {
 				get {
-					string tmp = name;
-					while (Generator.aliases.ContainsKey (tmp)) //recurse in aliases
-						tmp = Generator.aliases[tmp];
+					string tmp = resolveAlias(name);
 					return types.FirstOrDefault (t=>t.Name == tmp);
 				}
 			}
@@ -381,11 +366,8 @@ namespace vk.generator {
 			public bool tryGetTypeDef (out TypeDef td ) {
 				string tmp = name;
 				td = types.FirstOrDefault (t=>t.Name == tmp);
-				if (td == null) {
-					while (aliases.ContainsKey(tmp))
-						tmp = aliases[tmp];
-					td = types.FirstOrDefault (t=>t.Name == tmp);
-				}
+				if (td == null)
+					td = types.FirstOrDefault (t=>t.Name == resolveAlias (tmp));
 				return td != null;
 			}
 			public bool IsStruct => string.IsNullOrEmpty (txtbefore) ? false : txtbefore.Contains ("struct");
@@ -494,6 +476,7 @@ namespace vk.generator {
 		class ExtensionDef : InterfaceDef {
 			public ExtensionType type;
 			public string supported;
+			public bool Disabled => supported == "disabled";
 			public string[] requires;
 		}
 
@@ -766,9 +749,9 @@ namespace vk.generator {
 							rp.writeMemberDocIfFound (tw, mb.Name);
 						else if (!string.IsNullOrEmpty (mb.comment))
 							tw.WriteLine ($"/// <summary> {mb.comment} </summary>");
-						tw.WriteLine ($"public {mb.paramDef.CSName} {mb.Name} {{");
+						tw.WriteLine ($"public {td.CSName} {mb.Name} {{");
 						tw.Indent++;
-						tw.WriteLine ($"get => ({mb.paramDef.CSName})_{mb.Name};");
+						tw.WriteLine ($"get => ({td.CSName})_{mb.Name};");
 						tw.WriteLine ($"set {{ _{mb.Name} = ({typeStr})value; }}");
 						tw.Indent--;
 						tw.WriteLine (@"}");
@@ -1166,10 +1149,6 @@ namespace vk.generator {
 			tw.WriteLine (@" => throw new NotImplementedException();");
 		}
 		static void gen_command (IndentedTextWriter tw, CommandDef cd) {
-			if (!string.IsNullOrEmpty (cd.alias)) {
-				log_vk_net_gen (ConsoleColor.DarkGray, "TODO:command generator: is alias: " + cd);
-				return;
-			}
 			tw.WriteLine ($"internal static IntPtr {cd.CSName}_ptr;");
 
 			List<string> signatures = new List<string> () { "" };
@@ -1270,7 +1249,7 @@ namespace vk.generator {
 		static void readType (XmlNode nType) {
 
 			if (nType.Attributes ["alias"] != null) {
-				aliases.Add (nType.Attributes["name"].Value, nType.Attributes["alias"].Value);
+				AddAlias (nType.Attributes["name"].Value, nType.Attributes["alias"].Value);
 				return;
 			}
 
@@ -1355,9 +1334,11 @@ namespace vk.generator {
 					if (c.Name != "enum")
 						throw new Exception ("unexpected element in enums");
 					if (c.Attributes ["alias"] != null) {
-						aliases.Add (c.Attributes["name"].Value, c.Attributes["alias"].Value);
+						AddAlias (c.Attributes["name"].Value, c.Attributes["alias"].Value);
 						continue;
 					}
+					if (c.Attributes["name"].Value =="VK_MAX_DEVICE_GROUP_SIZE_KHR")
+						Debugger.Break();
 
 					constants.Add (new EnumerantValue (constantsED){
 						Name = c.Attributes["name"].Value,
@@ -1388,12 +1369,6 @@ namespace vk.generator {
 				ev.comment = p.Attributes["comment"]?.Value;
 				ev.extends = p.Attributes["extends"]?.Value;
 
-				if (skipEnums.Contains (ev.Name)) {
-					log_vk_net_gen (ConsoleColor.Yellow, $"skiped enum: {ev.Name}");
-					continue;
-				}
-
-
 				if (p.Attributes["alias"] != null) {
 					ev.isAlias = true;
 					ev.value = p.Attributes["alias"].Value;
@@ -1417,8 +1392,10 @@ namespace vk.generator {
 				foreach (XmlNode req in requirements.ChildNodes) {
 					switch (req.Name) {
 						case "enum":
-							EnumerantValue ev = constants.Where (v => v.Name == req.Attributes["name"].Value).First ();
-							ev.definedBy.Add (iface.Name);
+							if (tryGetConstant (req.Attributes["name"].Value, out EnumerantValue ev))
+								ev.definedBy.Add (iface.Name);
+							else
+								Debugger.Break();
 							break;
 						default:
 							log_vk_net_gen (ConsoleColor.Red, $"unhandle requirement tag in constants defs: {req.Attributes["name"].Value}");
@@ -1431,36 +1408,23 @@ namespace vk.generator {
 			foreach (XmlNode req in requirements.ChildNodes) {
 				switch (req.Name) {
 					case "type":
-						switch (requirements.Attributes["comment"]?.Value) {
-							case "Header boilerplate":
-								break;
-							case "API version":
-								break;
-							default:
-								TypeDef tdef = types.Where (td => td.Name == req.Attributes["name"].Value).FirstOrDefault ();
-								if (tdef != null)
-									tdef.definedBy.Add (iface.Name);
-								else
-									log_vk_net_gen (ConsoleColor.DarkRed, $"iface type not found: {req.Attributes["name"].Value}");
-								break;
-						}
+						TypeDef tdef = types.FirstOrDefault (td => td.Name == resolveAlias (req.Attributes["name"].Value));
+							if (tdef == null)
+						log_vk_net_gen (ConsoleColor.Red, $"iface type not found: {req.Attributes["name"].Value}");
+						else
+							tdef.definedBy.Add (iface.Name);
 						break;
 					case "command":
-						if (preloadedCommands.Contains (req.Attributes["name"].Value))//dont move those func
-							continue;
-						try {
-							CommandDef cd = commands.Where (e => e.Name == req.Attributes["name"].Value).First ();
-							cd.definedBy.Add (iface.Name);
-						} catch {
+						//if (preloadedCommands.Contains (req.Attributes["name"].Value))//dont move those func
+						//	continue;//TODO:remove this check
+						CommandDef cd = commands.FirstOrDefault (e => e.Name == resolveAlias (req.Attributes["name"].Value));
+						if (cd == null)
 							log_vk_net_gen (ConsoleColor.Red, $"extension command not found: {req.Attributes["name"].Value}");
-						}
+						else
+							cd.definedBy.Add (iface.Name);
 						break;
 					case "enum":
 						string eName = req.Attributes["name"].Value;
-						if (skipEnums.Contains (eName)) {
-							log_vk_net_gen (ConsoleColor.Yellow, $"skiped enum: {eName}");
-							continue;
-						}
 						EnumerantValue ev = extends.Where (e => e.Name == eName).FirstOrDefault ();
 						if (ev != null) {
 							ev.definedBy.Add (iface.Name);
@@ -1509,11 +1473,13 @@ namespace vk.generator {
 								value = eval.ToString ()
 							});
 						} else //constant
-							constants.Add (new EnumerantValue {
-								Name = eName,
-								definedBy = new List<string> { iface.Name },
-								extends = req.Attributes["extends"]?.Value,
-							});
+							if (tryGetConstant (eName, out EnumerantValue cst)) {
+								cst.definedBy.Add (iface.Name);
+								if (req.Attributes["extends"] != null)
+									Debugger.Break();
+
+							} else
+								log_vk_net_gen (ConsoleColor.Red, $"[requirements] constant not found: {eName}");
 						break;
 					case "comment":
 						break;
@@ -1522,6 +1488,16 @@ namespace vk.generator {
 						break;
 				}
 			}
+		}
+		public static string resolveAlias (string name) {
+			string tmp = name;
+			while (Generator.aliases.ContainsKey (tmp)) //recurse in aliases
+				tmp = Generator.aliases[tmp];
+			return tmp;
+		}
+		static bool tryGetConstant (string cst, out EnumerantValue ev) {
+			ev = constants.FirstOrDefault (c=>c.Name == resolveAlias (cst));
+			return ev != null;
 		}
 
 		public static void readExtension (XmlNode nExt) {
@@ -1601,25 +1577,26 @@ namespace vk.generator {
 			CommandDef cd = new CommandDef ();
 
 			if (ncmd.Attributes ["alias"] != null) {
-				cd.Name = ncmd.Attributes ["name"].Value;
-				cd.alias = ncmd.Attributes["alias"].Value;
-			} else {
-				cd.successCodes = ncmd.Attributes["successcodes"]?.Value;
-				cd.errorcodes = ncmd.Attributes["errorcodes"]?.Value;
-
-				XmlNode n = ncmd["proto"];
-				cd.returnType = ParamDef.parse (n);
-				cd.Name = n["name"].InnerText;
-				n = n.NextSibling;
-				while (n != null) {
-					if (n.Name == "param")
-						cd.parameters.Add (parseMember (n));
-					else if (n.Name == "implicitexternsyncparams")
-						cd.comment = n.InnerText;
-
-					n = n.NextSibling;
-				}
+				AddAlias (ncmd.Attributes ["name"].Value, ncmd.Attributes["alias"].Value);
+				return;
 			}
+
+			cd.successCodes = ncmd.Attributes["successcodes"]?.Value;
+			cd.errorcodes = ncmd.Attributes["errorcodes"]?.Value;
+
+			XmlNode n = ncmd["proto"];
+			cd.returnType = ParamDef.parse (n);
+			cd.Name = n["name"].InnerText;
+			n = n.NextSibling;
+			while (n != null) {
+				if (n.Name == "param")
+					cd.parameters.Add (parseMember (n));
+				else if (n.Name == "implicitexternsyncparams")
+					cd.comment = n.InnerText;
+
+				n = n.NextSibling;
+			}
+
 			commands.Add (cd);
 		}
 		#endregion
@@ -1928,10 +1905,10 @@ namespace vk.generator {
 				readFeature(featuresNL.Item(i));
 
 			var tmp = types.Where (t=>t.IsEnum && t.requires == null && t.bitvalues == null && t.enumDef != null);
+
 			//alias all the flagbits to the base type
-			foreach (TypeDef td in types.Where (t=>t.IsEnum && t.enumDefName != t.Name)) {
+			foreach (TypeDef td in types.Where (t=>t.IsEnum && t.enumDefName != t.Name))
 				AddAlias (td.enumDefName, td.Name);
-			}
 
 			structTypeEnum = enums.FirstOrDefault (e=>e.Name == "VkStructureType");
 
