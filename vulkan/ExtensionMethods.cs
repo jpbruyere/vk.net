@@ -75,11 +75,19 @@ namespace Vulkan {
             return hnd.AddrOfPinnedObject ();
         }
 		public static IntPtr PinPointer (this object obj) {
+			#if DEBUG
+			if (obj == null)
+				Debug.WriteLine ("Trying to pin null object: {0}", obj);
+			#endif
 			GCHandle hnd = GCHandle.Alloc (obj, GCHandleType.Pinned);
 			handles.Add (hnd.AddrOfPinnedObject (), hnd);
 			return hnd.AddrOfPinnedObject ();
 		}
 		public static IntPtr PinPointer<T> (this IEnumerable<T> obj) {
+			#if DEBUG
+			if (obj == null)
+				Debug.WriteLine ("Trying to pin null object: {0}", obj);
+			#endif
 			GCHandle hnd = GCHandle.Alloc (obj.ToArray(), GCHandleType.Pinned);
 			handles.Add (obj, hnd);
 			return hnd.AddrOfPinnedObject ();

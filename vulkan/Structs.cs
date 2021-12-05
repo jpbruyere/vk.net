@@ -10,27 +10,27 @@ using System.Collections.ObjectModel;
 
 namespace Vulkan
 {
-	public struct VkApplicationInfoPtr2 : IDisposable
+	public class VkApplicationInfoCollectionPtr// : IDisposable
 	{
-		IntPtr handle;
-		VkApplicationInfoPtr2 (IntPtr ptr) {
-			handle = ptr;
+		internal IEnumerable<VkApplicationInfo> instance;
+		internal IntPtr handle => instance.ToArray().PinPointer();
+		internal int Count => instance.Count();
+		VkApplicationInfoCollectionPtr (IEnumerable<VkApplicationInfo> str) {
+			instance = str;
 		}
-		VkApplicationInfoPtr2 (IEnumerable<VkApplicationInfo> str) {
-			handle = str.ToArray().PinPointer();
+		public static implicit operator VkApplicationInfoCollectionPtr (VkApplicationInfo s) => new VkApplicationInfoCollectionPtr (new VkApplicationInfo[] {s});
+        public static implicit operator VkApplicationInfoCollectionPtr (List<VkApplicationInfo> s) => new VkApplicationInfoCollectionPtr (s);
+        public static implicit operator VkApplicationInfoCollectionPtr (VkApplicationInfo[] s) => new VkApplicationInfoCollectionPtr (s);
+        public static implicit operator VkApplicationInfoCollectionPtr (Collection<VkApplicationInfo> s) => new VkApplicationInfoCollectionPtr (s);
+	}
+	public class VkApplicationInfoPtr2
+	{
+		internal VkApplicationInfo member;
+		internal IntPtr handle => member.PinPointer();
+		VkApplicationInfoPtr2 (VkApplicationInfo str) {
+			member = str;
 		}
-		public VkApplicationInfo Single {
-			set {
-				if (handle != IntPtr.Zero)
-					handle.Unpin();
-				handle = value.PinPointer();
-			}
-		}
-
-		//public static implicit operator IEnumerable<VkApplicationInfo> (VkApplicationInfoPtr2 pt)	=> Marshal.PtrToStructure <VkApplicationInfo> (pt.handle);
-		public static implicit operator IntPtr (VkApplicationInfoPtr2 pt) => pt.handle;
-		public static implicit operator VkApplicationInfoPtr2 (IntPtr ptr) => new VkApplicationInfoPtr2 (ptr);
-		public void Dispose() => handle.Unpin();
+		public static implicit operator VkApplicationInfoPtr2 (VkApplicationInfo s) => new VkApplicationInfoPtr2 (s);
 	}
 	/*
 	public partial struct VkApplicationInfo : IDisposable
@@ -147,7 +147,7 @@ namespace Vulkan
 		public VkImageSubresourceLayers(VkImageAspectFlags _aspectMask = VkImageAspectFlags.Color,
 			uint _layerCount = 1, uint _mipLevel = 0, uint _baseArrayLayer = 0)
 		{
-			aspectMask = _aspectMask;
+			this._aspectMask = (uint)_aspectMask;
 			layerCount = _layerCount;
 			mipLevel = _mipLevel;
 			baseArrayLayer = _baseArrayLayer;
@@ -160,7 +160,7 @@ namespace Vulkan
 			uint baseMipLevel = 0, uint levelCount = 1,
 			uint baseArrayLayer = 0, uint layerCount = 1)
 		{
-			this.aspectMask = aspectMask;
+			this._aspectMask = (uint)aspectMask;
 			this.baseMipLevel = baseMipLevel;
 			this.levelCount = levelCount;
 			this.baseArrayLayer = baseArrayLayer;
@@ -174,7 +174,7 @@ namespace Vulkan
 			binding = _binding;
 			this._descriptorType = (int)_descriptorType;
 			descriptorCount = _descriptorCount;
-			stageFlags = _stageFlags;
+			this._stageFlags = (uint)_stageFlags;
 			_pImmutableSamplers = IntPtr.Zero;
 		}
 	}
@@ -184,7 +184,7 @@ namespace Vulkan
 		{
 			this._sType = (int)VkStructureType.DescriptorSetLayoutCreateInfo;
 			pNext = IntPtr.Zero;
-			this.flags = flags;
+			this._flags = (uint)flags;
 			this.bindingCount = bindingCount;
 			_pBindings = pBindings;
 		}
@@ -234,14 +234,14 @@ namespace Vulkan
 			this._srcAlphaBlendFactor = (int)srcAlphaBlendFactor;
 			this._dstAlphaBlendFactor = (int)dstAlphaBlendFactor;
 			this._alphaBlendOp = (int)alphaBlendOp;
-			this.colorWriteMask = colorWriteMask;
+			this._colorWriteMask = (uint)colorWriteMask;
 		}
 	}
 	public partial struct VkPushConstantRange
 	{
 		public VkPushConstantRange(VkShaderStageFlags stageFlags, uint size, uint offset = 0)
 		{
-			this.stageFlags = stageFlags;
+			this._stageFlags = (uint)stageFlags;
 			this.size = size;
 			this.offset = offset;
 		}
@@ -252,7 +252,7 @@ namespace Vulkan
 		{
 			this._sType = (int)VkStructureType.CommandBufferBeginInfo;
 			pNext = _pInheritanceInfo = IntPtr.Zero;
-			flags = usage;
+			_flags = (uint)usage;
 		}
 	}
 	public partial struct VkQueryPoolCreateInfo
