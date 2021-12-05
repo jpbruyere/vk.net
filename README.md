@@ -1,7 +1,7 @@
 <h1 align="center">
   <br>
-  <a href="https://github.com/jpbruyere/vk.net/blob/master/VK/vk.net-128.png">
-    <img src="https://github.com/jpbruyere/vk.net/blob/master/VK/vk.net-128.png" alt="vk.net" width="128">
+  <a href="https://github.com/jpbruyere/vk.net/blob/master/vulkan/vk.net-128.png">
+    <img src="https://github.com/jpbruyere/vk.net/blob/master/vulkan/vk.net-128.png" alt="vk.net" width="128">
   </a> 
 <p align="center">
   <a href="https://www.nuget.org/packages/Vulkan"><img src="https://buildstats.info/nuget/Vulkan"></a>
