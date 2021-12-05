@@ -89,7 +89,7 @@ namespace Vulkan {
 				Debug.WriteLine ("Trying to pin null object: {0}", obj);
 			#endif
 			GCHandle hnd = GCHandle.Alloc (obj.ToArray(), GCHandleType.Pinned);
-			handles.Add (obj, hnd);
+			handles.Add (hnd.AddrOfPinnedObject (), hnd);
 			return hnd.AddrOfPinnedObject ();
 		}
 

@@ -1327,6 +1327,9 @@ namespace vk.generator {
 		public static void readEnum (XmlNode nEnum) {
 			if (nEnum.Attributes ["name"]?.Value == "API Constants") {
 				//constants
+				EnumDef constantsED = new EnumDef {
+					Name = "Vk"
+				};
 				foreach (XmlNode c in nEnum.ChildNodes) {
 					if (c.Name != "enum")
 						throw new Exception ("unexpected element in enums");
@@ -1335,7 +1338,7 @@ namespace vk.generator {
 						continue;
 					}
 
-					constants.Add (new EnumerantValue {
+					constants.Add (new EnumerantValue (constantsED){
 						Name = c.Attributes["name"].Value,
 						value = c.Attributes["value"].Value,
 						comment = c.Attributes["comment"]?.Value
