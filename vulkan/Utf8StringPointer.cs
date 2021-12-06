@@ -27,7 +27,10 @@ namespace Vulkan
 			=> handle == IntPtr.Zero ? "" : System.Runtime.InteropServices.Marshal.PtrToStringUTF8 (handle);
 		public void Dispose()
 		{
-			handle.Unpin();
+			if (handle != IntPtr.Zero) {
+				handle.Unpin();
+				handle = IntPtr.Zero;
+			}
 		}
 	}
 }

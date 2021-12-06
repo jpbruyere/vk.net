@@ -10,6 +10,7 @@ using System.Xml;
 using System.Linq;
 using System.Net;
 using System.Text.RegularExpressions;
+using System.Runtime.InteropServices;
 
 namespace vk.generator {
 
@@ -96,6 +97,12 @@ namespace vk.generator {
 		static void log_vk_net_gen (ConsoleColor c, string msg) {
 			Console.ForegroundColor = c;
 			Console.WriteLine ($"[GEN] {msg}");
+			Console.ResetColor();
+		}
+		[Conditional ("DEBUG_STRUCT_SIZES")]
+		static void log_dbg_struct_sizes (string msg) {
+			Console.ForegroundColor = ConsoleColor.Blue;
+			Console.WriteLine ($"{msg}");
 			Console.ResetColor();
 		}
 		const int extBase = 1000000000;
@@ -220,6 +227,39 @@ namespace vk.generator {
 
 		public static List<string> tags = new List<string> ();
 
+		static bool tryGetSizeOfValueType (string type, out int size) {
+			size = 0;
+			if (!csValueTypes.Contains (type))
+				return false;
+			switch (type) {
+				case "byte":
+					size = 1;
+					break;
+				case "int":
+				case "uint":
+					size = sizeof(int);
+					break;
+				case "long":
+				case "ulong":
+					size = sizeof(long);
+					break;
+				case "float":
+					size = sizeof(float);
+					break;
+				case "double":
+					size = sizeof(double);
+					break;
+				case "void":
+				case "IntPtr":
+				case "UIntPtr":
+					size = IntPtr.Size;
+					break;
+				default:
+					Debugger.Break();
+					break;
+			}
+			return true;
+		}
 
 		class Definition {
 			public List<string> definedBy = new List<string>();
@@ -243,6 +283,51 @@ namespace vk.generator {
 		class StructDef : TypeDef {
 			public string structextends;
 			public List<MemberDef> members = new List<MemberDef> ();
+			public override bool tryGetSize(out int size) {
+				size = 0;
+				int alignment = 1;
+				foreach (MemberDef md in members) {
+					int msize = 0;
+					int multiplier = 1;
+					if (md.paramDef.IndirectionLevel>0){
+						msize = IntPtr.Size;
+						if (msize > alignment)
+							alignment = msize;
+					}else {
+						if (!md.paramDef.tryGetTypeDef (out TypeDef td))
+							return false;
+						if (!td.tryGetSize (out msize))
+							return false;
+						if (td.IsValueType || td.IsEnum) {
+							if (msize > alignment)
+								alignment = msize;
+						}
+						if (md.GetIsFixedArray (out string[] dims)) {
+							if (int.TryParse (dims[0], out int dim))
+								multiplier = dim;
+							else if (tryGetConstant (dims[0], out EnumerantValue cst))
+								multiplier = int.Parse (cst.value);
+							else
+								Debugger.Break();
+						}
+					}
+					msize*=multiplier;
+					if (category == TypeCategories.@struct) {
+						if (size % alignment > 0)
+							size += alignment - (size % alignment);
+						size += msize;
+					} else if (category == TypeCategories.union) {
+						if(msize > size)
+							size = msize;
+					} else
+						Debugger.Break();
+
+				}
+				if (category == TypeCategories.@struct && size % alignment > 0)
+					size += alignment - (size % alignment);
+
+				return true;
+			}
 		}
 		class TypeDef : Definition {
 			public TypeCategories category;
@@ -259,8 +344,23 @@ namespace vk.generator {
 				_baseType = baseType == null ? null : types.FirstOrDefault (t=>t.Name == baseType);
 				return _baseType != null;
 			}
+			public virtual bool tryGetSize (out int size) {
+				size = 0;
+				string type = null;
+				if (IsEnum) {
+					EnumDef ed = enumDef;
+					type = ed == null ? CSName : ed.baseType;
+				} else if (IsValueType)
+					type = CSName;
+				else if (category == TypeCategories.handle)
+					type = "IntPtr";
+				else
+					Debugger.Break();
+				if (!tryGetSizeOfValueType (type, out size))
+					Debugger.Break();
+				return true;
+			}
 			public bool IsValueType => csValueTypes.Contains (CSName);
-
 			public bool IsEnum => category == TypeCategories.bitmask || category == TypeCategories.@enum;
 			public string enumDefName => IsEnum ? requires == null ? bitvalues == null ? name : bitvalues : requires : null;
 			public EnumDef enumDef {
@@ -288,7 +388,6 @@ namespace vk.generator {
 					return tmp;
 				}
 			}
-
 
 			public override string ToString () => $"{category,-10}: {name,-36} {baseType,-20} {requires}{bitvalues}";
 		}
@@ -551,14 +650,32 @@ namespace vk.generator {
 			}
 		}
 		static void gen_array_proxies (string englobingStaticClass) {
-			using (StreamWriter sr = new StreamWriter (vkNetTargetPath($"proxies_{englobingStaticClass}"), false, System.Text.Encoding.UTF8)) {
+			using (StreamWriter sr = new StreamWriter (vkNetTargetPath($"array_proxies_{englobingStaticClass}"), false, System.Text.Encoding.UTF8)) {
 				using (IndentedTextWriter tw = new IndentedTextWriter (sr)) {
+					log_dbg_struct_sizes (@"#include <stdio.h>");
+					log_dbg_struct_sizes (@"#include <vulkan/vulkan.h>");
+					log_dbg_struct_sizes (@"#include <vulkan/vulkan.h>");
+					log_dbg_struct_sizes (@"void main () {");
+
 					writePreamble (tw, "System.Runtime.InteropServices");
 					tw.Indent++;
-
 					foreach	(KeyValuePair<string,List<string>> kvp in arrayProxies) {
 						foreach (string type in kvp.Value) {
-							tw.WriteLine ($"[StructLayout(LayoutKind.Sequential, Size = (int)Vk.{constants.FirstOrDefault(e=>e.Name == kvp.Key).CSName})]");
+							int size = 0;
+							TypeDef td = types.FirstOrDefault (t=>t.Name == resolveAlias (type));
+							if (td == null) {
+								if (!tryGetSizeOfValueType (type, out size))
+									throw new Exception ($"get size failed for {type}");
+							} else if (td.tryGetSize (out size)) {
+								if (size > 1)
+									log_dbg_struct_sizes ($"\tprintf(\"csize:%d csharpsize:{size}\\n\", sizeof ({td.CSName}));");
+							} else
+								throw new Exception ($"get size failed for {td.CSName}");
+
+							if (size > 1)
+								tw.WriteLine ($"[StructLayout(LayoutKind.Sequential, Size = (int)Vk.{constants.FirstOrDefault(e=>e.Name == kvp.Key).CSName} * {size})]");
+							else
+								tw.WriteLine ($"[StructLayout(LayoutKind.Sequential, Size = (int)Vk.{constants.FirstOrDefault(e=>e.Name == kvp.Key).CSName})]");
 							string structName = EnumerantValue.GetArrayProxyStructName (kvp.Key, type);
 							string baseType = type == "char" ? "byte" : type;
 							tw.WriteLine ($"public struct {structName} {{");
@@ -613,6 +730,7 @@ namespace vk.generator {
 					tw.Indent--;
 					tw.WriteLine (@"}");
 				}
+				log_dbg_struct_sizes (@"}");
 			}
 		}
 		static void gen_structurePointer_proxies (string englobingStaticClass) {
@@ -638,9 +756,9 @@ namespace vk.generator {
 							tw.WriteLine ($"internal IEnumerable<{baseType}> instance;");
 							if (isEnum) {
 								EnumDef ed = td.enumDef;
-								tw.WriteLine ($"internal IntPtr handle => instance.Cast<{(ed == null ? td.CSName : ed.baseType)}>().ToArray().PinPointer();");
+								tw.WriteLine ($"internal IntPtr handle => instance.Cast<{(ed == null ? td.CSName : ed.baseType)}>().PinPointer();");
 							} else
-								tw.WriteLine ($"internal IntPtr handle => instance.ToArray().PinPointer();");
+								tw.WriteLine ($"internal IntPtr handle => instance.PinPointer();");
 							tw.WriteLine ($"internal int Count => instance.Count();");
 							tw.WriteLine ($"internal {ptrType} (IEnumerable<{baseType}> str) {{");
 						} else {
@@ -682,7 +800,7 @@ namespace vk.generator {
 				if (mb.paramDef.IndirectionLevel == 1){
 					if (mb.paramDef.Name == "char")
 						continue;
-					else if (mb.paramDef.Name != "void") {
+					else if (mb.paramDef.Name != "void" && td.CSName != "IntPtr" && td.CSName != "UIntPtr") {
 						/*if (td == null || (td.category == TypeCategories.basetype && td.baseType == null))
 							continue;*/
 						proxies.Add (mb.Name);
@@ -751,6 +869,7 @@ namespace vk.generator {
 				tw.WriteLine ($"[StructLayout(LayoutKind.Sequential)]");
 
 			string[] ptrProxies = getStructurePtrProxies (sd);
+			List<string> utf8StringPointers = new List<string>();
 			if (ptrProxies == null)
 				tw.WriteLine ($"public partial struct {sd.Name} {{");
 			else
@@ -767,10 +886,14 @@ namespace vk.generator {
 				if (sd.category == TypeCategories.union)
 					tw.WriteLine($"[FieldOffset(0)]");
 
+				if (!mb.paramDef.tryGetTypeDef (out TypeDef td))
+					throw new Exception($"type not found {mb.paramDef}");
+
 				if (mb.paramDef.IndirectionLevel == 1){
-					if (mb.paramDef.Name == "char")
+					if (mb.paramDef.Name == "char") {
 						tw.WriteLine ($"public Utf8StringPointer {mb.Name};");
-					else if (mb.paramDef.Name != "void")
+						utf8StringPointers.Add (mb.Name);
+					} else if (mb.paramDef.Name != "void" && td.CSName != "IntPtr" && td.CSName != "UIntPtr")
 						write_structurePointerProxy_member (tw, sd, mb);
 					else
 						tw.WriteLine ($"public IntPtr {mb.Name};");
@@ -781,8 +904,7 @@ namespace vk.generator {
 					continue;
 				}
 
-				if (!mb.paramDef.tryGetTypeDef (out TypeDef td))
-					throw new Exception($"type not found {mb.paramDef}");
+
 
 				string typeStr = td.CSName;
 
@@ -857,8 +979,8 @@ namespace vk.generator {
 							if (mdef.paramDef.IndirectionLevel == 1){
 								if (mdef.paramDef.Name == "char")
 									tmp = (($"string __{mdef.Name}", $"{mdef.Name} = __{mdef.Name};"));
-								else if (mdef.paramDef.Name == "void")
-									tmp = (($"IntPtr __{mdef.Name}", $"{mdef.Name} = __{mdef.Name};//void*"));
+								else if (mdef.paramDef.Name == "void" || mtd.CSName == "IntPtr" || mtd.CSName == "IntPtr")
+									tmp = (($"IntPtr __{mdef.Name}", $"{mdef.Name} = __{mdef.Name};//void*&& IntPtr"));
 								else  if (ptrProxies != null && ptrProxies.Contains (mdef.Name)) {
 									if (mdef.len == null) {
 										string ptrType = mtd.CSName.Replace('.','_') + "Ptr";
@@ -871,7 +993,7 @@ namespace vk.generator {
 									tmp = (($"IntPtr __{mdef.Name}", $"{mdef.Name} = __{mdef.Name};//default indirection == 1"));
 							} else if (mdef.paramDef.IndirectionLevel > 1)
 								tmp = (($"IntPtr __{mdef.Name}", $"{mdef.Name} = __{mdef.Name};//indirections > 1"));
-							else if (mdef.GetIsFixedArray (out string[] dims)) {
+							else if (mtd.CSName != "IntPtr" && mtd.CSName != "UIntPtr" && mdef.GetIsFixedArray (out string[] dims)) {
 								if (dims.Length > 1)
 									throw new NotImplementedException();
 								if (mdef.paramDef.Name == "char")
@@ -936,15 +1058,20 @@ namespace vk.generator {
 				//========
 			}
 
-			if (ptrProxies != null) {
+			if (ptrProxies != null || utf8StringPointers.Count > 0) {
 				tw.WriteLine ($"public void Dispose() {{");
 				tw.Indent++;
-				foreach (string proxy in ptrProxies) {
-					tw.WriteLine ($"if (_{proxy} != IntPtr.Zero)");
-					tw.Indent++;
-					tw.WriteLine ($"_{proxy}.Unpin ();");
-					tw.Indent--;
+				if (ptrProxies != null) {
+					foreach (string proxy in ptrProxies) {
+						tw.WriteLine ($"if (_{proxy} != IntPtr.Zero)");
+						tw.Indent++;
+						tw.WriteLine ($"_{proxy}.Unpin ();");
+						tw.Indent--;
+					}
 				}
+				foreach (string proxy in utf8StringPointers)
+					tw.WriteLine ($"{proxy}.Dispose ();");
+
 				tw.Indent--;
 				tw.WriteLine (@"}");
 			}
