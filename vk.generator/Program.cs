@@ -211,9 +211,9 @@ namespace vk.generator {
 		/// array proxies list to created to avoid fixed arrays
 		/// </summary>
 		/// <typeparam name="string">size</typeparam>
-		/// <typeparam name="string">type</typeparam>
+		/// <typeparam name="string">types</typeparam>
 		/// <returns></returns>
-		static Dictionary<string, string> arrayProxies = new Dictionary<string, string>();
+		static Dictionary<string, List<string>> arrayProxies = new Dictionary<string, List<string>>();
 		//contains raw types names
 		static List<string> structurePointerProxies = new List<string>(100);
 		static Dictionary<string, ParamDef> paramsDefs = new Dictionary<string, ParamDef> (100);
@@ -426,7 +426,7 @@ namespace vk.generator {
 				}
 			}
 			public string ResolvedName = null;
-			public static string GetArrayProxyStructName (string value) {
+			public static string GetArrayProxyStructName (string value, string type) {
 				string ccValue = value.ConvertUnderscoredUpperCasedNameToCamelCase();
 				if (ccValue.StartsWith("Vk", StringComparison.Ordinal))
 					ccValue = ccValue.Substring (2);
@@ -434,7 +434,7 @@ namespace vk.generator {
 					ccValue = ccValue.Substring (3);
 				if (ccValue.EndsWith("Size", StringComparison.Ordinal))
 					ccValue = ccValue.Substring (0, ccValue.Length - 4);
-				return $"{ccValue}_proxy";
+				return $"{ccValue}_{type}_proxy";
 			}
 
 			public bool Equals (EnumerantValue other) {
@@ -504,20 +504,19 @@ namespace vk.generator {
 			tw.Indent++;
 
 			tw.WriteLine ($"sType = {csStructName},");
-			tw.WriteLine ($"pNext = IntPtr.Zero");
 			tw.Indent--;
 			tw.WriteLine (@"};");
 			tw.Indent--;
 			tw.WriteLine (@"}");
 
-			tw.WriteLine ($"public {sd.Name} (IntPtr pNext) : this () {{");
+			/*tw.WriteLine ($"public {sd.Name} (IntPtr pNext) : this () {{");
 			tw.Indent++;
 
 			tw.WriteLine ($"sType = {csStructName};");
 			tw.WriteLine ($"this.pNext = pNext;");
 
 			tw.Indent--;
-			tw.WriteLine (@"}");
+			tw.WriteLine (@"}");*/
 		}
 		static bool tryGetVectorType (string type, int dim, out string vectorType) {
 			vectorType = null;
@@ -550,55 +549,57 @@ namespace vk.generator {
 					writePreamble (tw, "System.Runtime.InteropServices");
 					tw.Indent++;
 
-					foreach	(KeyValuePair<string,string> kvp in arrayProxies) {
-						tw.WriteLine ($"[StructLayout(LayoutKind.Sequential, Size = (int)Vk.{constants.FirstOrDefault(e=>e.Name == kvp.Key).CSName})]");
-						string structName = EnumerantValue.GetArrayProxyStructName (kvp.Key);
-						string baseType = kvp.Value == "char" ? "byte" : kvp.Value;
-						tw.WriteLine ($"public struct {structName} {{");
+					foreach	(KeyValuePair<string,List<string>> kvp in arrayProxies) {
+						foreach (string type in kvp.Value) {
+							tw.WriteLine ($"[StructLayout(LayoutKind.Sequential, Size = (int)Vk.{constants.FirstOrDefault(e=>e.Name == kvp.Key).CSName})]");
+							string structName = EnumerantValue.GetArrayProxyStructName (kvp.Key, type);
+							string baseType = type == "char" ? "byte" : type;
+							tw.WriteLine ($"public struct {structName} {{");
 
-						tw.Indent++;
-
-						tw.WriteLine ($"public Span<{baseType}> AsSpan {{");
-						tw.Indent++;
-						tw.WriteLine ($"get {{");
-						tw.Indent++;
-						tw.WriteLine ($"Span<{structName}> valSpan = MemoryMarshal.CreateSpan(ref this, 1);");
-						tw.WriteLine ($"return MemoryMarshal.Cast<{structName}, {baseType}>(valSpan);");
-						tw.Indent--;
-						tw.WriteLine (@"}");
-						tw.Indent--;
-						tw.WriteLine (@"}");
-
-						if (kvp.Value == "char") {
-							tw.WriteLine ($"public static implicit operator string ({structName} s) => s.ToString();");
-							tw.WriteLine ($"public static implicit operator {structName} (string s)");
-							tw.WriteLine (@"{");
 							tw.Indent++;
-							tw.WriteLine ($"{structName} tmp = default;");
-							tw.WriteLine ($"tmp.Update (s);");
-							tw.WriteLine ($"return tmp;");
-							tw.Indent--;
-							tw.WriteLine (@"}");
-							tw.WriteLine ($"public override string ToString()");
-							tw.WriteLine (@"{");
+
+							tw.WriteLine ($"public Span<{baseType}> AsSpan {{");
+							tw.Indent++;
+							tw.WriteLine ($"get {{");
 							tw.Indent++;
 							tw.WriteLine ($"Span<{structName}> valSpan = MemoryMarshal.CreateSpan(ref this, 1);");
-							tw.WriteLine ($"ReadOnlySpan<byte> bytes = MemoryMarshal.Cast<{structName}, byte>(valSpan);");
-							tw.WriteLine ($"return System.Text.Encoding.UTF8.GetString (bytes);");
+							tw.WriteLine ($"return MemoryMarshal.Cast<{structName}, {baseType}>(valSpan);");
 							tw.Indent--;
 							tw.WriteLine (@"}");
-							tw.WriteLine ($"void Update(string value)");
-							tw.WriteLine (@"{");
-							tw.Indent++;
-							tw.WriteLine ($"Span<{structName}> valSpan = MemoryMarshal.CreateSpan(ref this, 1);");
-							tw.WriteLine ($"Span<byte> bytes = MemoryMarshal.Cast<{structName}, byte>(valSpan);");
-							tw.WriteLine ($"System.Text.Encoding.UTF8.GetBytes (value).CopyTo (bytes);");
+							tw.Indent--;
+							tw.WriteLine (@"}");
+
+							if (type == "char") {
+								tw.WriteLine ($"public static implicit operator string ({structName} s) => s.ToString();");
+								tw.WriteLine ($"public static implicit operator {structName} (string s)");
+								tw.WriteLine (@"{");
+								tw.Indent++;
+								tw.WriteLine ($"{structName} tmp = default;");
+								tw.WriteLine ($"tmp.Update (s);");
+								tw.WriteLine ($"return tmp;");
+								tw.Indent--;
+								tw.WriteLine (@"}");
+								tw.WriteLine ($"public override string ToString()");
+								tw.WriteLine (@"{");
+								tw.Indent++;
+								tw.WriteLine ($"Span<{structName}> valSpan = MemoryMarshal.CreateSpan(ref this, 1);");
+								tw.WriteLine ($"ReadOnlySpan<byte> bytes = MemoryMarshal.Cast<{structName}, byte>(valSpan);");
+								tw.WriteLine ($"return System.Text.Encoding.UTF8.GetString (bytes);");
+								tw.Indent--;
+								tw.WriteLine (@"}");
+								tw.WriteLine ($"void Update(string value)");
+								tw.WriteLine (@"{");
+								tw.Indent++;
+								tw.WriteLine ($"Span<{structName}> valSpan = MemoryMarshal.CreateSpan(ref this, 1);");
+								tw.WriteLine ($"Span<byte> bytes = MemoryMarshal.Cast<{structName}, byte>(valSpan);");
+								tw.WriteLine ($"System.Text.Encoding.UTF8.GetBytes (value).CopyTo (bytes);");
+								tw.Indent--;
+								tw.WriteLine (@"}");
+							}
+
 							tw.Indent--;
 							tw.WriteLine (@"}");
 						}
-
-						tw.Indent--;
-						tw.WriteLine (@"}");
 					}
 
 
@@ -640,7 +641,7 @@ namespace vk.generator {
 							else
 								tw.WriteLine ($"internal IntPtr handle => instance.ToArray().PinPointer();");
 							tw.WriteLine ($"internal int Count => instance.Count();");
-							tw.WriteLine ($"{ptrType} (IEnumerable<{baseType}> str) {{");
+							tw.WriteLine ($"internal {ptrType} (IEnumerable<{baseType}> str) {{");
 						} else {
 							tw.WriteLine ($"internal {baseType} instance;");
 							if (isUintEnum)
@@ -649,7 +650,7 @@ namespace vk.generator {
 								tw.WriteLine ($"internal IntPtr handle => ((int)instance).PinPointer();");
 							else
 								tw.WriteLine ($"internal IntPtr handle => instance.PinPointer();");
-							tw.WriteLine ($"{ptrType} ({baseType} str) {{");
+							tw.WriteLine ($"internal {ptrType} ({baseType} str) {{");
 						}
 						tw.Indent++;
 						tw.WriteLine ($"instance = str;");
@@ -771,7 +772,7 @@ namespace vk.generator {
 				if (typeStr != "IntPtr" && typeStr != "UIntPtr" && !string.IsNullOrEmpty (mb.fixedArray)) {
 					int dim = 0;
 					string[] dims = mb.fixedArray.Split (new char[] { '[', ']' }, StringSplitOptions.RemoveEmptyEntries);
-					if (csValueTypes.Contains (typeStr)) {
+					//if (csValueTypes.Contains (typeStr)) {
 						if (mb.paramDef.Name == "char")
 							typeStr = "char";
 						else if (int.TryParse (dims[0], out dim) && tryGetVectorType (typeStr, dim, out string vectorType)) {
@@ -781,17 +782,20 @@ namespace vk.generator {
 
 						if (dims.Length != 1)
 							throw new NotImplementedException ("multi dimentional array not implemented");
-						if (int.TryParse (dims[0], out dim))
-							throw new NotImplementedException ("litteral dimention size not handled in char* arrays");
-						string strSize = dims[0];
-						if (arrayProxies.ContainsKey(strSize)) {
-							if (arrayProxies[strSize] != typeStr)
-								throw new NotImplementedException ("same constant used for different array types");
-						} else
-							arrayProxies.Add (strSize, typeStr);
-						tw.WriteLine ($"public {EnumerantValue.GetArrayProxyStructName (strSize)} {mb.Name};");
+						if (int.TryParse (dims[0], out dim)) {
+							for (int i = 0; i < dim; i++)
+								tw.WriteLine ($"public {typeStr} {mb.Name}_{i};");
+						} else {
+							string strSize = dims[0];
+							if (arrayProxies.ContainsKey(strSize)) {
+								if (!arrayProxies[strSize].Contains (typeStr))
+									arrayProxies[strSize].Add (typeStr);
+							} else
+								arrayProxies.Add (strSize, new List<string> () {typeStr});
+							tw.WriteLine ($"public {EnumerantValue.GetArrayProxyStructName (strSize, typeStr)} {mb.Name};");
+						}
 						continue;
-					}
+					/*}
 					if (dims.Length != 1)
 						throw new NotImplementedException ("multi dimentional array not implemented");
 					if (int.TryParse (dims[0], out dim)) {
@@ -801,7 +805,7 @@ namespace vk.generator {
 					} else {
 						tw.WriteLine ($"[MarshalAs (UnmanagedType.ByValArray, SizeConst = (int)Vk.{constants.FirstOrDefault(e=>e.Name == dims[0]).CSName})]");
 						tw.WriteLine ($"public {typeStr}[] {mb.Name};");
-					}
+					}*/
 					continue;
 				}
 
@@ -845,8 +849,110 @@ namespace vk.generator {
 					tw.WriteLine ($"public {typeStr} {mb.Name};");
 			}
 
-			if (sd.members.Any (mb => mb.Name == "sType" && !string.IsNullOrEmpty (mb.defaultValue)))
+			if (sd.members.Any (mb => mb.Name == "sType" && !string.IsNullOrEmpty (mb.defaultValue))) {
 				writeStructNew (tw, sd);
+				//write CTOR
+				IEnumerable<MemberDef> members = sd.members.Where (m=>
+					m.Name != "sType" && m.Name != "pNext").
+					OrderBy (m=>m.HasDefaultValue);
+
+				List<(string,string)> ctorMembers = new List<(string,string)> ();
+				List<string> ctorDefaults = new List<string>();
+
+				if (sd.members.Where (m=>!m.optional && m.Name != "sType").Count()>0) {
+					MemberDef md = sd.members.Where (mb => mb.Name == "sType").First ();
+					string csStructName = $"{structTypeEnum.CSName}.{structTypeEnum.AllValues.FirstOrDefault(st=>st.Name == md.defaultValue).CSName}";
+
+					foreach (MemberDef mdef in members) {
+
+						(string, string) tmp;
+						mdef.paramDef.tryGetTypeDef (out TypeDef mtd);
+						if (mdef.optional) {
+							if (ptrProxies != null && ptrProxies.Contains (mdef.Name))
+								ctorDefaults.Add ($"_{mdef.Name} = default;");
+							else if (mtd.IsEnum) {
+								if (mtd.enumDef != null)
+									ctorDefaults.Add ($"_{mdef.Name} = default;");
+								else
+									ctorDefaults.Add ($"{mdef.Name} = default;");
+							} else
+								ctorDefaults.Add ($"{mdef.Name} = default;");
+						} else {
+							if (mdef.paramDef.IndirectionLevel == 1){
+								if (mdef.paramDef.Name == "char")
+									tmp = (($"string __{mdef.Name}", $"{mdef.Name} = __{mdef.Name};"));
+								else if (mdef.paramDef.Name == "void")
+									tmp = (($"IntPtr __{mdef.Name}", $"{mdef.Name} = __{mdef.Name};//void*"));
+								else  if (ptrProxies != null && ptrProxies.Contains (mdef.Name)) {
+									if (mdef.len == null) {
+										string ptrType = mtd.CSName.Replace('.','_') + "Ptr";
+										tmp = (($"{mtd.CSName} __{mdef.Name}", $"_{mdef.Name} = new {ptrType} (__{mdef.Name}).handle;"));
+									} else {
+										string ptrType = mtd.CSName.Replace('.','_') + "CollectionPtr";
+										tmp = (($"IEnumerable<{mtd.CSName}> __{mdef.Name}", $"_{mdef.Name} = new {ptrType} (__{mdef.Name}).handle;"));
+									}
+								} else
+									tmp = (($"IntPtr __{mdef.Name}", $"{mdef.Name} = __{mdef.Name};//default indirection == 1"));
+							} else if (mdef.paramDef.IndirectionLevel > 1)
+								tmp = (($"IntPtr __{mdef.Name}", $"{mdef.Name} = __{mdef.Name};//indirections > 1"));
+							else if (mdef.GetIsFixedArray (out string[] dims)) {
+								if (dims.Length > 1)
+									throw new NotImplementedException();
+								if (mdef.paramDef.Name == "char")
+									tmp = (($"string __{mdef.Name}", $"{mdef.Name} = __{mdef.Name};"));
+								else if (int.TryParse (dims[0], out int dim) && tryGetVectorType (mtd.CSName, dim, out string vectorType))
+									tmp = (($"{vectorType} __{mdef.Name}", $"{mdef.Name} = __{mdef.Name};"));
+								else if (arrayProxies.ContainsKey (dims[0]) && arrayProxies[dims[0]].Contains (mtd.CSName))
+									tmp = (($"{mtd.CSName}[] __{mdef.Name}", $"__{mdef.Name}.AsSpan().CopyTo ({mdef.Name}.AsSpan);"));
+								else
+									tmp = (($"IEnumerable<{mtd.CSName}> __{mdef.Name}", $"{mdef.Name} = __{mdef.Name};//default fixed array"));
+							} else if (ptrProxies != null && ptrProxies.Contains (mdef.Name)) {
+								string ptrType = mtd.CSName.Replace('.','_') + "Ptr";
+								tmp = (($"{mtd.CSName} __{mdef.Name}", $"_{mdef.Name} = new {ptrType} (__{mdef.Name}).handle;"));
+							} else if (mtd.IsEnum) {
+								EnumDef ed = mtd.enumDef;
+								if (ed == null)
+									tmp = (($"{mtd.CSName} __{mdef.Name}", $"{mdef.Name} = __{mdef.Name};"));
+								else
+									tmp = (($"{ed.CSName} __{mdef.Name}", $"_{mdef.Name} = ({ed.baseType})__{mdef.Name};"));
+							} else if (mdef.paramDef.Name.StartsWith ("PFN_", StringComparison.Ordinal))
+								tmp = (($"IntPtr __{mdef.Name}", $"{mdef.Name} = __{mdef.Name};//func pointer"));
+							else
+								tmp = (($"{mtd.CSName} __{mdef.Name}", $"{mdef.Name} = __{mdef.Name};//default"));
+
+							if (mdef.HasDefaultValue)
+								tmp.Item1+= " = {mdef.defaultValue}";;
+
+							ctorMembers.Add (tmp);
+						}
+					}
+
+					tw.WriteLine ($"public {sd.Name}  (");
+					tw.Indent+=3;
+
+					for (int i = 0; i < ctorMembers.Count - 1; i++)
+						tw.WriteLine (ctorMembers[i].Item1+",");
+					tw.WriteLine (ctorMembers[ctorMembers.Count - 1].Item1);
+
+					tw.Indent--;
+					tw.WriteLine (@") {");
+					tw.Indent--;
+
+					tw.WriteLine ($"_sType = (int){csStructName};");
+					tw.WriteLine ($"pNext = IntPtr.Zero;");
+
+					foreach ((string,string) ctorMemb in ctorMembers)
+						tw.WriteLine (ctorMemb.Item2);
+					foreach (string s in ctorDefaults)
+						tw.WriteLine (s);
+
+					tw.Indent--;
+					tw.WriteLine (@"}");
+
+
+				}
+				//========
+			}
 
 			if (ptrProxies != null) {
 				tw.WriteLine ($"public void Dispose() {{");
@@ -1684,7 +1790,7 @@ namespace vk.generator {
 				int offset = match.Index + match.Length;
 
 				if (ed == null) {
-					log_vk_net_gen (ConsoleColor.Magenta, $"docReplacements: enum not fount: {match.Groups[1].Value}");
+					log_vk_net_gen (ConsoleColor.DarkYellow, $"docReplacements: enum not fount: {match.Groups[1].Value}");
 				} else {
 					string id = null;
 					if (isEnumType)
@@ -1723,7 +1829,7 @@ namespace vk.generator {
 				}
 				if (l.StartsWith ("endif::")) {
 					if (!conditionsStack.TryPop (out string condition))
-						log_vk_net_gen (ConsoleColor.Red, $"refpages: empty condition stack: {l}");
+						log_vk_net_gen (ConsoleColor.DarkYellow, $"refpages: empty condition stack: {l}");
 				}
 				if (l.StartsWith ("== ") || l.StartsWith (".")) {
 					if (memberName != null) {

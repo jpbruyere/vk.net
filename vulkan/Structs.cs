@@ -10,6 +10,20 @@ using System.Collections.ObjectModel;
 
 namespace Vulkan
 {
+	public interface enumStruct {}
+	public struct EnumStruct : enumStruct {
+		int Value;
+		public static EnumStruct Value0 => 1;
+		EnumStruct (int i) {
+			Value = i;
+		}
+		public static implicit operator int (EnumStruct e) => e.Value;
+		public static implicit operator EnumStruct(int i) => new EnumStruct(i);
+		public struct KHR {
+			public static EnumStruct Value1 => 10;
+		}
+		//public override string ToString() =>
+	}
 	public class VkApplicationInfoCollectionPtr// : IDisposable
 	{
 		internal IEnumerable<VkApplicationInfo> instance;
@@ -17,6 +31,7 @@ namespace Vulkan
 		internal int Count => instance.Count();
 		VkApplicationInfoCollectionPtr (IEnumerable<VkApplicationInfo> str) {
 			instance = str;
+			enumStruct es = EnumStruct.KHR.Value1;
 		}
 		public static implicit operator VkApplicationInfoCollectionPtr (VkApplicationInfo s) => new VkApplicationInfoCollectionPtr (new VkApplicationInfo[] {s});
         public static implicit operator VkApplicationInfoCollectionPtr (List<VkApplicationInfo> s) => new VkApplicationInfoCollectionPtr (s);
@@ -246,13 +261,28 @@ namespace Vulkan
 			this.offset = offset;
 		}
 	}
-	public partial struct VkCommandBufferBeginInfo
+	public interface IPNext : IDisposable {
+		VkStructureType sType { get; set; }
+		IntPtr PNext { get; set; }
+		void Chain (IPNext pNext);
+
+	}
+	public partial struct VkCommandBufferBeginInfo : IPNext
 	{
 		public VkCommandBufferBeginInfo(VkCommandBufferUsageFlags usage = (VkCommandBufferUsageFlags)0)
 		{
 			this._sType = (int)VkStructureType.CommandBufferBeginInfo;
 			pNext = _pInheritanceInfo = IntPtr.Zero;
 			_flags = (uint)usage;
+		}
+		public IntPtr PNext {
+			get => pNext;
+			set => pNext = value;
+		}
+		public void Chain (IPNext next) {
+			if (PNext != IntPtr.Zero)
+				next.PNext = PNext;
+			PNext = next.PinPointer ();
 		}
 	}
 	public partial struct VkQueryPoolCreateInfo
