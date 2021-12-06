@@ -792,22 +792,21 @@ namespace vk.generator {
 			}
 		}
 		//check if ptrProxies are used => if yes must implement IDisposable
-		static string[] getStructurePtrProxies (StructDef sd) {
-			List<string> proxies = new List<string>();
+		static void getStructurePtrProxies (StructDef sd, out IEnumerable<string> proxies, out IEnumerable<string> utf8StringPointers) {
+			List<string> _proxies = new List<string>();
+			List<string> _utf8StringPointers = new List<string>();
 			foreach (MemberDef mb in sd.members) {
 				if (!mb.paramDef.tryGetTypeDef (out TypeDef td))
 					throw new Exception($"type not found {mb.paramDef}");
 				if (mb.paramDef.IndirectionLevel == 1){
 					if (mb.paramDef.Name == "char")
-						continue;
-					else if (mb.paramDef.Name != "void" && td.CSName != "IntPtr" && td.CSName != "UIntPtr") {
-						/*if (td == null || (td.category == TypeCategories.basetype && td.baseType == null))
-							continue;*/
-						proxies.Add (mb.Name);
-					}
+						_utf8StringPointers.Add (mb.Name);
+					else if (mb.paramDef.Name != "void" && td.CSName != "IntPtr" && td.CSName != "UIntPtr")
+						_proxies.Add (mb.Name);
 				}
 			}
-			return (proxies.Count == 0) ? null : proxies.ToArray();
+			proxies = _proxies;
+			utf8StringPointers = _utf8StringPointers;
 		}
 		static void write_structurePointerProxy_member (IndentedTextWriter tw, StructDef sd, MemberDef mb) {
 			if (!mb.paramDef.tryGetTypeDef (out TypeDef td))
@@ -868,9 +867,9 @@ namespace vk.generator {
 			else
 				tw.WriteLine ($"[StructLayout(LayoutKind.Sequential)]");
 
-			string[] ptrProxies = getStructurePtrProxies (sd);
-			List<string> utf8StringPointers = new List<string>();
-			if (ptrProxies == null)
+			getStructurePtrProxies (sd, out IEnumerable<string> ptrProxies, out IEnumerable<string> utf8StringPointers);
+
+			if (ptrProxies.Count() == 0 && utf8StringPointers.Count() == 0)
 				tw.WriteLine ($"public partial struct {sd.Name} {{");
 			else
 				tw.WriteLine ($"public partial struct {sd.Name} : IDisposable {{");
@@ -890,10 +889,9 @@ namespace vk.generator {
 					throw new Exception($"type not found {mb.paramDef}");
 
 				if (mb.paramDef.IndirectionLevel == 1){
-					if (mb.paramDef.Name == "char") {
+					if (mb.paramDef.Name == "char")
 						tw.WriteLine ($"public Utf8StringPointer {mb.Name};");
-						utf8StringPointers.Add (mb.Name);
-					} else if (mb.paramDef.Name != "void" && td.CSName != "IntPtr" && td.CSName != "UIntPtr")
+					else if (mb.paramDef.Name != "void" && td.CSName != "IntPtr" && td.CSName != "UIntPtr")
 						write_structurePointerProxy_member (tw, sd, mb);
 					else
 						tw.WriteLine ($"public IntPtr {mb.Name};");
@@ -1058,17 +1056,17 @@ namespace vk.generator {
 				//========
 			}
 
-			if (ptrProxies != null || utf8StringPointers.Count > 0) {
+			if (ptrProxies.Count() > 0 || utf8StringPointers.Count() > 0) {
 				tw.WriteLine ($"public void Dispose() {{");
 				tw.Indent++;
-				if (ptrProxies != null) {
-					foreach (string proxy in ptrProxies) {
-						tw.WriteLine ($"if (_{proxy} != IntPtr.Zero)");
-						tw.Indent++;
-						tw.WriteLine ($"_{proxy}.Unpin ();");
-						tw.Indent--;
-					}
+
+				foreach (string proxy in ptrProxies) {
+					tw.WriteLine ($"if (_{proxy} != IntPtr.Zero)");
+					tw.Indent++;
+					tw.WriteLine ($"_{proxy}.Unpin ();");
+					tw.Indent--;
 				}
+
 				foreach (string proxy in utf8StringPointers)
 					tw.WriteLine ($"{proxy}.Dispose ();");
 

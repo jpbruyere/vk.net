@@ -15,18 +15,15 @@ namespace tests
 		{
 			VkInstance instance;
 
-			VkInstanceCreateInfo ci = VkInstanceCreateInfo.New();
-			VkApplicationInfo ai = VkApplicationInfo.New();
-			ai.apiVersion = new Version (1,0,0);
-			ai.applicationVersion = new Version (1,0,0);
-			ai.pApplicationName = "new application name";
-			ai.pEngineName = "new engine name";
+			using (VkApplicationInfo ai = new VkApplicationInfo(
+				new Version (1,0,0),
+				new Version (1,0,0),
+				new Version (1,2,0)) {pApplicationName = "new application name"}){
 
 
-			VkClearColorValue clear = new VkClearColorValue(255,0,0);
-			clear.floats[2] = 210;
-
-			using (PinnedObjects pi = new PinnedObjects()) {
+				VkClearColorValue clear = new VkClearColorValue(255,0,0);
+				clear.floats[2] = 210;
+				VkInstanceCreateInfo ci = VkInstanceCreateInfo.New();
 				ci.pApplicationInfo = ai;
 
 				VkResult res = vkCreateInstance (ref ci, IntPtr.Zero, out instance);
@@ -36,6 +33,7 @@ namespace tests
 				}else
 					Console.WriteLine ($"Success: {res}");
 
+				ci.Dispose();
 			}
 
 			vkDestroyInstance (instance, IntPtr.Zero);
