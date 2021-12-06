@@ -382,6 +382,13 @@ namespace vk.generator {
 			public bool externsync;
 			public bool nullTerminated;
 			public string len;
+			public bool tryGetLenMember (StructDef sd, out MemberDef lenMember) {
+				lenMember = sd.members.FirstOrDefault (m=>m.Name == len);
+				if (lenMember == null)
+					lenMember = sd.members.FirstOrDefault (m=>m.Name == len?.Split (',')[0]);
+				return lenMember != null;
+			}
+			public string altlen;
 			public string defaultValue;
 			public string fixedArray;
 			public bool HasDefaultValue => defaultValue != null;
@@ -615,40 +622,33 @@ namespace vk.generator {
 					tw.Indent++;
 
 					foreach	(string str in structurePointerProxies) {
+						bool isIEnumerable = false;
 						string baseType = str;
-						bool isUintEnum = false, isIntEnum = false, isIEnumerable = false;
-						if (baseType.EndsWith ('*')) {
-							isUintEnum = true;
-							baseType = baseType.Substring (0, baseType.Length - 1);
-						} else if (baseType.EndsWith ('#')) {
-							isIntEnum = true;
-							baseType = baseType.Substring (0, baseType.Length - 1);
-						}
 						if (baseType.EndsWith ('+')) {
 							isIEnumerable = true;
 							baseType = baseType.Substring (0, baseType.Length - 1);
 						}
+						TypeDef td = types.FirstOrDefault (t=>t.Name == resolveAlias (baseType));
+						bool isEnum = td != null && td.IsEnum;
 
 						string ptrType = isIEnumerable ? baseType.Replace('.','_') + "CollectionPtr" : baseType.Replace('.','_') + "Ptr";
 						tw.WriteLine ($"public class {ptrType} {{");
 						tw.Indent++;
 						if (isIEnumerable) {
 							tw.WriteLine ($"internal IEnumerable<{baseType}> instance;");
-							if (isUintEnum)
-								tw.WriteLine ($"internal IntPtr handle => instance.Cast<uint>().ToArray().PinPointer();");
-							else if (isIntEnum)
-								tw.WriteLine ($"internal IntPtr handle => instance.Cast<int>().ToArray().PinPointer();");
-							else
+							if (isEnum) {
+								EnumDef ed = td.enumDef;
+								tw.WriteLine ($"internal IntPtr handle => instance.Cast<{(ed == null ? td.CSName : ed.baseType)}>().ToArray().PinPointer();");
+							} else
 								tw.WriteLine ($"internal IntPtr handle => instance.ToArray().PinPointer();");
 							tw.WriteLine ($"internal int Count => instance.Count();");
 							tw.WriteLine ($"internal {ptrType} (IEnumerable<{baseType}> str) {{");
 						} else {
 							tw.WriteLine ($"internal {baseType} instance;");
-							if (isUintEnum)
-								tw.WriteLine ($"internal IntPtr handle => ((uint)instance).PinPointer();");
-							else if (isIntEnum)
-								tw.WriteLine ($"internal IntPtr handle => ((int)instance).PinPointer();");
-							else
+							if (isEnum) {
+								EnumDef ed = td.enumDef;
+								tw.WriteLine ($"internal IntPtr handle => (({(ed == null ? td.CSName : ed.baseType)})instance).PinPointer();");
+							} else
 								tw.WriteLine ($"internal IntPtr handle => instance.PinPointer();");
 							tw.WriteLine ($"internal {ptrType} ({baseType} str) {{");
 						}
@@ -682,7 +682,7 @@ namespace vk.generator {
 				if (mb.paramDef.IndirectionLevel == 1){
 					if (mb.paramDef.Name == "char")
 						continue;
-					else if (mb.paramDef.Name != "void" && !csValueTypes.Contains (td.CSName)) {
+					else if (mb.paramDef.Name != "void") {
 						/*if (td == null || (td.category == TypeCategories.basetype && td.baseType == null))
 							continue;*/
 						proxies.Add (mb.Name);
@@ -690,6 +690,55 @@ namespace vk.generator {
 				}
 			}
 			return (proxies.Count == 0) ? null : proxies.ToArray();
+		}
+		static void write_structurePointerProxy_member (IndentedTextWriter tw, StructDef sd, MemberDef mb) {
+			if (!mb.paramDef.tryGetTypeDef (out TypeDef td))
+				throw new Exception($"type not found {mb.paramDef}");
+
+			string typeStr = td.CSName;
+			string structPointerId = mb.len == null ? typeStr : $"{typeStr}+";
+			if (!structurePointerProxies.Contains (structPointerId))
+				structurePointerProxies.Add (structPointerId);
+
+			string origTypeStr = typeStr.Replace('.','_');
+			string len = mb.tryGetLenMember (sd, out MemberDef lenMember) ? lenMember.Name : null ;
+			string ptrType = mb.len == null ? origTypeStr + "Ptr" : origTypeStr + "CollectionPtr";
+
+			tw.WriteLine ($"public {ptrType} {mb.Name} {{");
+			tw.Indent++;
+			tw.WriteLine ($"set {{");
+			tw.Indent++;
+			tw.WriteLine ($"if (_{mb.Name} != IntPtr.Zero)");
+			tw.Indent++;
+			tw.WriteLine ($"_{mb.Name}.Unpin ();");
+			tw.Indent--;
+			tw.WriteLine ($"if (value == null) {{");
+			tw.Indent++;
+			tw.WriteLine ($"_{mb.Name} = IntPtr.Zero;");
+			if (len != null)
+				tw.WriteLine ($"{len} = 0;");
+			tw.WriteLine ($"return;");
+			tw.Indent--;
+			tw.WriteLine (@"}");
+			tw.WriteLine ($"_{mb.Name} = value.handle;");
+
+			if (len != null) {
+				if (!lenMember.paramDef.tryGetTypeDef(out TypeDef lenField))
+					throw new Exception ("len type not found");
+
+				string targetType = lenField.CSName;
+				if (targetType == "int")
+					tw.WriteLine ($"{len} = value.Count;");
+				else if (targetType == "byte")
+					tw.WriteLine ($"{len} = Convert.ToByte (value.Count);");
+				else
+					tw.WriteLine ($"{len} = ({targetType})value.Count;");
+			}
+			tw.Indent--;
+			tw.WriteLine (@"}");
+			tw.Indent--;
+			tw.WriteLine (@"}");
+			tw.WriteLine ($"IntPtr _{mb.Name};");
 		}
 		static void gen_struct (IndentedTextWriter tw, StructDef sd) {
 			bool hasDoc = tryFindRefPage (sd.Name, out refPage rp);
@@ -709,57 +758,6 @@ namespace vk.generator {
 
 			tw.Indent++;
 			foreach (MemberDef mb in sd.members) {
-				string typeStr;
-
-				if (!mb.paramDef.tryGetTypeDef (out TypeDef td))
-					throw new Exception($"type not found {mb.paramDef}");
-
-				if (mb.paramDef.IndirectionLevel == 1){
-					if (mb.paramDef.Name == "char")
-						typeStr = "Utf8StringPointer";
-					else if (mb.paramDef.Name != "void" && !csValueTypes.Contains (td.CSName)) {
-						/*if (td.category == TypeCategories.basetype && td.baseType == null)
-							typeStr = "IntPtr";
-						else {*/
-							typeStr = $"{td.CSName}";
-							string structPointerId = mb.len == null ? typeStr : $"{typeStr}+";
-							if (td.IsEnum) {
-								EnumDef ed = enums.FirstOrDefault (e => e.Name == td.enumDefName);
-								if (ed.type == EnumTypes.@enum)
-									structPointerId += "#";//integer enum
-								else
-									structPointerId += "*";//unsigned integer enum
-							}
-							if (!structurePointerProxies.Contains (structPointerId))
-								structurePointerProxies.Add (structPointerId);
-							typeStr += "+";
-						//}
-					} else
-						typeStr = "IntPtr";
-				} else if (mb.paramDef.IndirectionLevel > 0 || mb.paramDef.Name.StartsWith ("PFN_", StringComparison.Ordinal))
-					typeStr = "IntPtr";
-				else if (td.IsEnum) {
-					EnumDef ed = td.enumDef;
-					if (ed == null)//no value for enum
-						typeStr = td.CSName;
-					else {
-						//enums has to be stored in struct as int or uint for enums are not yet blittable in ms .NET
-						typeStr = ed.baseType;
-						tw.WriteLine ($"{typeStr} _{mb.Name};");
-						if (hasDoc)
-							rp.writeMemberDocIfFound (tw, mb.Name);
-						else if (!string.IsNullOrEmpty (mb.comment))
-							tw.WriteLine ($"/// <summary> {mb.comment} </summary>");
-						tw.WriteLine ($"public {td.CSName} {mb.Name} {{");
-						tw.Indent++;
-						tw.WriteLine ($"get => ({td.CSName})_{mb.Name};");
-						tw.WriteLine ($"set {{ _{mb.Name} = ({typeStr})value; }}");
-						tw.Indent--;
-						tw.WriteLine (@"}");
-						continue;
-					}
-				} else
-					typeStr = td.CSName;
 
 				if (hasDoc)
 					rp.writeMemberDocIfFound (tw, mb.Name);
@@ -769,84 +767,62 @@ namespace vk.generator {
 				if (sd.category == TypeCategories.union)
 					tw.WriteLine($"[FieldOffset(0)]");
 
-				if (typeStr != "IntPtr" && typeStr != "UIntPtr" && !string.IsNullOrEmpty (mb.fixedArray)) {
-					int dim = 0;
-					string[] dims = mb.fixedArray.Split (new char[] { '[', ']' }, StringSplitOptions.RemoveEmptyEntries);
-					//if (csValueTypes.Contains (typeStr)) {
-						if (mb.paramDef.Name == "char")
-							typeStr = "char";
-						else if (int.TryParse (dims[0], out dim) && tryGetVectorType (typeStr, dim, out string vectorType)) {
-							tw.WriteLine ($"public {vectorType} {mb.Name};");
-							continue;
-						}
-
-						if (dims.Length != 1)
-							throw new NotImplementedException ("multi dimentional array not implemented");
-						if (int.TryParse (dims[0], out dim)) {
-							for (int i = 0; i < dim; i++)
-								tw.WriteLine ($"public {typeStr} {mb.Name}_{i};");
-						} else {
-							string strSize = dims[0];
-							if (arrayProxies.ContainsKey(strSize)) {
-								if (!arrayProxies[strSize].Contains (typeStr))
-									arrayProxies[strSize].Add (typeStr);
-							} else
-								arrayProxies.Add (strSize, new List<string> () {typeStr});
-							tw.WriteLine ($"public {EnumerantValue.GetArrayProxyStructName (strSize, typeStr)} {mb.Name};");
-						}
-						continue;
-					/*}
-					if (dims.Length != 1)
-						throw new NotImplementedException ("multi dimentional array not implemented");
-					if (int.TryParse (dims[0], out dim)) {
-						for (int i = 0; i < dim; i++) {
-							tw.WriteLine ($"public {typeStr} {mb.Name}_{i};");
-						}
-					} else {
-						tw.WriteLine ($"[MarshalAs (UnmanagedType.ByValArray, SizeConst = (int)Vk.{constants.FirstOrDefault(e=>e.Name == dims[0]).CSName})]");
-						tw.WriteLine ($"public {typeStr}[] {mb.Name};");
-					}*/
+				if (mb.paramDef.IndirectionLevel == 1){
+					if (mb.paramDef.Name == "char")
+						tw.WriteLine ($"public Utf8StringPointer {mb.Name};");
+					else if (mb.paramDef.Name != "void")
+						write_structurePointerProxy_member (tw, sd, mb);
+					else
+						tw.WriteLine ($"public IntPtr {mb.Name};");
+					continue;
+				}
+				if (mb.paramDef.IndirectionLevel > 0 || mb.paramDef.Name.StartsWith ("PFN_", StringComparison.Ordinal)) {
+					tw.WriteLine ($"public IntPtr {mb.Name};");
 					continue;
 				}
 
-				if (typeStr.EndsWith ("+")) {
-					string origTypeStr = typeStr.Substring (0, typeStr.Length - 1).Replace('.','_');
-					string len = mb.len?.Split (',')[0];
-					string ptrType = mb.len == null ? origTypeStr + "Ptr" : origTypeStr + "CollectionPtr";
-					tw.WriteLine ($"public {ptrType} {mb.Name} {{");
-					tw.Indent++;
-					tw.WriteLine ($"set {{");
-					tw.Indent++;
-					tw.WriteLine ($"if (_{mb.Name} != IntPtr.Zero)");
-					tw.Indent++;
-					tw.WriteLine ($"_{mb.Name}.Unpin ();");
-					tw.Indent--;
-					tw.WriteLine ($"if (value == null) {{");
-					tw.Indent++;
-					tw.WriteLine ($"_{mb.Name} = IntPtr.Zero;");
-					if (mb.len != null)
-						tw.WriteLine ($"{len} = 0;");
-					tw.WriteLine ($"return;");
-					tw.Indent--;
-					tw.WriteLine (@"}");
-					tw.WriteLine ($"_{mb.Name} = value.handle;");
+				if (!mb.paramDef.tryGetTypeDef (out TypeDef td))
+					throw new Exception($"type not found {mb.paramDef}");
 
-					if (mb.len != null) {
-						string targetType = sd.members.FirstOrDefault (m=>m.Name == len).paramDef.CSName;
-						if (targetType == "int")
-							tw.WriteLine ($"{len} = value.Count;");
-						else if (targetType == "byte")
-							tw.WriteLine ($"{len} = Convert.ToByte (value.Count);");
-						else
-							tw.WriteLine ($"{len} = ({targetType})value.Count;");
+				string typeStr = td.CSName;
+
+				if (typeStr != "IntPtr" && typeStr != "UIntPtr" && mb.GetIsFixedArray (out string[] dims))  {
+					if (dims.Length > 1)
+						throw new NotImplementedException();
+
+					if (mb.paramDef.Name == "char"){
+						typeStr = "char";
+					} else if (int.TryParse (dims[0], out int dim)) {
+						if (tryGetVectorType (typeStr, dim, out string vectorType))
+							tw.WriteLine ($"public {vectorType} {mb.Name};");
+						else {
+							for (int i = 0; i < dim; i++)
+								tw.WriteLine ($"public {typeStr} {mb.Name}_{i};");
+						}
+						continue;
 					}
-					tw.Indent--;
-					tw.WriteLine (@"}");
-					tw.Indent--;
-					tw.WriteLine (@"}");
-					tw.WriteLine ($"IntPtr _{mb.Name};");
-				} else
-					tw.WriteLine ($"public {typeStr} {mb.Name};");
+					if (arrayProxies.ContainsKey(dims[0])) {
+						if (!arrayProxies[dims[0]].Contains (typeStr))
+							arrayProxies[dims[0]].Add (typeStr);
+					} else
+						arrayProxies.Add (dims[0], new List<string> () {typeStr});
+					tw.WriteLine ($"public {EnumerantValue.GetArrayProxyStructName (dims[0], typeStr)} {mb.Name};");
+					continue;
+				} else if (td.IsEnum) {
+					EnumDef ed = td.enumDef;
+					if (ed != null) {//enums has to be stored in struct as int or uint for enums are not yet blittable in ms .NET
+						typeStr = ed.baseType;
+						tw.WriteLine ($"public {td.CSName} {mb.Name} {{");
+						tw.Indent++;
+						tw.WriteLine ($"get => ({td.CSName})_{mb.Name};");
+						tw.WriteLine ($"set {{ _{mb.Name} = ({typeStr})value; }}");
+						tw.Indent--;
+						tw.WriteLine (@"}");
+						tw.WriteLine ($"{typeStr} _{mb.Name};");
+						continue;
+					}
+				}
+				tw.WriteLine ($"public {typeStr} {mb.Name};");
 			}
 
 			if (sd.members.Any (mb => mb.Name == "sType" && !string.IsNullOrEmpty (mb.defaultValue))) {
@@ -900,9 +876,15 @@ namespace vk.generator {
 									throw new NotImplementedException();
 								if (mdef.paramDef.Name == "char")
 									tmp = (($"string __{mdef.Name}", $"{mdef.Name} = __{mdef.Name};"));
-								else if (int.TryParse (dims[0], out int dim) && tryGetVectorType (mtd.CSName, dim, out string vectorType))
-									tmp = (($"{vectorType} __{mdef.Name}", $"{mdef.Name} = __{mdef.Name};"));
-								else if (arrayProxies.ContainsKey (dims[0]) && arrayProxies[dims[0]].Contains (mtd.CSName))
+								else if (int.TryParse (dims[0], out int dim)) {
+									if (tryGetVectorType (mtd.CSName, dim, out string vectorType))
+										tmp = ($"{vectorType} __{mdef.Name}", $"{mdef.Name} = __{mdef.Name};");
+									else {
+										for (int i = 0; i < dim; i++)
+											ctorMembers.Add (($"{mtd.CSName} __{mdef.Name}_{i}", $"{mdef.Name}_{i} = __{mdef.Name}_{i};"));
+										continue;
+									}
+								} else if (arrayProxies.ContainsKey (dims[0]) && arrayProxies[dims[0]].Contains (mtd.CSName))
 									tmp = (($"{mtd.CSName}[] __{mdef.Name}", $"__{mdef.Name}.AsSpan().CopyTo ({mdef.Name}.AsSpan);"));
 								else
 									tmp = (($"IEnumerable<{mtd.CSName}> __{mdef.Name}", $"{mdef.Name} = __{mdef.Name};//default fixed array"));
@@ -921,7 +903,7 @@ namespace vk.generator {
 								tmp = (($"{mtd.CSName} __{mdef.Name}", $"{mdef.Name} = __{mdef.Name};//default"));
 
 							if (mdef.HasDefaultValue)
-								tmp.Item1+= " = {mdef.defaultValue}";;
+								tmp.Item1 += " = {mdef.defaultValue}";
 
 							ctorMembers.Add (tmp);
 						}
@@ -1656,6 +1638,7 @@ namespace vk.generator {
 		static MemberDef parseMember (XmlNode np) {
 			MemberDef md = new MemberDef () { paramDef = ParamDef.parse (np) };
 			md.len = np.Attributes["len"]?.Value;
+			md.altlen = np.Attributes["altlen"]?.Value;
 			md.defaultValue = np.Attributes["values"]?.Value;
 			md.optional = string.Equals (np.Attributes["optional"]?.Value, "true", StringComparison.OrdinalIgnoreCase);
 			md.externsync = np.Attributes["externsync"] != null;
