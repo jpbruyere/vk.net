@@ -1,35 +1,13 @@
 ﻿using System;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using System.Text;
 using Vulkan;
 using static Vulkan.Vk;
 using static samples.Utils;
-using Version = Vulkan.Version;
 using System.Linq;
 
 namespace tests
 {
 	class Program
 	{
-
-		static bool TryGetPhysicalDevice (VkInstance inst, VkPhysicalDeviceType deviceType, out VkPhysicalDevice phy) {
-			CheckResult (vkEnumeratePhysicalDevices (inst, out uint phyCount, IntPtr.Zero));
-
-			VkPhysicalDevice[] phys = new VkPhysicalDevice[phyCount];
-
-			CheckResult (vkEnumeratePhysicalDevices (inst, out phyCount, phys.Pin()));
-
-			for (int i = 0; i < phys.Length; i++)
-			{
-				phy = phys[i];
-				vkGetPhysicalDeviceProperties (phy, out VkPhysicalDeviceProperties props);
-				if (props.deviceType == deviceType)
-					return true;
-			}
-			phy = default;
-			return false;
-		}
 		static void Main(string[] args)
 		{
 			VkInstance inst;
@@ -46,6 +24,12 @@ namespace tests
 				if (!TryGetPhysicalDevice (inst, VkPhysicalDeviceType.IntegratedGpu, out phy))
 					if (!TryGetPhysicalDevice (inst, VkPhysicalDeviceType.Cpu, out phy))
 						throw new Exception ("no suitable physical device found");
+
+			foreach (VkPhysicalDeviceToolPropertiesEXT toolProp in GetToolProperties(phy)) {
+				Console.ForegroundColor = ConsoleColor.DarkYellow;
+				Console.WriteLine ($"Enabled Tool: {toolProp.name}({toolProp.version})");
+				Console.ResetColor ();
+			}
 
 			vkGetPhysicalDeviceQueueFamilyProperties (phy, out uint queueFamilyCount, IntPtr.Zero);
 			VkQueueFamilyProperties[] phys = new VkQueueFamilyProperties[queueFamilyCount];
