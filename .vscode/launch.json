@@ -1,0 +1,68 @@
+{
+	// Use IntelliSense to learn about possible attributes.
+	// Hover to view descriptions of existing attributes.
+	// For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"name": ".NET Core Launch (generator)",
+			"type": "coreclr",
+			"request": "launch",
+			"preLaunchTask": "build generator",
+			"program": "${workspaceFolder}/vk.generator/bin/Debug/netcoreapp3.1/vk.generator",
+			"args": ["Vulkan-Docs/xml/vk.xml"],
+			"cwd": "${workspaceFolder}",
+			"console": "externalTerminal",
+			"stopAtEntry": false
+		},
+		{
+			"name": ".NET Core Launch (rewrite)",
+			"type": "coreclr",
+			"request": "launch",
+			"preLaunchTask": "build rewrite",
+			"program": "${workspaceFolder}/vk.rewrite/bin/Debug/netcoreapp3.1/vk.rewrite",
+			"args": ["vulkan/bin/Debug/netstandard2.1/Vulkan.dll"],
+			"cwd": "${workspaceFolder}",
+			"console": "internalConsole",
+			"stopAtEntry": false
+		},
+		{
+			"name": ".NET Core Launch (create_instance)",
+			"type": "coreclr",
+			"request": "launch",
+			"preLaunchTask": "build create_instance",
+			"program": "${workspaceFolder}/samples/create_instance/bin/Debug/netcoreapp3.1/create_instance",
+			"args": [],
+			"cwd": "${workspaceFolder}",
+			"console": "externalTerminal",
+			"stopAtEntry": false
+		},
+		{
+			"name": ".NET Core Launch (select_physical_dev)",
+			"type": "coreclr",
+			"request": "launch",
+			"preLaunchTask": "build select_physical_dev",
+			"program": "${workspaceFolder}/samples/select_physical_dev/bin/Debug/netcoreapp3.1/select_physical_dev",
+			"args": [],
+			"cwd": "${workspaceFolder}",
+			"console": "externalTerminal",
+			"stopAtEntry": false
+		},
+		{
+			"name": ".NET Core Launch (create_device)",
+			"type": "coreclr",
+			"request": "launch",
+			"preLaunchTask": "build create_device",
+			"program": "${workspaceFolder}/samples/create_device/bin/Debug/netcoreapp3.1/create_device",
+			"args": [],
+			"cwd": "${workspaceFolder}",
+			"console": "externalTerminal",
+			"stopAtEntry": false
+		},
+		{
+			"name": ".NET Core Attach",
+			"type": "coreclr",
+			"request": "attach"
+		}
+	]
+}

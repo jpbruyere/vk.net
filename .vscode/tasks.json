@@ -1,0 +1,119 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "build generator",
+			"command": "dotnet",
+			"type": "process",
+			"args": [
+				"build",
+				"${workspaceFolder}/vk.generator/vk.generator.csproj",
+				"/property:GenerateFullPaths=true",
+				"/property:Configuration=Debug",
+				"/property:SolutionDir=${workspaceFolder}/",
+				"/consoleloggerparameters:NoSummary"
+			],
+			"problemMatcher": "$msCompile"
+		},
+		{
+			"label": "build rewrite",
+			"command": "dotnet",
+			"type": "process",
+			"args": [
+				"build",
+				"${workspaceFolder}/vk.rewrite/vk.rewrite.csproj",
+				"/property:GenerateFullPaths=true",
+				"/property:Configuration=Debug",
+				"/property:SolutionDir=${workspaceFolder}/",
+				"/consoleloggerparameters:NoSummary"
+			],
+			"problemMatcher": "$msCompile"
+		},
+		{
+			"label": "build vulkan",
+			"command": "dotnet",
+			"type": "process",
+			"args": [
+				"build",
+				"${workspaceFolder}/vulkan/vulkan.csproj",
+				"/property:GenerateFullPaths=true",
+				"/property:Configuration=Debug",
+				"/property:SolutionDir=${workspaceFolder}/",
+				"/consoleloggerparameters:NoSummary"
+			],
+			"problemMatcher": "$msCompile",
+		},
+		{
+			"label": "build create_instance",
+			"command": "dotnet",
+			"type": "process",
+			"args": [
+				"build",
+				"${workspaceFolder}/samples/create_instance/create_instance.csproj",
+				"/property:GenerateFullPaths=true",
+				"/property:Configuration=Debug",
+				"/property:Regenerate=false",
+				"/property:SolutionDir=${workspaceFolder}/",
+				"/consoleloggerparameters:NoSummary"
+			],
+			"problemMatcher": "$msCompile",
+		},
+		{
+			"label": "build select_physical_dev",
+			"command": "dotnet",
+			"type": "process",
+			"args": [
+				"build",
+				"${workspaceFolder}/samples/select_physical_dev/select_physical_dev.csproj",
+				"/property:GenerateFullPaths=true",
+				"/property:Configuration=Debug",
+				"/property:Regenerate=false",
+				"/property:SolutionDir=${workspaceFolder}/",
+				"/consoleloggerparameters:NoSummary"
+			],
+			"problemMatcher": "$msCompile",
+		},
+		{
+			"label": "build create_device",
+			"command": "dotnet",
+			"type": "process",
+			"args": [
+				"build",
+				"${workspaceFolder}/samples/create_device/create_device.csproj",
+				"/property:GenerateFullPaths=true",
+				"/property:Configuration=Debug",
+				"/property:Regenerate=false",
+				"/property:SolutionDir=${workspaceFolder}/",
+				"/consoleloggerparameters:NoSummary"
+			],
+			"problemMatcher": "$msCompile",
+		},
+		{
+			"label": "publish",
+			"command": "dotnet",
+			"type": "process",
+			"args": [
+				"publish",
+				"${workspaceFolder}/vk.generator/vk.generator.csproj",
+				"/property:GenerateFullPaths=true",
+				"/property:Configuration=Debug",
+				"/consoleloggerparameters:NoSummary"
+			],
+			"problemMatcher": "$msCompile"
+		},
+		{
+			"label": "watch",
+			"command": "dotnet",
+			"type": "process",
+			"args": [
+				"watch",
+				"run",
+				"${workspaceFolder}/vk.generator/vk.generator.csproj",
+				"/property:GenerateFullPaths=true",
+				"/property:Configuration=Debug",
+				"/consoleloggerparameters:NoSummary"
+			],
+			"problemMatcher": "$msCompile"
+		}
+	]
+}

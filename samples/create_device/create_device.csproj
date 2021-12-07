@@ -5,7 +5,4 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
   </PropertyGroup>
 
-	<ItemGroup>
-		<ProjectReference Include="..\vulkan\vulkan.csproj" />
-	</ItemGroup>
 </Project>

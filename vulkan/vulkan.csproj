@@ -39,12 +39,12 @@
 
 	<Target Name="generate" BeforeTargets="BeforeCompile">
 		<MakeDir Directories="$(SolutionDir)build/generated" />
-		<Exec Condition="$(OS) == 'Windows_NT'"
+		<Exec Condition="$(OS) == 'Windows_NT' AND '$(Regenerate)'=='true' "
 				Command="$(SolutionDir)vk.generator/bin/$(Configuration)/$(ToolsFramework)/vk.generator.exe %(SpecFile.Identity)"
 				WorkingDirectory="$(SolutionDir)">
 			<Output TaskParameter="ConsoleOutput" PropertyName="OutputOfExec" />
 		</Exec>
-		<Exec Condition="$(OS) != 'Windows_NT'"
+		<Exec Condition="$(OS) != 'Windows_NT' AND '$(Regenerate)'=='true' "
 				Command="$(SolutionDir)vk.generator/bin/$(Configuration)/$(ToolsFramework)/vk.generator %(SpecFile.Identity)"
 				WorkingDirectory="$(SolutionDir)">
 			<Output TaskParameter="ConsoleOutput" PropertyName="OutputOfExec" />
@@ -54,7 +54,7 @@
 		</CreateItem>
 	</Target>
 
-	<Target Name="rewrite" AfterTargets="CoreBuild">
+	<Target Name="rewrite" AfterTargets="CoreBuild" >
 		<Exec Condition="$(OS) == 'Windows_NT'" ConsoleToMSBuild="true" EchoOff="true"
 				Command="$(SolutionDir)vk.rewrite/bin/$(Configuration)/$(ToolsFramework)/vk.rewrite.exe $(TargetPath)" >
 			<Output TaskParameter="ConsoleOutput" PropertyName="OutputOfExec" />

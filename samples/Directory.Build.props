@@ -1,6 +1,5 @@
 <Project>
 	<PropertyGroup>
-		<RootDirectory>$(MSBuildThisFileDirectory)</RootDirectory>
 		<Deterministic>true</Deterministic>
 
 		<RepositoryUrl>https://github.com/jpbruyere/vk.net</RepositoryUrl>
@@ -8,11 +7,9 @@
 		<Authors>Jean-Philippe Bruyère</Authors>
 		<Copyright></Copyright>
 		<Company></Company>
-
-		<ToolsFramework>netcoreapp3.1</ToolsFramework>
-
-		<!--regenerate vk.net sources with vk.generator-->
-		<Regenerate>true</Regenerate>
-
 	</PropertyGroup>
+	<ItemGroup>
+		<ProjectReference Include="$(MSBuildThisFileDirectory)..\vulkan\vulkan.csproj" />
+		<Compile Include="$(MSBuildThisFileDirectory)common\*.cs"/>
+	</ItemGroup>
 </Project>
