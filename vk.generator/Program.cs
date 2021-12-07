@@ -599,31 +599,6 @@ namespace vk.generator {
 			tw.WriteLine ($"namespace {vknamespace} {{");
 		}
 		static EnumDef structTypeEnum = null;
-		static void writeStructNew (IndentedTextWriter tw, StructDef sd) {
-			MemberDef md = sd.members.Where (mb => mb.Name == "sType").First ();
-			string csStructName = $"{structTypeEnum.CSName}.{structTypeEnum.AllValues.FirstOrDefault(st=>st.Name == md.defaultValue).CSName}";
-
-			tw.WriteLine ($"public static {sd.Name} New () {{");
-			tw.Indent++;
-
-			tw.WriteLine ($"return new {sd.Name} {{");
-			tw.Indent++;
-
-			tw.WriteLine ($"sType = {csStructName},");
-			tw.Indent--;
-			tw.WriteLine (@"};");
-			tw.Indent--;
-			tw.WriteLine (@"}");
-
-			/*tw.WriteLine ($"public {sd.Name} (IntPtr pNext) : this () {{");
-			tw.Indent++;
-
-			tw.WriteLine ($"sType = {csStructName};");
-			tw.WriteLine ($"this.pNext = pNext;");
-
-			tw.Indent--;
-			tw.WriteLine (@"}");*/
-		}
 		static bool tryGetVectorType (string type, int dim, out string vectorType) {
 			vectorType = null;
 			switch (type) {
@@ -867,6 +842,15 @@ namespace vk.generator {
 			else
 				tw.WriteLine ($"[StructLayout(LayoutKind.Sequential)]");
 
+			MemberDef mdSType = sd.members.Where (mb => mb.Name == "sType").FirstOrDefault ();
+			EnumerantValue evSType = mdSType == null ? null :
+				mdSType.defaultValue == null ? null :
+				structTypeEnum.AllValues.FirstOrDefault(st=>st.Name == mdSType.defaultValue);
+			string csStructName = evSType == null ? null : $"{structTypeEnum.CSName}.{evSType.CSName}";
+			if (csStructName!=null) {
+				tw.WriteLine ($"[StructureType ({evSType.value})]");
+			}
+
 			getStructurePtrProxies (sd, out IEnumerable<string> ptrProxies, out IEnumerable<string> utf8StringPointers);
 
 			if (ptrProxies.Count() == 0 && utf8StringPointers.Count() == 0)
@@ -945,8 +929,7 @@ namespace vk.generator {
 				tw.WriteLine ($"public {typeStr} {mb.Name};");
 			}
 
-			if (sd.members.Any (mb => mb.Name == "sType" && !string.IsNullOrEmpty (mb.defaultValue))) {
-				writeStructNew (tw, sd);
+			if (csStructName != null) {
 				//write CTOR
 				IEnumerable<MemberDef> members = sd.members.Where (m=>
 					m.Name != "sType" && m.Name != "pNext").
@@ -956,8 +939,6 @@ namespace vk.generator {
 				List<string> ctorDefaults = new List<string>();
 
 				if (sd.members.Where (m=>!m.optional && m.Name != "sType").Count()>0) {
-					MemberDef md = sd.members.Where (mb => mb.Name == "sType").First ();
-					string csStructName = $"{structTypeEnum.CSName}.{structTypeEnum.AllValues.FirstOrDefault(st=>st.Name == md.defaultValue).CSName}";
 
 					foreach (MemberDef mdef in members) {
 
@@ -1342,15 +1323,31 @@ namespace vk.generator {
 		static string getByRefParamSig (MemberDef md, bool isLast) {
 			if (!md.paramDef.tryGetTypeDef (out TypeDef td))
 				throw new Exception ($"type not found: {md.paramDef.Name}");
-			string typeName = td.CSName; //md.paramDef.CSName == "void" ? "IntPtr" : md.paramDef.CSName;
+			string typeName = td.CSName;
 			switch (md.paramDef.IndirectionLevel) {
 				case 1:
 					return md.paramDef.IsConst ?
-						(string.Format ($"ref {typeName} {md.Name}{(isLast ? ", " : ")")}")) :
-						(string.Format ($"out {typeName} {md.Name}{(isLast ? ", " : ")")}"));
+						string.Format ($"ref {typeName} {md.Name}{(isLast ? ", " : ")")}") :
+						string.Format ($"out {typeName} {md.Name}{(isLast ? ", " : ")")}");
 				case 2:
 					return md.paramDef.IsConst ?
 						string.Format ($"ref IntPtr {md.Name}{(isLast ? ", " : ")")}") :
+						string.Format ($"out IntPtr {md.Name}{(isLast ? ", " : ")")}");
+			}
+			return null;
+		}
+		static string getPinParamSig (MemberDef md, bool isLast) {
+			if (!md.paramDef.tryGetTypeDef (out TypeDef td))
+				throw new Exception ($"type not found: {md.paramDef.Name}");
+			string typeName = td.CSName;
+			switch (md.paramDef.IndirectionLevel) {
+				case 1:
+					return md.paramDef.IsConst ?
+						string.Format ($"[Pin]{typeName} {md.Name}{(isLast ? ", " : ")")}") :
+						string.Format ($"out {typeName} {md.Name}{(isLast ? ", " : ")")}");
+				case 2:
+					return md.paramDef.IsConst ?
+						string.Format ($"[Pin]IntPtr {md.Name}{(isLast ? ", " : ")")}") :
 						string.Format ($"out IntPtr {md.Name}{(isLast ? ", " : ")")}");
 			}
 			return null;
@@ -1369,8 +1366,11 @@ namespace vk.generator {
 			for (int i = 0; i < cd.parameters.Count; i++) {
 				MemberDef md = cd.parameters[i];
 				List<string> typeSigs = new List<string> () { getDefaultParamSig (md, i < cd.parameters.Count - 1) };
-				if (md.paramDef.IndirectionLevel == 1 && md.paramDef.Name != "void")
-					typeSigs.Add (getByRefParamSig (md, i < cd.parameters.Count - 1));
+				if (md.paramDef.IndirectionLevel == 1 && md.paramDef.Name != "void") {
+					if (md.paramDef.IsConst)
+						typeSigs.Add (getByRefParamSig (md, i < cd.parameters.Count - 1));
+					typeSigs.Add (getPinParamSig (md, i < cd.parameters.Count - 1));
+				}
 
 				string[] prevSigs = new string[signatures.Count];
 				Array.Copy (signatures.ToArray (), prevSigs, prevSigs.Length);
