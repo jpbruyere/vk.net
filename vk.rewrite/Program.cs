@@ -19,12 +19,11 @@ namespace Vk.Rewrite
 
 		static TypeReference trefCalliRewrite;
 		static TypeReference trefPin;
+#if AUTO_SET_STYPE
 		static TypeReference trefStructureType;
-
+#endif
 		public static int Main(string[] args)
 		{
-
-
 			if ((args.Length < 1) == true || args[0] == null) {
 				Console.WriteLine ("Error: argument 1 must be the path of VK.dll.");
 				return -1;
@@ -60,13 +59,11 @@ namespace Vk.Rewrite
 
 				trefCalliRewrite = mainModule.GetType (mainVkNamespace+".Generator.CalliRewriteAttribute");
 				trefPin = mainModule.GetType (mainVkNamespace+".Generator.PinAttribute");
+#if AUTO_SET_STYPE
 				trefStructureType = mainModule.GetType (mainVkNamespace+".StructureTypeAttribute");
-
-				foreach (TypeDefinition type in mainModule.Types)
-				{
-
-					foreach (MethodDefinition method in type.Methods)
-					{
+#endif
+				foreach (TypeDefinition type in mainModule.Types) {
+					foreach (MethodDefinition method in type.Methods) {
 						if (method.CustomAttributes.Any(ca => ca.AttributeType == trefCalliRewrite))
 							RewriteMethod (method);
 					}
@@ -87,42 +84,49 @@ namespace Vk.Rewrite
 				TypeDefinition td = parameterType.IsByReference ?
 					parameterType.GetElementType() as TypeDefinition :
 					parameterType as TypeDefinition;
+#if AUTO_SET_STYPE
 				PropertyDefinition pdSType = td?.Properties.FirstOrDefault (f=>f.Name == "sType");
-
 				CustomAttribute ca = td == null ? null : td.CustomAttributes.FirstOrDefault (ca => ca.AttributeType == trefStructureType);
 				int structType = 0;
 				if (ca != null) {
 					PropertyDefinition pd = (ca.AttributeType as TypeDefinition).Properties[0];
 					structType = (int)ca.ConstructorArguments[0].Value;
 				}
+#endif
 
 				if (method.Parameters[i].CustomAttributes.Any(ca => ca.AttributeType == trefPin)) {
 					VariableDefinition variable = new VariableDefinition(parameterType);
 					method.Body.Variables.Add(variable);
 					il.Emit(OpCodes.Stloc, variable);
+#if AUTO_SET_STYPE
 					if (ca != null) {
 						il.Emit(OpCodes.Ldloca, variable);
 						il.Emit(OpCodes.Ldc_I4, structType);
 						il.Emit(OpCodes.Call, pdSType.SetMethod);
 					}
+#endif
 					il.Emit(OpCodes.Ldloca, variable);
 					variable = new VariableDefinition(new PinnedType(new ByReferenceType(parameterType)));
 					method.Body.Variables.Add(variable);
 					il.Emit(OpCodes.Stloc, variable);
 					il.Emit(OpCodes.Ldloc, variable);
 					il.Emit(OpCodes.Conv_I);
-				} else if (parameterType.IsByReference)	{
+				} else if (parameterType.IsByReference) {
 					VariableDefinition byRefVariable = new VariableDefinition(new PinnedType(parameterType));
 					method.Body.Variables.Add(byRefVariable);
 					il.Emit(OpCodes.Stloc, byRefVariable);
+#if AUTO_SET_STYPE
 					if (pdSType != null) {
 						il.Emit(OpCodes.Ldloc, byRefVariable);
 						il.Emit(OpCodes.Ldc_I4, structType);
 						il.Emit(OpCodes.Call, pdSType.SetMethod);
 					}
+#endif
 					il.Emit(OpCodes.Ldloc, byRefVariable);
 					il.Emit(OpCodes.Conv_I);
-				} else if (ca != null) {
+				}
+#if AUTO_SET_STYPE
+				else if (ca != null) {
 					VariableDefinition variable = new VariableDefinition(parameterType);
 					method.Body.Variables.Add(variable);
 					il.Emit(OpCodes.Stloc, variable);
@@ -130,6 +134,7 @@ namespace Vk.Rewrite
 					il.Emit(OpCodes.Ldc_I4, structType);
 					il.Emit(OpCodes.Call, pdSType.SetMethod);
 				}
+#endif
 			}
 
 			FieldDefinition field = method.DeclaringType.Fields.SingleOrDefault(fd => fd.Name == method.Name + "_ptr");

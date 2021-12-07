@@ -740,8 +740,9 @@ namespace vk.generator {
 							baseType = baseType.Substring (0, baseType.Length - 1);
 						}
 						TypeDef td = types.FirstOrDefault (t=>t.Name == resolveAlias (baseType));
-						string csStructName = null;
 						bool isEnum = td != null && td.IsEnum;
+#if AUTO_SET_STYPE
+						string csStructName = null;
 						if (td != null && td.category == TypeCategories.@struct) {
 							StructDef sd = td as StructDef;
 							MemberDef mdSType = sd.members.Where (mb => mb.Name == "sType").FirstOrDefault ();
@@ -750,7 +751,7 @@ namespace vk.generator {
 							structTypeEnum.AllValues.FirstOrDefault(st=>st.Name == mdSType.defaultValue);
 							csStructName = evSType == null ? null : $"{structTypeEnum.CSName}.{evSType.CSName}";
 						}
-
+#endif
 						string ptrType = isIEnumerable ? baseType.Replace('.','_') + "CollectionPtr" : baseType.Replace('.','_') + "Ptr";
 						tw.WriteLine ($"public class {ptrType} {{");
 						tw.Indent++;
@@ -764,6 +765,7 @@ namespace vk.generator {
 							tw.WriteLine ($"internal int Count => instance.Count();");
 							tw.WriteLine ($"internal {ptrType} (IEnumerable<{baseType}> str) {{");
 							tw.Indent++;
+#if AUTO_SET_STYPE
 							if (csStructName != null) {
 								tw.WriteLine ($"if (str != null) {{");
 								tw.Indent++;
@@ -783,6 +785,10 @@ namespace vk.generator {
 								tw.WriteLine ($"instance = str;");
 								tw.Indent--;
 							}
+#else
+							tw.WriteLine ($"instance = str;");
+							tw.Indent--;
+#endif
 						} else {
 							tw.WriteLine ($"internal {baseType} instance;");
 							if (isEnum) {
@@ -792,8 +798,10 @@ namespace vk.generator {
 								tw.WriteLine ($"internal IntPtr handle => instance.PinPointer();");
 							tw.WriteLine ($"internal {ptrType} ({baseType} str) {{");
 							tw.Indent++;
+#if AUTO_SET_STYPE
 							if (csStructName != null)
 								tw.WriteLine ($"str.sType = {csStructName};");
+#endif
 							tw.WriteLine ($"instance = str;");
 						}
 
@@ -897,9 +905,10 @@ namespace vk.generator {
 				mdSType.defaultValue == null ? null :
 				structTypeEnum.AllValues.FirstOrDefault(st=>st.Name == mdSType.defaultValue);
 			string csStructName = evSType == null ? null : $"{structTypeEnum.CSName}.{evSType.CSName}";
-			if (csStructName!=null) {
+#if AUTO_SET_STYPE
+			if (csStructName!=null)
 				tw.WriteLine ($"[StructureType ({evSType.value})]");
-			}
+#endif
 
 			getStructurePtrProxies (sd, out IEnumerable<string> ptrProxies, out IEnumerable<string> utf8StringPointers);
 

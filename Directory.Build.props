@@ -13,6 +13,18 @@
 
 		<!--regenerate vk.net sources with vk.generator-->
 		<Regenerate>true</Regenerate>
+		<!--
+			AutoSetSType = TRUE
+			automatic set of the sType field with corresponding structure type.
+			- rewrite will emit sType property set
+			- structure pointer proxies will set sType property for single instance and enumerable
+			  this implies that a loop for the enumerable on each set.
+
+			AutoSetSType = FALSE
+			Use the New static property to create a new instance of the structure with the correct value for sType.
+			ex: VkInstanceCreateInfo ci = VkInstanceCreateInfo.New;
+		-->
+		<AutoSetSType>true</AutoSetSType>
 
 	</PropertyGroup>
 </Project>

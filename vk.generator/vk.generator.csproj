@@ -6,5 +6,8 @@
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<DefineConstants>$(DefineConstants);LOG_VK_NET_GEN;DEBUG_STRUCT_SIZES</DefineConstants>
 	</PropertyGroup>
+	<PropertyGroup Condition=" '$(AutoSetSType)' == 'true'">
+		<DefineConstants>$(DefineConstants);AUTO_SET_STYPE</DefineConstants>
+	</PropertyGroup>
 
 </Project>

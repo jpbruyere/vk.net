@@ -1,10 +1,6 @@
 ﻿using System;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using System.Text;
 using Vulkan;
 using static Vulkan.Vk;
-using Version = Vulkan.Version;
 
 namespace tests
 {
@@ -14,13 +10,22 @@ namespace tests
 		static void Main(string[] args)
 		{
 			VkInstance instance;
-
+#if AUTO_SET_STYPE
+			Console.WriteLine ("AUTO_SET_STYPE: ON");
 			using (VkApplicationInfo ai = new VkApplicationInfo()) {
 				using (VkInstanceCreateInfo ci = new VkInstanceCreateInfo {pApplicationInfo = ai}){
 					Console.WriteLine (vkCreateInstance (ci, IntPtr.Zero, out instance));
 				}
 			}
-
+#else
+			Console.WriteLine ("AUTO_SET_STYPE: OFF");
+			using (VkApplicationInfo ai = VkApplicationInfo.New) {
+				VkInstanceCreateInfo ci = VkInstanceCreateInfo.New;
+				ci.pApplicationInfo = ai;
+				Console.WriteLine (vkCreateInstance (ci, IntPtr.Zero, out instance));
+				ci.Dispose();
+			}
+#endif
 			vkDestroyInstance (instance, IntPtr.Zero);
 		}
 	}

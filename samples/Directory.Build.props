@@ -7,9 +7,16 @@
 		<Authors>Jean-Philippe Bruyère</Authors>
 		<Copyright></Copyright>
 		<Company></Company>
+
+		<SolutionDir>$(MSBuildThisFileDirectory)..\</SolutionDir>
+		<OutputPath>$(SolutionDir)build\$(Configuration)\</OutputPath>
 	</PropertyGroup>
 	<ItemGroup>
 		<ProjectReference Include="$(MSBuildThisFileDirectory)..\vulkan\vulkan.csproj" />
 		<Compile Include="$(MSBuildThisFileDirectory)common\*.cs"/>
 	</ItemGroup>
+	<PropertyGroup Condition=" '$(AutoSetSType)' == 'true'">
+		<DefineConstants>$(DefineConstants);AUTO_SET_STYPE</DefineConstants>
+	</PropertyGroup>
+
 </Project>
