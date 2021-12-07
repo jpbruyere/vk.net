@@ -722,7 +722,16 @@ namespace vk.generator {
 							baseType = baseType.Substring (0, baseType.Length - 1);
 						}
 						TypeDef td = types.FirstOrDefault (t=>t.Name == resolveAlias (baseType));
+						string csStructName = null;
 						bool isEnum = td != null && td.IsEnum;
+						if (td != null && td.category == TypeCategories.@struct) {
+							StructDef sd = td as StructDef;
+							MemberDef mdSType = sd.members.Where (mb => mb.Name == "sType").FirstOrDefault ();
+							EnumerantValue evSType = mdSType == null ? null :
+							mdSType.defaultValue == null ? null :
+							structTypeEnum.AllValues.FirstOrDefault(st=>st.Name == mdSType.defaultValue);
+							csStructName = evSType == null ? null : $"{structTypeEnum.CSName}.{evSType.CSName}";
+						}
 
 						string ptrType = isIEnumerable ? baseType.Replace('.','_') + "CollectionPtr" : baseType.Replace('.','_') + "Ptr";
 						tw.WriteLine ($"public class {ptrType} {{");
@@ -736,6 +745,26 @@ namespace vk.generator {
 								tw.WriteLine ($"internal IntPtr handle => instance.PinPointer();");
 							tw.WriteLine ($"internal int Count => instance.Count();");
 							tw.WriteLine ($"internal {ptrType} (IEnumerable<{baseType}> str) {{");
+							tw.Indent++;
+							if (csStructName != null) {
+								tw.WriteLine ($"if (str != null) {{");
+								tw.Indent++;
+								tw.WriteLine ($"{baseType}[] tmp = str.ToArray();");
+								tw.WriteLine ($"for (int i=0; i<tmp.Length; i++)");
+								tw.Indent++;
+								tw.WriteLine ($"tmp[i].sType = {csStructName};");
+								tw.Indent--;
+								tw.WriteLine ($"instance = tmp;");
+								tw.Indent--;
+								tw.WriteLine (@"} else");
+								tw.Indent++;
+								tw.WriteLine ($"instance = str;");
+								tw.Indent--;
+								tw.Indent--;
+							} else {
+								tw.WriteLine ($"instance = str;");
+								tw.Indent--;
+							}
 						} else {
 							tw.WriteLine ($"internal {baseType} instance;");
 							if (isEnum) {
@@ -744,9 +773,12 @@ namespace vk.generator {
 							} else
 								tw.WriteLine ($"internal IntPtr handle => instance.PinPointer();");
 							tw.WriteLine ($"internal {ptrType} ({baseType} str) {{");
+							tw.Indent++;
+							if (csStructName != null)
+								tw.WriteLine ($"str.sType = {csStructName};");
+							tw.WriteLine ($"instance = str;");
 						}
-						tw.Indent++;
-						tw.WriteLine ($"instance = str;");
+
 						tw.Indent--;
 						tw.WriteLine (@"}");
 						if (isIEnumerable) {

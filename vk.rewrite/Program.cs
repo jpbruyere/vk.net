@@ -84,8 +84,10 @@ namespace Vk.Rewrite
 			{
 				EmitLoadArgument (il, i, method.Parameters);
 				TypeReference parameterType = method.Parameters[i].ParameterType;
-				TypeDefinition td = parameterType as TypeDefinition;
-				PropertyDefinition fd = td?.Properties.FirstOrDefault (f=>f.Name == "sType");
+				TypeDefinition td = parameterType.IsByReference ?
+					parameterType.GetElementType() as TypeDefinition :
+					parameterType as TypeDefinition;
+				PropertyDefinition pdSType = td?.Properties.FirstOrDefault (f=>f.Name == "sType");
 
 				CustomAttribute ca = td == null ? null : td.CustomAttributes.FirstOrDefault (ca => ca.AttributeType == trefStructureType);
 				int structType = 0;
@@ -101,7 +103,7 @@ namespace Vk.Rewrite
 					if (ca != null) {
 						il.Emit(OpCodes.Ldloca, variable);
 						il.Emit(OpCodes.Ldc_I4, structType);
-						il.Emit(OpCodes.Call, fd.SetMethod);
+						il.Emit(OpCodes.Call, pdSType.SetMethod);
 					}
 					il.Emit(OpCodes.Ldloca, variable);
 					variable = new VariableDefinition(new PinnedType(new ByReferenceType(parameterType)));
@@ -113,6 +115,11 @@ namespace Vk.Rewrite
 					VariableDefinition byRefVariable = new VariableDefinition(new PinnedType(parameterType));
 					method.Body.Variables.Add(byRefVariable);
 					il.Emit(OpCodes.Stloc, byRefVariable);
+					if (pdSType != null) {
+						il.Emit(OpCodes.Ldloc, byRefVariable);
+						il.Emit(OpCodes.Ldc_I4, structType);
+						il.Emit(OpCodes.Call, pdSType.SetMethod);
+					}
 					il.Emit(OpCodes.Ldloc, byRefVariable);
 					il.Emit(OpCodes.Conv_I);
 				} else if (ca != null) {
@@ -121,7 +128,7 @@ namespace Vk.Rewrite
 					il.Emit(OpCodes.Stloc, variable);
 					il.Emit(OpCodes.Ldloca, variable);
 					il.Emit(OpCodes.Ldc_I4, structType);
-					il.Emit(OpCodes.Call, fd.SetMethod);
+					il.Emit(OpCodes.Call, pdSType.SetMethod);
 				}
 			}
 
