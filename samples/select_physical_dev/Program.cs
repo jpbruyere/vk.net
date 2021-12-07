@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using System.Text;
 using Vulkan;
 using static Vulkan.Vk;
-using static samples.Utils;
+using static Vulkan.Utils;
 using Version = Vulkan.Version;
 
 namespace tests

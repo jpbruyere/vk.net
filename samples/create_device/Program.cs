@@ -1,7 +1,7 @@
 ﻿using System;
 using Vulkan;
 using static Vulkan.Vk;
-using static samples.Utils;
+using static Vulkan.Utils;
 using System.Linq;
 
 namespace tests
@@ -32,12 +32,15 @@ namespace tests
 			}
 
 			vkGetPhysicalDeviceQueueFamilyProperties (phy, out uint queueFamilyCount, IntPtr.Zero);
-			VkQueueFamilyProperties[] phys = new VkQueueFamilyProperties[queueFamilyCount];
-			vkGetPhysicalDeviceQueueFamilyProperties (phy, out queueFamilyCount, phys.Pin());
-			phys.Unpin();
+			VkQueueFamilyProperties[] qFamProps = new VkQueueFamilyProperties[queueFamilyCount];
+			vkGetPhysicalDeviceQueueFamilyProperties (phy, out queueFamilyCount, qFamProps.Pin());
+			qFamProps.Unpin();
+			Console.WriteLine ($"Queues:");
+			for (int i = 0; i < queueFamilyCount; i++)
+				Console.WriteLine ($"\t{i}: {qFamProps[i].queueFlags,-60} ({qFamProps[i].queueCount})");
 
-			uint qFamIndex = (uint)phys.Select((phy, index) => (phy, index))
-				.First (qfp=>qfp.phy.queueFlags.HasFlag (VkQueueFlags.Graphics)).index;
+			uint qFamIndex = (uint)qFamProps.Select((qFam, index) => (qFam, index))
+				.First (qfp=>qfp.qFam.queueFlags.HasFlag (VkQueueFlags.Graphics)).index;
 
 			VkDevice dev = default;
 			float[] priorities = {0};
