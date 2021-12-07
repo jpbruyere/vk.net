@@ -287,7 +287,7 @@ namespace Vulkan
 	}
 	public partial struct VkQueryPoolCreateInfo
 	{
-		public static VkQueryPoolCreateInfo New(VkQueryType queryType,
+		public static VkQueryPoolCreateInfo CreateNew(VkQueryType queryType,
 			VkQueryPipelineStatisticFlags statisticFlags = (VkQueryPipelineStatisticFlags)0, uint count = 1)
 		{
 			VkQueryPoolCreateInfo ret = new VkQueryPoolCreateInfo();

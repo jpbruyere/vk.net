@@ -624,6 +624,24 @@ namespace vk.generator {
 			default: return false;
 			}
 		}
+		static void writeStructNew (IndentedTextWriter tw, StructDef sd, string csStructName) {
+				tw.WriteLine ($"///<summary>Create a new instance of the {sd.Name} structure and set the sType field to the corresponding structure type.</summary>");
+				tw.WriteLine ($"public static {sd.Name} New {{");
+				tw.Indent++;
+				tw.WriteLine ($"get {{");
+				tw.Indent++;
+
+				tw.WriteLine ($"return new {sd.Name} {{");
+				tw.Indent++;
+
+				tw.WriteLine ($"sType = {csStructName}");
+				tw.Indent--;
+				tw.WriteLine (@"};");
+				tw.Indent--;
+				tw.WriteLine (@"}");
+				tw.Indent--;
+				tw.WriteLine (@"}");
+		}
 		static void gen_array_proxies (string englobingStaticClass) {
 			using (StreamWriter sr = new StreamWriter (vkNetTargetPath($"array_proxies_{englobingStaticClass}"), false, System.Text.Encoding.UTF8)) {
 				using (IndentedTextWriter tw = new IndentedTextWriter (sr)) {
@@ -962,6 +980,7 @@ namespace vk.generator {
 			}
 
 			if (csStructName != null) {
+				writeStructNew (tw, sd, csStructName);
 				//write CTOR
 				IEnumerable<MemberDef> members = sd.members.Where (m=>
 					m.Name != "sType" && m.Name != "pNext").
