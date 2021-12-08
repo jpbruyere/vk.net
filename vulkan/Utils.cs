@@ -16,6 +16,16 @@ namespace Vulkan {
 			if (result != VkResult.Success)
 				throw new InvalidOperationException ($"[{sourceFilePath}:{sourceLineNumber}->{caller}]{msg}: {result}");
 		}
+		public static VkExtensionProperties[] GetAvailableInstanceExtensions (string layerName = null) {
+			using (Utf8StringPointer pLayerName =  layerName) {
+				CheckResult (vkEnumerateInstanceExtensionProperties (pLayerName, out uint pCount, IntPtr.Zero));
+				VkExtensionProperties[] tmp = new VkExtensionProperties[pCount];
+				CheckResult (vkEnumerateInstanceExtensionProperties (pLayerName, out pCount, tmp.Pin()));
+				tmp.Unpin();
+				return tmp;
+			}
+		}
+
 		public static bool TryGetPhysicalDevice (VkInstance inst, VkPhysicalDeviceType deviceType, out VkPhysicalDevice phy) {
 			CheckResult (vkEnumeratePhysicalDevices (inst, out uint phyCount, IntPtr.Zero));
 

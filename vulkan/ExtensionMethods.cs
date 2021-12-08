@@ -10,7 +10,7 @@ using System.Runtime.InteropServices;
 using static Vulkan.Vk;
 
 namespace Vulkan {
-	public static class ExtensionMethods {
+	public static partial class ExtensionMethods {
 		#region pinning
 		/// <summary>
 		/// list of pinned GCHandles used to pass value from managed to unmanaged code.
