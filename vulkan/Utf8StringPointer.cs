@@ -13,7 +13,10 @@ namespace Vulkan
 			handle = ptr;
 		}
 		Utf8StringPointer (string str) {
-			handle = str.PinPointer();
+			if (string.IsNullOrEmpty(str))
+				handle = IntPtr.Zero;
+			else
+				handle = str.PinPointer();
 		}
 		public static implicit operator string (Utf8StringPointer pt)
 			=> pt.ToString();
