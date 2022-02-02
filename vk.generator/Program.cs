@@ -65,6 +65,8 @@ namespace vk.generator {
 					continue;
 				if ((i == tmp.Length - 1 && Generator.tags.Contains (s)) || (char.IsDigit (s[0]) && s.Substring (1) == "D"))
 					result.Add (s);
+				else if (char.IsDigit(s[0]) && result.LastOrDefault() is string lastStr && char.IsDigit(lastStr.Last()))
+					result.Add ("_" + s[0] + s.Substring (1).ToLower ());
 				else
 					result.Add (s[0] + s.Substring (1).ToLower ());
 			}
@@ -2014,6 +2016,10 @@ namespace vk.generator {
 						return l;
 					}
 					continue;
+				}
+				if (l.StartsWith ("* [[")) {
+					int tmp = l.IndexOf ("]]", 3);
+					l = $"* {l.Substring (tmp + 2).Trim()}";
 				}
 				if (l.StartsWith ("* ename:") || l.StartsWith ("* pname:")) {
 					l = l.Substring (8);

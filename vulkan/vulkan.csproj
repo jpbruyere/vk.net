@@ -3,7 +3,7 @@
 	<PropertyGroup>
 		<TargetFrameworks>netstandard2.1</TargetFrameworks>
 
-		<AssemblyVersion>0.4.0</AssemblyVersion>
+		<AssemblyVersion>0.4.1</AssemblyVersion>
 		<AssemblyName>Vulkan</AssemblyName>
 		<PackageVersion>$(AssemblyVersion)-beta</PackageVersion>
 
@@ -19,10 +19,7 @@
 		<PackageIcon>vk.net-64.png</PackageIcon>
 		<SynchReleaseVersion>false</SynchReleaseVersion>
 		<PackageReleaseNotes>
-			* Docummentation extracted from Vulkan-Docs
-			* no usafe code.
-			* use Vector type where possible
-			* Proxy structures to handle arrays.
+			* VkFormat in camel case taking care of consecutive numbers with underscore addition.
 		</PackageReleaseNotes>
 		<AllowUnsafeBlocks>false</AllowUnsafeBlocks>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>

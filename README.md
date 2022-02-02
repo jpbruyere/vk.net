@@ -24,4 +24,6 @@ Auto-generated low level [Vulkan](https://www.khronos.org/vulkan/) bindings for 
 The [nuget package](https://www.nuget.org/packages/Vulkan) is available under the name **Vulkan**.
 
 
+Compiling Options:
 
+-p:`AutoSetSType`=`true`
