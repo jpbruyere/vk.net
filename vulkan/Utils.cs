@@ -43,16 +43,16 @@ namespace Vulkan {
 			phy = default;
 			return false;
 		}
-		public static VkPhysicalDeviceToolPropertiesEXT[] GetToolProperties (VkPhysicalDevice phy) {
-			CheckResult (vkGetPhysicalDeviceToolPropertiesEXT (phy , out uint count, IntPtr.Zero));
-			int sizeStruct = Marshal.SizeOf<VkPhysicalDeviceToolPropertiesEXT> ();
+		public static VkPhysicalDeviceToolProperties[] GetToolProperties (VkPhysicalDevice phy) {
+			CheckResult (vkGetPhysicalDeviceToolProperties (phy , out uint count, IntPtr.Zero));
+			int sizeStruct = Marshal.SizeOf<VkPhysicalDeviceToolProperties> ();
 			IntPtr ptrTools = Marshal.AllocHGlobal (sizeStruct * (int)count);
-			CheckResult (vkGetPhysicalDeviceToolPropertiesEXT (phy , out count, ptrTools));
+			CheckResult (vkGetPhysicalDeviceToolProperties (phy , out count, ptrTools));
 
-			VkPhysicalDeviceToolPropertiesEXT[] result = new VkPhysicalDeviceToolPropertiesEXT[count];
+			VkPhysicalDeviceToolProperties[] result = new VkPhysicalDeviceToolProperties[count];
 			IntPtr tmp = ptrTools;
 			for (int i = 0; i < count; i++) {
-				result[i] = Marshal.PtrToStructure<VkPhysicalDeviceToolPropertiesEXT> (tmp);
+				result[i] = Marshal.PtrToStructure<VkPhysicalDeviceToolProperties> (tmp);
 				tmp += sizeStruct;
 			}
 

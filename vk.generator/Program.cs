@@ -177,7 +177,15 @@ namespace vk.generator {
 			{ "StdVideoH264ProfileIdc","IntPtr" },
 			{ "VkRemoteAddressNV","IntPtr" },
 
-			{ "CAMetalLayer", "IntPtr" }
+			{ "CAMetalLayer", "IntPtr" },
+
+			{ "MTLDevice_id", "IntPtr"},
+			{ "MTLCommandQueue_id", "IntPtr"},
+			{ "MTLBuffer_id", "IntPtr"},
+			{ "MTLTexture_id", "IntPtr"},
+			{ "MTLSharedEvent_id", "IntPtr"},
+
+			{ "IOSurfaceRef", "IntPtr"},
 		};
 
 		static string[] reservedNames = { "event", "object" };

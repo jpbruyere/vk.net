@@ -21,10 +21,10 @@
 			  this implies that a loop for the enumerable on each set.
 
 			AutoSetSType = FALSE
-			Use the New static property to create a new instance of the structure with the correct value for sType.
-			ex: VkInstanceCreateInfo ci = VkInstanceCreateInfo.New;
+			Use the `New` static property to create a new instance of the structure with the correct value for sType.
+			ex: `VkInstanceCreateInfo ci = VkInstanceCreateInfo.New;`
 		-->
-		<AutoSetSType>true</AutoSetSType>
+		<AutoSetSType>false</AutoSetSType>
 
 	</PropertyGroup>
 </Project>
