@@ -8,12 +8,16 @@ namespace tests
 {
 	class Program
 	{
-
+		delegate void del(IntPtr phy, ref VkPhysicalDeviceFeatures2 vdf);
+		delegate void del2(IntPtr phy, IntPtr vdf);
 		static void Main(string[] args)
 		{
 			VkInstance inst;
 
-			using (VkApplicationInfo ai = new VkApplicationInfo ()) {
+			using (VkApplicationInfo ai = new VkApplicationInfo (
+				new Vulkan.Version(1,2,0),
+				new Vulkan.Version(1,2,0),
+				new Vulkan.Version(1,3,0))) {
 				using (VkInstanceCreateInfo ci = new VkInstanceCreateInfo {pApplicationInfo = ai}){
 					CheckResult (vkCreateInstance (ci, IntPtr.Zero, out inst));
 				}

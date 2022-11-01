@@ -293,6 +293,7 @@ namespace vk.generator {
 		class StructDef : TypeDef {
 			public string structextends;
 			public List<MemberDef> members = new List<MemberDef> ();
+			public override bool HasSType => category == TypeCategories.@struct && members.Any (mb => mb.Name == "sType");
 			public override bool tryGetSize(out int size) {
 				size = 0;
 				int alignment = 1;
@@ -372,6 +373,7 @@ namespace vk.generator {
 			}
 			public bool IsValueType => csValueTypes.Contains (CSName);
 			public bool IsEnum => category == TypeCategories.bitmask || category == TypeCategories.@enum;
+			public virtual bool HasSType => false;
 			public string enumDefName => IsEnum ? requires == null ? bitvalues == null ? name : bitvalues : requires : null;
 			public EnumDef enumDef {
 				get {
@@ -915,10 +917,10 @@ namespace vk.generator {
 				mdSType.defaultValue == null ? null :
 				structTypeEnum.AllValues.FirstOrDefault(st=>st.Name == mdSType.defaultValue);
 			string csStructName = evSType == null ? null : $"{structTypeEnum.CSName}.{evSType.CSName}";
-#if AUTO_SET_STYPE
+//#if AUTO_SET_STYPE
 			if (csStructName!=null)
 				tw.WriteLine ($"[StructureType ({evSType.value})]");
-#endif
+//#endif
 
 			getStructurePtrProxies (sd, out IEnumerable<string> ptrProxies, out IEnumerable<string> utf8StringPointers);
 
@@ -928,6 +930,10 @@ namespace vk.generator {
 				tw.WriteLine ($"public partial struct {sd.Name} : IDisposable {{");
 
 			tw.Indent++;
+
+			/*if (csStructName != null)
+				tw.WriteLine ($"internal const int vkType = {evSType.value};");*/
+
 			foreach (MemberDef mb in sd.members) {
 
 				if (hasDoc)
@@ -1396,7 +1402,7 @@ namespace vk.generator {
 			string typeName = td.CSName;
 			switch (md.paramDef.IndirectionLevel) {
 				case 1:
-					return md.paramDef.IsConst ?
+					return md.paramDef.IsConst || td.HasSType ?
 						string.Format ($"ref {typeName} {md.Name}{(isLast ? ", " : ")")}") :
 						string.Format ($"out {typeName} {md.Name}{(isLast ? ", " : ")")}");
 				case 2:
@@ -1414,7 +1420,9 @@ namespace vk.generator {
 				case 1:
 					return md.paramDef.IsConst ?
 						string.Format ($"[Pin]{typeName} {md.Name}{(isLast ? ", " : ")")}") :
-						string.Format ($"out {typeName} {md.Name}{(isLast ? ", " : ")")}");
+						td.HasSType ?
+							string.Format ($"ref {typeName} {md.Name}{(isLast ? ", " : ")")}") :
+							string.Format ($"out {typeName} {md.Name}{(isLast ? ", " : ")")}");
 				case 2:
 					return md.paramDef.IsConst ?
 						string.Format ($"[Pin]IntPtr {md.Name}{(isLast ? ", " : ")")}") :
