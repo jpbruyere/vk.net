@@ -109,6 +109,10 @@ namespace vk.generator {
 		}
 		const int extBase = 1000000000;
 		const int extBlockSize = 1000;
+
+		/// <summary> target api (vulkan, vulkansc). </summary>
+		public const string vkapi = "vulkan";
+
 		/// <summary> Main namespace for generated code. </summary>
 		public const string vknamespace = "Vulkan";
 		/// <summary> Static class encapsulating constants and methods </summary>
@@ -173,6 +177,7 @@ namespace vk.generator {
 
 			{ "_screen_window","IntPtr" },
 			{ "_screen_context","IntPtr" },
+			{ "_screen_buffer","IntPtr" },
 			{ "StdVideoH265ProfileIdc","IntPtr" },
 			{ "StdVideoH264ProfileIdc","IntPtr" },
 			{ "VkRemoteAddressNV","IntPtr" },
@@ -900,7 +905,11 @@ namespace vk.generator {
 			tw.WriteLine (@"}");
 			tw.Indent--;
 			tw.WriteLine (@"}");
-			tw.WriteLine ($"IntPtr _{mb.Name};");
+			if (sd.category == TypeCategories.union)
+				tw.WriteLine ($"[FieldOffset(0)]IntPtr _{mb.Name};");
+			else
+				tw.WriteLine ($"IntPtr _{mb.Name};");
+
 		}
 		static void gen_struct (IndentedTextWriter tw, StructDef sd) {
 			bool hasDoc = tryFindRefPage (sd.Name, out refPage rp);
@@ -931,29 +940,25 @@ namespace vk.generator {
 
 			tw.Indent++;
 
-			/*if (csStructName != null)
-				tw.WriteLine ($"internal const int vkType = {evSType.value};");*/
-
 			foreach (MemberDef mb in sd.members) {
 
 				if (hasDoc)
 					rp.writeMemberDocIfFound (tw, mb.Name);
 				else if (!string.IsNullOrEmpty (mb.comment))
 					tw.WriteLine ($"/// <summary> {mb.comment} </summary>");
-
-				if (sd.category == TypeCategories.union)
-					tw.WriteLine($"[FieldOffset(0)]");
+				
+				string prefix = sd.category == TypeCategories.union ? "[FieldOffset(0)]" : "";
 
 				if (!mb.paramDef.tryGetTypeDef (out TypeDef td))
 					throw new Exception($"type not found {mb.paramDef}");
 
 				if (mb.paramDef.IndirectionLevel == 1){
 					if (mb.paramDef.Name == "char")
-						tw.WriteLine ($"public Utf8StringPointer {mb.Name};");
+						tw.WriteLine ($"{prefix}public Utf8StringPointer {mb.Name};");
 					else if (mb.paramDef.Name != "void" && td.CSName != "IntPtr" && td.CSName != "UIntPtr")
 						write_structurePointerProxy_member (tw, sd, mb);
 					else
-						tw.WriteLine ($"public IntPtr {mb.Name};");
+						tw.WriteLine ($"{prefix}public IntPtr {mb.Name};");
 					continue;
 				}
 				if (mb.paramDef.IndirectionLevel > 0 || mb.paramDef.Name.StartsWith ("PFN_", StringComparison.Ordinal)) {
@@ -973,7 +978,7 @@ namespace vk.generator {
 						typeStr = "char";
 					} else if (int.TryParse (dims[0], out int dim)) {
 						if (tryGetVectorType (typeStr, dim, out string vectorType))
-							tw.WriteLine ($"public {vectorType} {mb.Name};");
+							tw.WriteLine ($"{prefix}public {vectorType} {mb.Name};");
 						else {
 							for (int i = 0; i < dim; i++)
 								tw.WriteLine ($"public {typeStr} {mb.Name}_{i};");
@@ -997,11 +1002,11 @@ namespace vk.generator {
 						tw.WriteLine ($"set {{ _{mb.Name} = ({typeStr})value; }}");
 						tw.Indent--;
 						tw.WriteLine (@"}");
-						tw.WriteLine ($"{typeStr} _{mb.Name};");
+						tw.WriteLine ($"{prefix}{typeStr} _{mb.Name};");
 						continue;
 					}
 				}
-				tw.WriteLine ($"public {typeStr} {mb.Name};");
+				tw.WriteLine ($"{prefix}public {typeStr} {mb.Name};");
 			}
 
 			if (csStructName != null) {
@@ -1444,7 +1449,7 @@ namespace vk.generator {
 			for (int i = 0; i < cd.parameters.Count; i++) {
 				MemberDef md = cd.parameters[i];
 				List<string> typeSigs = new List<string> () { getDefaultParamSig (md, i < cd.parameters.Count - 1) };
-				if (md.paramDef.IndirectionLevel == 1 && md.paramDef.Name != "void") {
+				if (md.paramDef.IndirectionLevel == 1 && md.paramDef.Name != "void" && md.paramDef.CSName != "IntPtr") {
 					if (md.paramDef.IsConst)
 						typeSigs.Add (getByRefParamSig (md, i < cd.parameters.Count - 1));
 					typeSigs.Add (getPinParamSig (md, i < cd.parameters.Count - 1));
@@ -1601,7 +1606,10 @@ namespace vk.generator {
 							case "comment":
 								break;
 							case "member":
-								sd.members.Add (parseMember (m));
+								if (m.Attributes ["api"] == null || string.Equals(m.Attributes ["api"].Value, vkapi, StringComparison.OrdinalIgnoreCase)) {
+									sd.members.Add (parseMember (m));
+								}							
+								
 								break;
 							default:
 								log_vk_net_gen (ConsoleColor.Red, $"unknown element in struct def : {m.OuterXml}");
@@ -1840,6 +1848,7 @@ namespace vk.generator {
 
 		static MemberDef parseMember (XmlNode np) {
 			MemberDef md = new MemberDef () { paramDef = ParamDef.parse (np) };
+					
 			md.len = np.Attributes["len"]?.Value;
 			md.altlen = np.Attributes["altlen"]?.Value;
 			md.defaultValue = np.Attributes["values"]?.Value;
@@ -1868,6 +1877,11 @@ namespace vk.generator {
 		public static void readCommand (XmlNode ncmd) {
 			CommandDef cd = new CommandDef ();
 
+			// collect only target api set with 'vkapi' global variable.
+			if (ncmd.Attributes ["api"] != null && !string.Equals(ncmd.Attributes ["api"].Value, vkapi, StringComparison.OrdinalIgnoreCase)) {
+				return;
+			}
+
 			if (ncmd.Attributes ["alias"] != null) {
 				AddAlias (ncmd.Attributes ["name"].Value, ncmd.Attributes["alias"].Value);
 				return;
@@ -1881,9 +1895,11 @@ namespace vk.generator {
 			cd.Name = n["name"].InnerText;
 			n = n.NextSibling;
 			while (n != null) {
-				if (n.Name == "param")
-					cd.parameters.Add (parseMember (n));
-				else if (n.Name == "implicitexternsyncparams")
+				if (n.Name == "param") {
+					if (n.Attributes ["api"] == null || string.Equals(n.Attributes ["api"].Value, vkapi, StringComparison.OrdinalIgnoreCase)) {
+						cd.parameters.Add (parseMember (n));
+					}
+				} else if (n.Name == "implicitexternsyncparams")
 					cd.comment = n.InnerText;
 
 				n = n.NextSibling;

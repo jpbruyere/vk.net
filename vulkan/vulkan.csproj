@@ -3,7 +3,7 @@
 	<PropertyGroup>
 		<TargetFrameworks>netstandard2.1</TargetFrameworks>
 
-		<AssemblyVersion>0.5.1</AssemblyVersion>
+		<AssemblyVersion>0.5.2</AssemblyVersion>
 		<AssemblyName>Vulkan</AssemblyName>
 		<PackageVersion>$(AssemblyVersion)</PackageVersion>
 
@@ -19,7 +19,8 @@
 		<PackageIcon>vk.net-64.png</PackageIcon>
 		<SynchReleaseVersion>false</SynchReleaseVersion>
 		<PackageReleaseNotes>
-			* VkFormat in camel case taking care of consecutive numbers with underscore addition.
+		 - vkapi global variable to select vulkan/vulkansc
+		 - update vulkan xml to v1.3.269
 		</PackageReleaseNotes>
 		<AllowUnsafeBlocks>false</AllowUnsafeBlocks>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
