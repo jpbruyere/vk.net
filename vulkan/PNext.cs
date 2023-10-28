@@ -27,6 +27,24 @@ namespace Vulkan
 			init();
 			Marshal.WriteIntPtr(handle + 4, pNext);
 		}
+		/// <summary>
+		/// Allocate on HGlobal a new structure of type T and set current value
+		/// ensure instance is Disposed.
+		/// </summary>
+		public PNext (T instance) {
+			handle = Marshal.AllocHGlobal(Marshal.SizeOf<T>());
+			Marshal.StructureToPtr(instance, handle, false);
+		}
+		/// <summary>
+		/// Allocate on HGlobal a new structure of type T set current value and
+		/// the PNext field.
+		/// ensure instance is Disposed.
+		/// </summary>
+		public PNext (T instance, IntPtr pNext) {
+			handle = Marshal.AllocHGlobal(Marshal.SizeOf<T>());
+			Marshal.StructureToPtr(instance, handle, false);
+			Marshal.WriteIntPtr(handle + 4, pNext);
+		}
 		void init() {
 			handle = Marshal.AllocHGlobal(Marshal.SizeOf<T>());
 			Type t = typeof(T);
