@@ -24,7 +24,7 @@
 			Use the `New` static property to create a new instance of the structure with the correct value for sType.
 			ex: `VkInstanceCreateInfo ci = VkInstanceCreateInfo.New;`
 		-->
-		<AutoSetSType>false</AutoSetSType>
+		<AutoSetSType>true</AutoSetSType>
 
 	</PropertyGroup>
 </Project>

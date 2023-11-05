@@ -3,7 +3,7 @@
 	<PropertyGroup>
 		<TargetFrameworks>netstandard2.1</TargetFrameworks>
 
-		<AssemblyVersion>0.5.2</AssemblyVersion>
+		<AssemblyVersion>0.5.3</AssemblyVersion>
 		<AssemblyName>Vulkan</AssemblyName>
 		<PackageVersion>$(AssemblyVersion)</PackageVersion>
 
@@ -21,6 +21,7 @@
 		<PackageReleaseNotes>
 		 - vkapi global variable to select vulkan/vulkansc
 		 - update vulkan xml to v1.3.269
+		 - AUTO_SET_STYPE = on
 		</PackageReleaseNotes>
 		<AllowUnsafeBlocks>false</AllowUnsafeBlocks>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
