@@ -9,7 +9,7 @@
 		<Copyright></Copyright>
 		<Company></Company>
 
-		<ToolsFramework>netcoreapp3.1</ToolsFramework>
+		<ToolsFramework>net6</ToolsFramework>
 
 		<!--regenerate vk.net sources with vk.generator-->
 		<Regenerate>true</Regenerate>

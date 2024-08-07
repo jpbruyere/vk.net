@@ -3,7 +3,7 @@
 	<PropertyGroup>
 		<TargetFrameworks>netstandard2.1</TargetFrameworks>
 
-		<AssemblyVersion>0.5.3</AssemblyVersion>
+		<AssemblyVersion>0.6.0</AssemblyVersion>
 		<AssemblyName>Vulkan</AssemblyName>
 		<PackageVersion>$(AssemblyVersion)</PackageVersion>
 
@@ -19,14 +19,13 @@
 		<PackageIcon>vk.net-64.png</PackageIcon>
 		<SynchReleaseVersion>false</SynchReleaseVersion>
 		<PackageReleaseNotes>
-		 - vkapi global variable to select vulkan/vulkansc
+		 - update dotnet 6 for samples and generator.
 		 - update vulkan xml to v1.3.269
-		 - AUTO_SET_STYPE = on
 		</PackageReleaseNotes>
 		<AllowUnsafeBlocks>false</AllowUnsafeBlocks>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 
-		<NoWarn>$(NoWarn);1591;0419</NoWarn>
+		<NoWarn>$(NoWarn);1574;1591;0419</NoWarn>
 	</PropertyGroup>
 
 	<PropertyGroup Condition=" '$(AutoSetSType)' == 'true'">

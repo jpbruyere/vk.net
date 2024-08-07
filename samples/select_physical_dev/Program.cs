@@ -1,4 +1,7 @@
-﻿using System;
+﻿// Copyright (c) 2024  Jean-Philippe Bruyère <jp_bruyere@hotmail.com>
+//
+// This code is licensed under the MIT license (MIT) (http://opensource.org/licenses/MIT)
+using System;
 using Vulkan;
 using static Vulkan.Vk;
 using static Vulkan.Utils;
@@ -8,8 +11,6 @@ namespace tests
 {
 	class Program
 	{
-		delegate void del(IntPtr phy, ref VkPhysicalDeviceFeatures2 vdf);
-		delegate void del2(IntPtr phy, IntPtr vdf);
 		static void Main(string[] args)
 		{
 			VkInstance inst;
@@ -30,6 +31,7 @@ namespace tests
 			VkPhysicalDevice[] phys = new VkPhysicalDevice[phyCount];
 
 			CheckResult (vkEnumeratePhysicalDevices (inst, out phyCount, phys.Pin()));
+			phys.Unpin();
 
 			for (int i = 0; i < phys.Length; i++)
 			{

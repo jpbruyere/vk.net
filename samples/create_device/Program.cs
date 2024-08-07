@@ -1,9 +1,11 @@
-﻿using System;
+﻿// Copyright (c) 2024  Jean-Philippe Bruyère <jp_bruyere@hotmail.com>
+//
+// This code is licensed under the MIT license (MIT) (http://opensource.org/licenses/MIT)
+using System;
 using Vulkan;
 using static Vulkan.Vk;
 using static Vulkan.Utils;
 using System.Linq;
-using System.Runtime.InteropServices;
 
 namespace tests
 {	
@@ -13,22 +15,32 @@ namespace tests
 		{
 			VkInstance inst;
 
+			vkEnumerateInstanceLayerProperties(out uint lpc, IntPtr.Zero);
+			VkLayerProperties[] lp = new VkLayerProperties[lpc];
+			vkEnumerateInstanceLayerProperties(out lpc, lp.Pin());
+			lp.Unpin();
+
+			foreach (VkLayerProperties lpi in lp)
+			{
+				Console.WriteLine($"Layer: {lpi.layerName}");
+				Console.WriteLine($"       {lpi.description}");
+			}
+
 			using (VkApplicationInfo ai = new VkApplicationInfo (
 				new Vulkan.Version(1,2,0),
 				new Vulkan.Version(1,2,0),
 				new Vulkan.Version(1,3,0)
-			)) {
-				
-			using (PinnedObjects po = new PinnedObjects()) {
-				IntPtr[] instanceExts = {Ext.I.VK_KHR_get_physical_device_properties2.Pin(po)};
-				IntPtr[] layers = {"VK_LAYER_KHRONOS_validation".Pin(po)};
-				using (VkInstanceCreateInfo ci = new VkInstanceCreateInfo {
-					pApplicationInfo = ai,
-					enabledExtensionCount = 1,
-					enabledLayerCount = 1,
-					ppEnabledExtensionNames = instanceExts.Pin(po),
-					ppEnabledLayerNames = layers.Pin(po)}){
-						CheckResult (vkCreateInstance (ci, IntPtr.Zero, out inst));
+			)) {	
+				using (PinnedObjects po = new PinnedObjects()) {
+					IntPtr[] instanceExts = {Ext.I.VK_KHR_get_physical_device_properties2.Pin(po)};
+					IntPtr[] layers = {"VK_LAYER_KHRONOS_validation".Pin(po)};
+					using (VkInstanceCreateInfo ci = new VkInstanceCreateInfo {
+						pApplicationInfo = ai,
+						enabledExtensionCount = 1,
+						enabledLayerCount = 1,
+						ppEnabledExtensionNames = instanceExts.Pin(po),
+						ppEnabledLayerNames = layers.Pin(po)}){
+							CheckResult (vkCreateInstance (ci, IntPtr.Zero, out inst));
 					}
 				}
 			}
@@ -79,6 +91,8 @@ namespace tests
 					CheckResult (vkCreateDevice (phy, deviceCreateInfo, IntPtr.Zero, out dev));
 				}
 			}
+
+			Vk.LoadDeviceFunctionPointers(dev);
 			
 			vkGetDeviceQueue (dev, qFamIndex, 0, out VkQueue gQ);
 
